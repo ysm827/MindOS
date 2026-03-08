@@ -21,9 +21,12 @@
 
 | 目录 | 适用任务 |
 |------|----------|
+| `Profile/` | 个人身份、偏好、目标与全局上下文 |
 | `Configurations/` | 环境初始化、工具安装、Agent 配置 |
-| `Research/` | 文献调研、idea 生成、实验、论文写作与投稿 |
-| `Startup/` | 产品设计、技术开发、市场营销 |
+| `Workflows/Research/` | 文献调研、idea 生成、实验、论文写作与投稿 |
+| `Workflows/Startup/` | 产品设计、技术开发、市场营销 |
+| `Workflows/Media/` | 媒体内容创作 |
+| `Workflows/Information/` | 信息获取与整理 |
 | `Growth/` | 个人成长、学习规划 |
 | `Resources/` | 外部资源收藏（GitHub 项目、工具、文章等）|
 
@@ -31,6 +34,12 @@
 
 ```
 sop_note/
+├── Profile/            # 个人身份与上下文配置
+│   ├── README.md
+│   ├── 👤_Identity.md
+│   ├── ⚙️_Preferences.md
+│   ├── 🎯_Objectives.md
+│   └── 🧠_Context.md
 ├── Configurations/     # 环境配置与工具 SOP
 │   ├── 🧠 使用规范.md
 │   ├── 🖥️ Server Setup.md
@@ -40,22 +49,28 @@ sop_note/
 │   ├── Apps/           # 常用软件清单
 │   ├── Tools/          # SSH、Python、HuggingFace 配置
 │   └── Orgs/           # 公司特定配置（腾讯等）
-├── Research/           # 科研工作流
-│   ├── Survey/
-│   ├── Ideation/
-│   ├── Experiment/
-│   ├── Writing/
-│   └── Review/
-├── Startup/            # 创业相关
-│   ├── Product/
-│   ├── Development/
-│   └── Marketing/
+├── Workflows/          # 工作流 SOP
+│   ├── Research/       # 科研工作流
+│   │   ├── Survey/
+│   │   ├── Ideation/
+│   │   ├── Experiment/
+│   │   ├── Writing/
+│   │   └── Review/
+│   ├── Startup/        # 创业相关
+│   │   ├── Product/
+│   │   ├── Development/
+│   │   └── Marketing/
+│   ├── Media/          # 媒体内容创作
+│   └── Information/    # 信息获取与整理
 └── Growth/             # 个人成长
-    ├── Information/
     └── Cognition/
-Resources/              # 外部资源收藏
-    ├── 🌟 Github Projects.csv
-    └── Github Projects/
+├── Resources/              # 外部资源收藏
+│   ├── Products.csv        # 产品收藏
+│   ├── 🌟 Github Projects.csv
+│   └── Github Projects/
+└── Projects/               # 个人项目
+    ├── Research/
+    └── Products/
 ```
 
 ## 📐 扩展规范
@@ -63,7 +78,16 @@ Resources/              # 外部资源收藏
 ### 新增文件
 
 - 文件名以 emoji 开头，使用中文，英文专有名词保留原文
-- 新增后必须同步更新所属目录的索引文件（如 `使用规范.md`）
+- 新增后必须同步更新所属目录的 `🧠 使用规范.md`（每个根目录下的直接子目录均有此文件）
+
+### 🧠 使用规范.md 规范
+
+每个根目录下的直接子目录须包含 `🧠 使用规范.md`，固定包含以下部分：
+
+1. **一句话说明** — 本目录的职责与定位
+2. **📁 目录结构** — 当前目录的完整文件树（含注释）
+3. **💡 使用说明** — 各子目录/文件的用途，以及 Agent 执行时的注意事项
+4. **📐 更新规则** — 在本目录新增文件、目录或内容时需遵守的规则
 
 ### 新增目录
 
@@ -72,9 +96,9 @@ Resources/              # 外部资源收藏
 
 ### 添加产品
 
-- 当用户提供一个产品（含产品名称或 URL）时，抓取产品信息并追加一行到 `Resources/Products/Products.csv`
-- CSV 字段：`Name, URL, Category, Description, Key Features, Target Users, Pricing`
-- 若 `Resources/Products/Products.csv` 不存在，先创建并写入表头再追加
+- 当用户提供一个产品（含产品名称或 URL）时，抓取产品信息并追加一行到 `Resources/Products.csv`
+- CSV 字段：`Name, URL, Category, Tags, Description, Key Features, Target Users, Pricing`
+- 若 `Resources/Products.csv` 不存在，先创建并写入表头再追加
 
 ### 文件变更
 
