@@ -1,10 +1,3 @@
- 开始构建
-  GitHub下面有个词，是MCP-native
-  ，这个应该更名成Agent-native。并且将移动
-  作为第一个，三个排序依次是Agent-native、L
-  ocal-first
-  、Open Source
-   
 
 
 
