@@ -11,6 +11,7 @@ on:
       - 'skills/**'
       - 'template/**'
       - 'wiki/**'
+      - 'assets/**'
       - 'landing/**'
       - 'README.md'
       - 'README_zh.md'
@@ -44,6 +45,7 @@ jobs:
           [ -d skills/ ] && rsync -av --delete --exclude='node_modules' skills/ /tmp/mindos/skills/
           [ -d template/ ] && rsync -av --delete template/ /tmp/mindos/template/
           [ -d wiki/ ] && rsync -av --delete wiki/ /tmp/mindos/wiki/
+          [ -d assets/ ] && rsync -av --delete assets/ /tmp/mindos/assets/
 
           [ -f .gitignore.prod ] && cp .gitignore.prod /tmp/mindos/.gitignore
 
