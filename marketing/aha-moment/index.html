@@ -115,6 +115,51 @@
   .step-1 .step-dot { background: var(--accent); }
   .step-2 .step-dot { background: var(--success); }
   .step-3 .step-dot { background: var(--info); }
+  .step-4 .step-dot { background: var(--accent); box-shadow: 0 0 0 4px var(--bg), 0 0 24px var(--accent-glow); }
+
+  /* Chat mock for step 4 */
+  .chat-mock {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+  .chat-mock-bar {
+    display: flex; align-items: center; gap: 5px;
+    padding: 6px 10px;
+    border-bottom: 1px solid var(--border);
+  }
+  .chat-mock-bar .dots { display: flex; gap: 4px; }
+  .chat-mock-bar .dots span { width: 7px; height: 7px; border-radius: 50%; }
+  .chat-mock-bar .label {
+    margin-left: 6px; font-size: 10px;
+    font-family: 'JetBrains Mono', monospace; color: var(--muted-fg);
+  }
+  .chat-row {
+    display: flex; gap: 10px; align-items: flex-start;
+    padding: 10px 14px;
+  }
+  .chat-avatar {
+    width: 28px; height: 28px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 700; flex-shrink: 0;
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .avatar-user { background: var(--accent-dim); color: var(--accent); }
+  .avatar-agent { background: rgba(122, 158, 196, 0.15); color: var(--info); }
+  .chat-bubble {
+    font-size: 12px; line-height: 1.6; color: var(--fg);
+    background: var(--muted); padding: 8px 12px; border-radius: 10px;
+    max-width: 90%;
+  }
+  .chat-bubble .hl-info { color: var(--info); }
+  .chat-bubble .ref {
+    display: inline-block; margin-top: 4px; padding: 2px 8px;
+    border-radius: 4px; font-size: 10px;
+    font-family: 'JetBrains Mono', monospace;
+    background: var(--accent-dim); color: var(--accent);
+    border: 1px solid rgba(212,149,74,0.12);
+  }
 
   .step-header {
     display: flex; align-items: baseline; gap: 10px;
@@ -246,9 +291,46 @@
       </div>
     </div>
 
-  </div>
+    <!-- Step 4: Any Agent, Instant Context -->
+    <div class="step step-4">
+      <div class="step-dot">4</div>
+      <div class="step-header">
+        <div class="step-title">Any Agent, Instant Context</div>
+        <span class="step-tag tag-capture">INVOKE</span>
+      </div>
+      <div class="step-desc">
+        Weeks later, ask any Agent to act. It reads MindOS via MCP, instantly has your full context &mdash; no re-explaining. Past thinking powers future execution.
+      </div>
+      <div class="chat-mock">
+        <div class="chat-mock-bar">
+          <div class="dots">
+            <span style="background:#e06c6c"></span>
+            <span style="background:var(--accent)"></span>
+            <span style="background:var(--success)"></span>
+          </div>
+          <span class="label">Claude Code</span>
+        </div>
+        <div class="chat-row">
+          <div class="chat-avatar avatar-user">U</div>
+          <div class="chat-bubble">Write a product launch post for the new onboarding flow.</div>
+        </div>
+        <div class="chat-row">
+          <div class="chat-avatar avatar-agent">A</div>
+          <div class="chat-bubble">
+            <span class="hl-info">Reading MindOS</span> &rarr; Growth-Strategy.md, Onboarding-Redesign.md<br/>
+            Generated launch copy based on your strategy and philosophy.<br/>
+            <span class="ref">via MCP &middot; 3 files referenced</span>
+          </div>
+        </div>
+      </div>
+      <div class="callouts">
+        <div class="callout"><span class="dot dot-accent"></span>Claude Code, Cursor, OpenClaw &mdash; all synced</div>
+        <div class="callout"><span class="dot dot-accent"></span>Reads via MCP, zero re-explaining</div>
+        <div class="callout"><span class="dot dot-info"></span>Experience compounds over time</div>
+      </div>
+    </div>
 
-  <div class="footer">
+  </div>
     <p>Capture once &rarr; <span>MindOS</span> organizes &rarr; Every Agent remembers &rarr; <span>You level up</span></p>
     <div class="sub">github.com/GeminiLight/MindOS</div>
   </div>
