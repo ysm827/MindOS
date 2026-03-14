@@ -14,7 +14,7 @@ MindOS 是一个 **人机协同心智平台 (Human-AI Collaborative Mind Platfor
 
 1. **Global Mind Sync** — Capture once, reuse everywhere. MCP server lets any compatible agent access your Profile, SOPs, and project memory.
 2. **Transparent and Controllable** — Retrieval, reflection, and execution outcomes are written to local plain text. Humans can audit and correct continuously in the GUI.
-3. **Symbiotic Evolution** — Knowledge as Code. Daily notes naturally become executable instructions through prompt-native writing and reference-driven sync.
+3. **Symbiotic Evolution** — Knowledge as Code. Daily notes naturally become executable instructions through prompt-native writing and cross-file reference linking.
 
 **Foundation: Local-first.** All data stored locally as plain text for privacy, ownership, and performance.
 
@@ -41,16 +41,18 @@ MindOS 是一个 **人机协同心智平台 (Human-AI Collaborative Mind Platfor
 
 ## 目标用户 (Target User)
 
-- **AI 独立开发者/创始人** — 管理复杂 SOP、产品路线图和技术架构
+**核心 Persona：** 同时使用 3+ AI Agent 的独立开发者/创始人——管理复杂 SOP、产品路线图和技术架构，需要跨 Agent 共享上下文。
+
+**扩展用户：**
+- **AI-native 小团队（3-15 人）** — 共享 SOP、Profile、项目记忆给团队 Agent
 - **系统性思考者** — 拥有庞大本地 Markdown/CSV 知识库，追求本地控制与隐私
-- **Agentic AI 深度用户** — 通过 MCP 让 Agent 精准读写个人上下文
 
 ## 用户旅程 (User Journey)
 
 | 场景 | 现状痛点 | MindOS 解决方案 |
 |------|---------|----------------|
 | 获取信息 | 文件树+搜索，缺乏上下文 | ⌘K 全局模糊搜索 + 实时片段预览 |
-| 更新知识 | 编辑→保存→刷新 | 即时编辑 + 最后修改追踪 |
+| 管理文件关联 | 文件间关联靠人维护，缺乏自动化 | Wiki Graph + Backlinks 自动追踪引用关系 |
 | 人机协作 | 手动复制粘贴 Context | Agent 通过 MCP 直接读写 Markdown |
 | 修正幻觉 | 无法知道 AI 记住了什么 | 在 UI 中审查并修改 Agent "记忆" |
 | 知识沉淀 | 碎片难结构化 | 内置结构化模板引导系统化 |
@@ -66,16 +68,17 @@ MindOS 是一个 **人机协同心智平台 (Human-AI Collaborative Mind Platfor
 - **MindOS Skills (EN + ZH)：** 结构感知路由、搜索回退策略、多文件审批
 - **AI 对话 (⌘/)：** Vercel AI SDK 流式输出，`@` 文件引用 + PDF 上传
 - **全局搜索 (⌘K)：** 毫秒级全文搜索 + snippet 预览
-- **10 个渲染器插件：** TODO Board, CSV Views, Wiki Graph, Timeline, Backlinks, AI Briefing, Config, Agent Inspector, Diff Viewer, Workflow Runner
+- **11 个渲染器插件：** TODO Board, CSV Views, Wiki Graph, Timeline, Backlinks, AI Briefing, Config, Agent Inspector, Diff Viewer, Workflow Runner, Onboarding
 - **CLI：** onboard / start / open / sync / mcp install / gateway daemon / token — 13 个 lib 模块
 - **Git 自动同步：** `mindos sync` — 自动 commit/push/pull，冲突保留 `.sync-conflict`
+- **PWA 支持：** manifest + service worker + 可安装
 - **安全：** Bearer Token, 路径沙箱, INSTRUCTION.md 写保护, 原子写入
 - **11+ Agent 兼容：** Claude Code, Cursor, Windsurf, Cline, Gemini CLI 等
 
 ### 不做什么 (Out of Scope)
 
 - 自建富文本格式（依赖纯 Markdown/CSV）
-- 在线多人实时协作（优先单人 + Agent 场景）
+- 实时多光标协同编辑（支持团队异步共享，但不做 Google Docs 式实时协作）
 - Agent 训练/微调（只做知识存储和工具调用）
 
 ## 交互原则 (UX Principles)
@@ -84,5 +87,15 @@ MindOS 是一个 **人机协同心智平台 (Human-AI Collaborative Mind Platfor
 |------|------|
 | Speed First | 拒绝 Loading 焦虑，内容即开即读 |
 | Minimal Chrome | 界面只保留内容与搜索 |
-| Keyboard-driven | 所有核心动作均可快捷键完成 |
+| Keyboard-driven | 桌面端所有核心动作均可快捷键完成；移动端优化触控交互 |
 | Localism | 彻底的本地隐私，数据永远属于用户 |
+
+## 成功指标 (North Star Metrics)
+
+| 阶段 | 北极星指标 | 目标 |
+|------|-----------|------|
+| P1（当前） | 周活跃知识库数（至少 1 次 MCP 读写或 GUI 编辑） | 100+ |
+| P1.5（过渡） | 累计活跃知识库数 + 社区反馈 | 300+ 累计，GitHub 50+ issues |
+| P2 | 月活跃用户 + 7 日留存率 | MAU 1000+，7d retention > 40% |
+| P3 | Pro 付费转化率 + Team 层 ARR | conversion > 5%，ARR $50K+ |
+| P4 | Context API 第三方调用量 | 月调用 > 100K |

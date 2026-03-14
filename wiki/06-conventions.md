@@ -66,3 +66,15 @@ Conventional Commits：`feat:` / `fix:` / `refactor:` / `docs:` / `chore:`
 - 不使用 `console.log` 做生产日志（CLI 中可用 ANSI 颜色函数）
 - 不在 MCP 工具中直接操作 `INSTRUCTION.md`（写保护）
 - 不在模块间通过全局状态隐式通信
+
+## 样式约定
+
+| 场景 | 做法 | 不做 |
+|------|------|------|
+| 显示字体（标题/标签） | `className="font-display"` | `style={{ fontFamily: "IBM Plex Mono..." }}` |
+| 主题色按钮 | `bg-[var(--amber)] text-[#131210]` | `style={{ background: 'var(--amber)' }}` |
+| 交互状态展开/折叠 | 按钮加 `aria-expanded={state}` | 仅视觉反馈无语义 |
+| 动态消息（错误/成功） | `role="alert" aria-live="polite"` | 静默插入 DOM |
+| 键盘焦点 | 依赖 `globals.css` 全局 `focus-visible` 规则 | 每个组件重复写 `focus:ring-*` |
+| 时间戳显示 | `relativeTime(mtime, t.home.relativeTime)` + `suppressHydrationWarning` | `new Date().toLocaleDateString()` |
+| CLI 输出语言 | 英文统一（全球用户） | 中英混合 |
