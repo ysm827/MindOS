@@ -1,15 +1,20 @@
 ## PENDING
 
+- sync在GUI的操作方式应该是输入框 按钮，而不是文字提示
 
-mindos onboard 允许用户选择 cli or gui 进行配置
 - 其实现在用户对这个sync功能感知还挺弱的，你有什么建议，从文档到cli到gui到...
 - 支持用户有多个mindos
 - wiki 使用指南，比如roadmap到stage
 
 允许用户在GUI配置 MCP 和 Skill，需要注意本地和云端
 
+  ⎿  · 你想要的 'CLI or GUI 配置' 具体是哪种形态？ → 
+     CLI 入口分流                                      
+     · GUI 配置需要覆盖哪些内容？ → 全部配置项
 
 ## ADDRESS
+
+mindos onboard 允许用户选择 cli or gui 进行配置
 
   1. Sync 可见性增强                 
 

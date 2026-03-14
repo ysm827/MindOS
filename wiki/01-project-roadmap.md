@@ -20,7 +20,7 @@
 | 局域网自动发现 | 📋 规划 | P1C | [./13-stage-mdns.md](./13-stage-mdns.md) |
 | Cloud Hub | 待做 | P2A | RESTful + S3/R2 + E2E 加密 |
 | 桌面安装包 | 📋 规划 | P2B | [./14-stage-desktop.md](./14-stage-desktop.md) |
-| Personal Knowledge API | 待做 | P2D | RESTful + GraphQL + Webhook 订阅 |
+| Personal Knowledge API | 📋 规划 | P2D | [./15-stage-knowledge-api.md](./15-stage-knowledge-api.md) |
 | Knowledge Health 仪表盘 | 待做 | P2D | 过期检测、孤立文件、矛盾检测、完整度评分 |
 | ACP 多 Agent 中枢 | 待做 | P3 | — |
 | Agent Governance 权限治理 | 待做 | P3 | 细粒度 ACL、操作配额、敏感文件标记、审批流 |
