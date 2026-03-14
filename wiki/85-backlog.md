@@ -16,6 +16,10 @@
 
 ## 改进想法
 
+- [ ] **Onboarding — API Key 连通性验证**：Step 2 填写 API Key 后失焦自动测试（`max_tokens: 1`），显示 ✔/✘ badge 但不阻断继续；CLI 同步；Skip 模式不触发
+
+- ❌ **Onboarding — 原生文件夹选择器（Web 不做，桌面端要做）**：浏览器 `showDirectoryPicker()` 返回的是内存句柄（`FileSystemDirectoryHandle`），规范层面无 `.path` 属性，无法获取服务器上的真实路径。Web 模式下路径补全（SPEC-OB-16）是最接近的替代方案。**桌面端**（Electron）列为必做：用 `dialog.showOpenDialog` 实现原生文件夹选择，直接返回真实路径。
+
 - [ ] 局域网自动发现 (mDNS/Bonjour) — 手机/平板自动连
 - [ ] 首页 Plugins 更好的展示方式
 - [ ] Skill 工作流引导优化（持续）

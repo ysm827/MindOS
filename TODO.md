@@ -1,5 +1,11 @@
 ## PENDING
 
+
+沉淀交互模式
+
+
+模块解耦化，
+
 我经常开多个Terminal端口怎么办
 
 你再核查下然后开启下一个阶段
@@ -9,13 +15,22 @@
 - 支持用户有多个mindos
 - wiki 使用指南，比如roadmap到stage
 
+## ADDRESSED
+
+CLI有没有可能进来之后 检查系统语言选择展示的语言
+
+2. GUI 模式下文件路径改成可以可以类似打开文件目录选择的，你觉得怎么样？对服务器优化吗
+1. 知识库的存放目录，/data/home/geminitwang/.mindos/~/MindOS/ 这个肯定不对吧，预期是用户目录下的 MindOS，而不是隐藏目录，GUI和CLI都更新下
+
+~/MindOS/ -> ~/MindOS/my-mind
+
+CLI 和 GUI 都更新下
+
 允许用户在GUI配置 MCP 和 Skill，需要注意本地和云端
 
   ⎿  · 你想要的 'CLI or GUI 配置' 具体是哪种形态？ → 
      CLI 入口分流                                      
      · GUI 配置需要覆盖哪些内容？ → 全部配置项
-
-## ADDRESS
 
 我插件如何保持灵活性和可扩展性？比如 最小化侵入主代码文件？
 
