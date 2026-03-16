@@ -7,6 +7,7 @@
 ## Bug
 
 - [x] **`mindos update` 端口硬编码**：重启后健康检查轮询 `localhost:3000`，但用户实际端口可能不是 3000，导致"did not come back up in time"误报。修复：直接从 config 文件读 `port` 字段；顺带将 `waitForHttp` 探测路径从 `/` 改为 `/api/health` — v0.5.2
+- [x] **进程生命周期 7-bug 链**：stop/restart 模块连环 bug（PID 不完整、端口清理跳过、env 继承覆盖、config 新旧端口不分、lsof 环境差异、ss 子串误匹配、health 被 auth 拦截）。详见 `wiki/81-postmortem-process-lifecycle.md` — v0.5.7
 
 ## 技术债
 

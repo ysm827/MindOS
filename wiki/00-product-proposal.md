@@ -58,7 +58,7 @@
 
 | 场景 | 现状痛点 | MindOS 怎么做 |
 |------|---------|--------------|
-| 首次上手 | 工具配置复杂，门槛高 | `npm i -g && mindos onboard`，30 秒浏览器可用 |
+| 首次上手 | 工具配置复杂，门槛高 | `npm i -g @geminilight/mindos && mindos onboard`，30 秒浏览器可用 |
 | 跨 Agent 工作 | 每换一个 Agent 就要重新交代背景 | `mindos token` 一键生成配置，粘到任意 Agent 即连通 |
 | 审查 Agent 行为 | 不知道 AI 记住了什么、改了什么 | Agent Inspector 实时日志 + GUI 中审查/修正/删除 |
 | 沉淀工作流 | 对话最佳实践关掉就丢了 | 对话经验沉淀为 Skill/SOP，Agent 自动更新关联文件 |
