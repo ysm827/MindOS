@@ -110,6 +110,8 @@ jobs:
           fi
 
           cd /tmp/mindos
+          # landing/ is deployed to gh-pages only — remove from main if it exists
+          rm -rf /tmp/mindos/landing
           git add -A
           if git diff --cached --quiet; then
             echo "No changes to sync."
