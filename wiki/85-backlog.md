@@ -10,6 +10,7 @@
 - [x] **进程生命周期 7-bug 链**：stop/restart 模块连环 bug（PID 不完整、端口清理跳过、env 继承覆盖、config 新旧端口不分、lsof 环境差异、ss 子串误匹配、health 被 auth 拦截）。详见 `wiki/81-postmortem-process-lifecycle.md` — v0.5.7
 - [x] **Onboard check-port 自回环误报端口占用**：`http://localhost:3013/setup` 配置端口时，3013 被报为"已被占用"。原因：server-to-self HTTP 回环在 Next.js 单线程模式下超时。修复：从 `req.nextUrl.port` 直接判断 self，跳过网络自检。详见 `wiki/80-known-pitfalls.md`
 - [x] **云同步 P0 可靠性/安全 6 项修复**：O1 instrumentation.ts daemon 自启动 + O2 进程退出 flush + O3 push 失败重试 + O4 token 安全统一 + O5 .gitignore 自动创建 + bonus `now` action 冲突处理统一。详见 `wiki/specs/spec-kb-cloud-sync.md` 优化路线图 P0 节
+- [x] **Git Sync 可靠性 4 项修复**：B1 credential approve 假成功 → 加 fill 验证 + fallback；B2 首次 push 无 upstream → `push -u origin HEAD`；B3 冲突文件写入失败标记 `noBackup`；B4 config/state 原子写入。详见 `wiki/specs/spec-sync-reliability.md`
 
 ## 技术债
 
@@ -48,14 +49,14 @@
 
 - [x] **I1：CLI `mindos status` 命令** — 已有 `mindos doctor` 覆盖此需求
 - [x] **I2：登录页产品标语** — 已实现（`loginT.tagline` + `loginT.subtitle`）
-- [ ] **I3：API Key 连通性验证** — Settings AI Tab 新增 Test 按钮，点击后调用轻量验证端点。[SPEC](./specs/spec-api-key-test.md)。减少"配置完发现 key 无效"的挫败感
+- [x] **I3：API Key 连通性验证** — Settings AI Tab 已有 Test 按钮（`/api/settings/test-key`），支持 Anthropic/OpenAI，返回延迟和错误分类
 
 ### 🟡 中优先
 
 - [ ] **I4：CLI per-command `--help`** — `mindos start --help` 显示子命令选项。与 I1 一起做，CLI 专业度提升
 - [ ] **I5：首次使用引导流程** — 检测新模板 → 展示知识库结构 → 引导 AI 提问 → 引导配置 Sync。激活率关键路径，但工作量较大
 - [ ] **I6：首页 Plugins 更好的展示方式** — 当前插件列表平铺，缺乏分类和预览
-- [ ] **I7：文件视图 topbar 文件图标** — 与侧边栏保持一致，小改动提升一致性
+- [x] **I7：文件视图 topbar 文件图标** — Breadcrumb 组件已有 `FileTypeIcon`（.csv → Table，.md → FileText，目录 → Folder）
 - [ ] **I8：Skill 工作流引导优化** — 持续迭代
 
 ### 🟢 低优先（等需求驱动）
