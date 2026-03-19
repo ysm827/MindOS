@@ -242,8 +242,7 @@ const commands = {
         // Do NOT call start() here — kickstart -k would kill the just-started process,
         // causing a port-conflict race condition with KeepAlive restart loops.
         console.log(dim('  (First run may take a few minutes to install dependencies and build the app.)'));
-        console.log(dim('  Follow live progress with:  mindos logs\n'));
-        const ready = await waitForHttp(Number(webPort), { retries: 60, intervalMs: 2000, label: 'Web UI' });
+        const ready = await waitForHttp(Number(webPort), { retries: 60, intervalMs: 2000, label: 'Web UI', logFile: LOG_PATH });
         if (!ready) {
           console.error(red('\n✘ Service started but Web UI did not become ready in time.'));
           console.error(dim('  Check logs with: mindos logs\n'));
@@ -326,7 +325,13 @@ const commands = {
     const mcpSdk = resolve(ROOT, 'mcp', 'node_modules', '@modelcontextprotocol', 'sdk', 'package.json');
     if (!existsSync(mcpSdk)) {
       console.log(yellow('Installing MCP dependencies (first run)...\n'));
-      run('npm install --prefer-offline --no-workspaces', resolve(ROOT, 'mcp'));
+      const mcpCwd = resolve(ROOT, 'mcp');
+      try {
+        execSync('npm install --prefer-offline --no-workspaces', { cwd: mcpCwd, stdio: 'inherit' });
+      } catch {
+        console.log(yellow('Offline install failed, retrying online...\n'));
+        run('npm install --no-workspaces', mcpCwd);
+      }
     }
     // Map config env vars to what the MCP server expects
     const mcpPort = process.env.MINDOS_MCP_PORT || '8781';
@@ -616,7 +621,7 @@ ${dim('Shortcut: mindos start --daemon  →  install + start in one step')}
       const webPort = updateConfig.port ?? 3456;
       const mcpPort = updateConfig.mcpPort ?? 8781;
       console.log(dim('  (Waiting for Web UI to come back up — first run after update includes a rebuild...)'));
-      const ready = await waitForHttp(Number(webPort), { retries: 60, intervalMs: 2000, label: 'Web UI' });
+      const ready = await waitForHttp(Number(webPort), { retries: 60, intervalMs: 2000, label: 'Web UI', logFile: LOG_PATH });
       if (ready) {
         const localIP = getLocalIP();
         console.log(`\n${'─'.repeat(53)}`);
