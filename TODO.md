@@ -1,8 +1,24 @@
 ## PENDING
 
+搜索加类型筛选
+
+Setup install skill的时候 Skill install failed
+
+
+现在有个很大的问题，文件树和Ask AI不能同时打开
+
+  改动: Knowledge Tab → General
+重命名，把 Monitoring 的系统指标折叠进来
+  改动: 删 Monitoring Tab
+  原因: 内容太薄（几个数值卡片），并入 General
+    底部折叠区
+
+1. Ask AI Panel里面的AI的回答文字太大了
+2. File Panel应该支持一键折叠/扩展层级
+3. 
+
 设计系统更新！
 
-添加删除文件或更新文件名称，旁边文件目录的不更新
 
 ❯ MindOS MCP Server                             
 Status                                          
@@ -48,6 +64,7 @@ Review change
 ## ADDRESSED
 
 Waiting for Web UI 有可能展示出具体细节吗
+添加删除文件或更新文件名称，旁边文件目录的不更新
 
 
 ### Sync "Remote not reachable" — credential 静默吞错 ✅
