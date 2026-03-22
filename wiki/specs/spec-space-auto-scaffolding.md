@@ -379,9 +379,9 @@ home: {
 
 | 文件 | 改动 |
 |------|------|
-| `app/lib/core/fs-ops.ts` | `createFile()` 和 `writeFile()` 各加 1-2 行调用脚手架 |
+| `app/lib/core/fs-ops.ts` | `createFile()` 末尾加 1 行调用脚手架 |
 | `app/app/page.tsx` | 新增 `getTopLevelDirs()`，传 `spaces` prop |
-| `app/components/HomeContent.tsx` | "Recently Modified" 改为 Space-Grouped Timeline + "All Spaces" 行，替换 Plugin chips |
+| `app/components/HomeContent.tsx` | "Recently Modified" 改为 Space-Grouped Timeline + "All Spaces" 行 |
 | `app/lib/i18n-en.ts` | 新增 `home.recentlyActive` / `home.allSpaces` / `home.nFiles` |
 | `app/lib/i18n-zh.ts` | 同上中文版 |
 
@@ -405,7 +405,7 @@ home: {
 | 3 | `.agents/skills/xxx.md` | `startsWith('.')` → 跳过 |
 | 4 | 已有 INSTRUCTION.md 的目录 | 幂等跳过 |
 | 5 | 已有 README.md 但无 INSTRUCTION.md | 只补 INSTRUCTION.md |
-| 6 | 根 README.md 不存在或无结构树 | 静默跳过 |
+| 6 | 根 README.md 更新 | 不自动修改——由 Agent 按 INSTRUCTION.md §5.1 自行更新 |
 | 7 | emoji 目录名 `📖 Learning/` | 正则剥离 emoji 作模板标题 |
 | 8 | 脚手架写入失败 | try-catch 包裹，不阻塞主操作 |
 
@@ -419,6 +419,8 @@ home: {
 | 12 | 新用户只有模板文件 | 正常分组（模板文件也有 mtime） |
 | 13 | 一级目录 > 10 个 | All Spaces 行 flex-wrap 自动换行 |
 | 14 | spaces prop 为空（异常） | 回退到扁平时间线 |
+| 15 | 所有 recent files 都在根级 | `groupBySpace()` 返回空数组 → 回退到扁平时间线 |
+| 16 | `fileCount` 包含 INSTRUCTION.md/README.md | 可接受，用户不会在意精确数值 |
 
 ### 风险
 
@@ -426,7 +428,6 @@ home: {
 |------|------|------|
 | 脚手架拖慢文件创建 | 低 | 两次 `writeFileSync` < 1ms，try-catch 不阻塞 |
 | 分组逻辑在大知识库（1000+ 文件）下性能 | 低 | `getRecentlyModified(15)` 只返回 15 条，分组是 O(n) 其中 n ≤ 15 |
-| 根 README.md 被错误修改 | 低 | 只追加目录行，有结构检测保护 |
 | 首页布局变化导致视觉回归 | 中 | 分组后总信息量不变，只改排列方式；兜底到扁平模式 |
 
 ## 验收标准
@@ -434,10 +435,10 @@ home: {
 ### Part A: 自动脚手架
 
 - [ ] `create_file("Learning/note.md")` → `Learning/INSTRUCTION.md` + `Learning/README.md` 自动出现
-- [ ] `writeFile("NewSpace/file.md")` 写入新目录 → 同上
 - [ ] 已有 INSTRUCTION.md 的目录不被覆盖
+- [ ] 已有 README.md 但无 INSTRUCTION.md → 只补 INSTRUCTION.md
 - [ ] `.agents/` 等隐藏目录不触发
-- [ ] 新目录追加到根 README.md 结构树
+- [ ] 根级文件创建不触发
 - [ ] 脚手架失败不阻塞主操作
 - [ ] 单元测试覆盖以上 case
 
@@ -446,10 +447,11 @@ home: {
 - [ ] 首页 "Recently Active" 按 Space 分组展示
 - [ ] Space 标题行可点击，跳转到目录视图
 - [ ] 组内最多展示 3 个文件
-- [ ] 底部 "All Spaces" 行展示所有一级目录 + Plugin 入口
+- [ ] 底部 "All Spaces" 行展示所有一级目录
+- [ ] Plugin chips 保留在 All Spaces 行下方
 - [ ] 空 Space 灰显
 - [ ] 根级文件归入 "Other" 分组
-- [ ] spaces 为空时回退到扁平时间线
+- [ ] 分组为空时回退到扁平时间线
 - [ ] i18n en/zh 正常
 - [ ] 移动端 All Spaces 行正常换行
 

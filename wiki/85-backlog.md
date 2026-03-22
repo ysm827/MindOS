@@ -65,6 +65,7 @@
 
 - [ ] **I4：CLI per-command `--help`** — `mindos start --help` 显示子命令选项。与 I1 一起做，CLI 专业度提升
 - [x] **I5：首次使用引导流程** — GuideCard 替换 WelcomeBanner，3 任务卡片（探索 KB / AI 对话 / 配置同步）+ 交互式完成追踪 + C2→C4 渐进推荐 + 后端 guideState 持久化 + Settings 恢复入口。[spec](./specs/spec-first-use-guide.md)
+- [x] **I13：Space 体验增强** — 新建一级目录自动生成 INSTRUCTION.md + README.md（Agent bootstrap 不再降级）+ 首页 "Recently Active" 按 Space 分组展示 + "All Spaces" 导航行。[spec](./specs/spec-space-auto-scaffolding.md)
 - [x] **I6：首页 Plugins 展示优化** — 卡片展示 description + tags，消除 RENDERER_ENTRY / PLUGIN_ENTRY_FILES 重复映射，不可用 plugin 点击提示创建引导，补齐 3 个漏注册 renderer（backlinks/workflow/diff）
 - [x] **I6.5：Skill 管理面板改进** — 分组显示（Custom/Built-in）+ 搜索过滤 + 全文查看（read API）+ 内联编辑 + 预填模板创建（General/Tool-use/Workflow）+ Markdown 渲染。解决"不知道给新 agent 提供什么信息"的 pain point
 - [x] **I7：文件视图 topbar 文件图标** — Breadcrumb 组件已有 `FileTypeIcon`（.csv → Table，.md → FileText，目录 → Folder）
