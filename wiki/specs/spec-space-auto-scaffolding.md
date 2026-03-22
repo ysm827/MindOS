@@ -140,6 +140,9 @@ ${dirName}/
 /**
  * If filePath is inside a top-level directory that lacks INSTRUCTION.md,
  * auto-generate scaffolding files. Idempotent and fail-safe.
+ *
+ * Does NOT modify root README.md — that's the Agent's job per INSTRUCTION.md §5.1.
+ * Automated string manipulation of user-editable markdown is fragile and risky.
  */
 export function scaffoldIfNewSpace(mindRoot: string, filePath: string): void {
   try {
@@ -162,44 +165,27 @@ export function scaffoldIfNewSpace(mindRoot: string, filePath: string): void {
     if (!fs.existsSync(readmePath)) {
       fs.writeFileSync(readmePath, README_TEMPLATE(cleanName), 'utf-8');
     }
-
-    appendToRootReadme(mindRoot, topDir);
   } catch {
     // Scaffold failure must never block the primary file operation
   }
-}
-
-function appendToRootReadme(mindRoot: string, dirName: string): void {
-  const readmePath = path.join(mindRoot, 'README.md');
-  if (!fs.existsSync(readmePath)) return;
-
-  const content = fs.readFileSync(readmePath, 'utf-8');
-  if (content.includes(dirName + '/')) return;
-
-  const structureEnd = content.lastIndexOf('└──');
-  if (structureEnd === -1) return;
-
-  const updated = content.slice(0, structureEnd)
-    + content.slice(structureEnd).replace('└──', '├──')
-    .replace(/\n```/, `\n└── ${dirName}/\n\`\`\``);
-
-  fs.writeFileSync(readmePath, updated, 'utf-8');
 }
 ```
 
 #### 集成点：`fs-ops.ts`
 
+只在 `createFile` 中触发（不在 `writeFile` 中）：
+
 ```typescript
 import { scaffoldIfNewSpace } from './space-scaffold';
 
 // createFile() 末尾加一行
-scaffoldIfNewSpace(mindRoot, filePath);
-
-// writeFile() 在 mkdirSync 之前记录目录状态，末尾条件触发
-const dirExisted = fs.existsSync(path.dirname(resolved));
-// ... 原有逻辑 ...
-if (!dirExisted) scaffoldIfNewSpace(mindRoot, filePath);
+export function createFile(mindRoot: string, filePath: string, initialContent = ''): void {
+  // ... 原有逻辑 ...
+  scaffoldIfNewSpace(mindRoot, filePath);  // ← 新增
+}
 ```
+
+**为什么不 hook `writeFile`**：`writeFile` 是覆盖写，用于更新已有文件，目录必然已存在。唯一例外是 Agent 对不存在的路径 `write_file`——但这时 `mkdirSync` 创建的中间目录不一定是用户意图的 "Space"，贸然生成脚手架可能造成困惑。`createFile` 语义明确（"新建文件"），是更安全的触发点。
 
 ### Part B: 首页 Space 分组
 
@@ -318,10 +304,10 @@ function groupBySpace(recent: RecentFile[], spaces: SpaceInfo[]): SpaceGroup[] {
 - 展示**所有**一级目录（包括 Recent 中未出现的），每个显示 `emoji + name (fileCount)`
 - 空 Space（0 文件）灰显，暗示"可以往这里加内容"
 - 已有活动的 Space 正常色
-- Plugin 快捷入口合并在末尾（保留现有 `availablePlugins` 逻辑）
 - 整行可横向滚动（移动端友好）
+- **Plugin chips 保留在 All Spaces 行下方**，不合并（语义不同：Space 是目录，Plugin 是渲染器入口）
 
-**兜底**：如果 `spaces` 为空或 `recent` 全是根级文件，回退到当前的扁平时间线（不分组）。
+**兜底规则**：`groupBySpace()` 返回空数组时（所有文件都在根级，或 spaces 为空），整个 section 回退到当前的扁平时间线，不分组。
 
 #### 样式设计
 
