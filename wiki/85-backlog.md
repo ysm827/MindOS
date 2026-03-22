@@ -53,6 +53,7 @@
 - [x] **I3.5：`mindos uninstall` 命令** — 一条命令干净卸载（停进程 + 卸 daemon + 删配置 + 删知识库三重保护 + npm uninstall）— v0.5.15
 - [x] **I12：Activity Bar + Panel 布局重构** — 左侧新增 48px Rail（Logo + Files/Search/AI + Settings/Sync），Sidebar 改为可切换 Panel。AI 对话/搜索/设置从 Modal 变为 Panel，不遮盖内容。移动端不变。[spec](./specs/spec-activity-bar-layout.md)
 - [x] **Agent Panel 统一体验重构 (Phase 1-3)** — 抽取 snippet 生成为 shared util，创建 McpProvider 共享数据层，AgentsPanel 展开显示 config snippet + Skills toggle 区，McpTab 消费共享 context 不再重复 fetch。[spec](./specs/spec-agent-panel-unify.md)
+- [x] **UX Review 修复 Batch 1-4** — OnboardingView error state + AskFab 暗色模式 + 72→6 inline style 清理 + aria-live/aria-hidden。[spec](./specs/spec-ux-review-fixes-batch.md) [review](../review/ux-design-review-2026-03-22.md)
 
 ### 🟡 中优先
 
