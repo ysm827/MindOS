@@ -57,6 +57,9 @@
 - [x] **架构 Review 修复** — mcp-snippets 单元测试 (11 cases) + RightAskPanel ErrorBoundary。[spec](./specs/spec-arch-review-fixes.md)
 - [x] **Quick Fixes** — PluginsPanel `role="link"` 键盘可访问 + N+1 fetch 改为单次 `/api/files` + `--amber-dim` 对比度 0.12→0.18 + modal 遮罩 `.dark` 变体
 - [x] **Settings → Restart Walkthrough** — General tab 新增"重新开始引导"按钮，PATCH `/api/setup` 重置 walkthroughStep + walkthroughDismissed
+- [x] **SidebarLayout 拆 hooks** — 479→314 行，抽取 `useLeftPanel` (81 行) + `useAskPanel` (117 行)，15+ state 分离为 2 个独立 hook
+- [x] **McpSkillsSection 拆子组件** — 595→359 行，抽取 `McpSkillRow` (145 行) + `McpSkillCreateForm` (178 行)
+- [x] **补测试** — walkthrough-steps (4 cases) + explore-use-cases (7 cases) + i18n-new-keys (10 cases)，总计 50 文件 598 测试
 
 ### 🟡 中优先
 
@@ -69,12 +72,16 @@
 
 ### 🟢 低优先（等需求驱动）
 
-- [x] **I9：Onboarding 端口分离** — Setup wizard 用临时端口（9100+），完成后按配置端口重启 — v0.5.4
-- [x] **I10：目录视图卡片密度优化** — 文件夹 `p-3` + 22px 图标（紧凑），文件 `p-4` + 28px 图标（保持信息量）。Breadcrumb 增加 FileTypeIcon。FindInPage 阅读模式搜索
+- [ ] **Toast/Snackbar 系统** — Copy 反馈各组件自管 `setCopied`（5+ 处重复）。引入 Sonner 或自建全局 Toast provider，统一操作反馈出口。**触发条件**：需要 undo 操作（如删除文件撤销）或批量操作结果反馈时。工作量 ~1-2h
+- [ ] **⌘K Command Palette 扩展** — 当前只搜文件。可扩展为：快捷操作（Toggle dark mode / Restart walkthrough / Go to /explore）+ Skill 开关 + 最近 AI 对话。**触发条件**：用户反馈"操作路径长"或"找不到功能"时。工作量 ~3-4h
+- [ ] **Zustand/Jotai 替代 Context 嵌套** — 当前 4 层 Provider（Locale → Walkthrough → Mcp → SidebarLayout），Context 变化导致子树 re-render。已用 `useMemo` 缓解，当前无感知性能问题。**触发条件**：profiler 显示 Context re-render 是瓶颈，或 Provider 层数超过 6 层时。工作量 ~4-6h
+- [ ] **i18n 按模块拆分** — `i18n-en.ts` 712 行 / `i18n-zh.ts` 737 行，全部翻译在单一 `as const` 对象中。类型系统保证 key 一致性。**触发条件**：加第 3 种语言，或单文件超过 1000 行时。工作量 ~2-3h
 - [ ] **I11：局域网自动发现 (mDNS/Bonjour)** — 手机/平板自动连。P2 桌面端阶段再做更合适，[详情](./63-stage-mdns.md)
 
 ### 已完成 / 不做
 
+- [x] **I9：Onboarding 端口分离** — Setup wizard 用临时端口（9100+），完成后按配置端口重启 — v0.5.4
+- [x] **I10：目录视图卡片密度优化** — 文件夹 `p-3` + 22px 图标（紧凑），文件 `p-4` + 28px 图标（保持信息量）。Breadcrumb 增加 FileTypeIcon。FindInPage 阅读模式搜索
 - [x] **增加更多 Agent 支持** — 16 个 MCP Agent + `npx skills` 支持 40 个
 - [x] **GUI RestartBlock 健康检查** — v0.5.2
 - [x] **Onboarding 非空目录模板选择** — v0.5.9
