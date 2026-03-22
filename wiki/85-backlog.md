@@ -47,6 +47,8 @@
 
 ### 🔴 高优先（下一批做）
 
+- [ ] **Electron Desktop App（Phase 1）** — 本地+远程双模式桌面端，含共享连接 SDK、服务端 CORS 增强、系统托盘/快捷键/自动更新。[spec](./specs/spec-electron-desktop-app.md)
+- [ ] **Capacitor 移动端（Phase 2）** — iOS/Android 原生壳，复用 Phase 1 连接 SDK。[spec](./specs/spec-capacitor-mobile-app.md)
 - [x] **I1：CLI `mindos status` 命令** — 已有 `mindos doctor` 覆盖此需求
 - [x] **I2：登录页产品标语** — 已实现（`loginT.tagline` + `loginT.subtitle`）
 - [x] **I3：API Key 连通性验证** — Settings AI Tab 已有 Test 按钮（`/api/settings/test-key`），支持 Anthropic/OpenAI，返回延迟和错误分类
