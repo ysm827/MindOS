@@ -1,5 +1,21 @@
 ## PENDING
 
+可以的，先加上这个：  把 "连接配置"        
+  标准化——所有非桌面客户端都需要：           
+                                             
+  1. 服务器地址（http://192.168.1.100:3456） 
+  2. Auth Token（已有）                      
+  3. 连接测试（调 /api/health）              
+                                             
+  这个流程在你的 MCP Settings                
+  里已经有雏形了（Remote 模式 +              
+  Token），只需要在移动端做一个独立的        
+  "首次连接" 页面。                          
+
+● Explore(Explore auth and conne
+
+文件夹换成workspace的概念？
+
 搜索加类型筛选
 
 Setup install skill的时候 Skill install failed
