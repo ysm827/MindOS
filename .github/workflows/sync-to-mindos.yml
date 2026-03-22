@@ -177,14 +177,15 @@ jobs:
               echo "Tag ${TAG} already exists on public repo, skipping."
             fi
 
-            # Trigger publish workflow via GitHub API (tags pushed by PAT don't
-            # auto-trigger workflows in the same repo — GitHub anti-loop policy)
+            # Trigger publish workflow via GitHub API.
+            # Use ref=main (where the workflow file lives), pass tag as input.
+            # Tags pushed by PAT don't auto-trigger workflows (GitHub anti-loop).
             echo "Triggering npm publish workflow on GeminiLight/MindOS..."
-            curl -s -X POST \
+            curl -sf -X POST \
               -H "Authorization: token ${PAT}" \
               -H "Accept: application/vnd.github.v3+json" \
               "https://api.github.com/repos/GeminiLight/MindOS/actions/workflows/publish-npm.yml/dispatches" \
-              -d "{\"ref\":\"${TAG}\"}" \
+              -d "{\"ref\":\"main\",\"inputs\":{\"tag\":\"${TAG}\"}}" \
               && echo "✅ Publish workflow dispatched for ${TAG}" \
-              || echo "⚠️ Failed to dispatch publish workflow"
+              || echo "⚠️ Failed to dispatch publish workflow — check PAT permissions"
           fi
