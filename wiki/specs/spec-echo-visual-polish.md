@@ -28,6 +28,7 @@ EchoPanel
 - **表单区**（daily / growth）：与事实层 **同级卡片** 节奏；label 采用小号大写 tracking（与设置卡一致）；主按钮 `rounded-lg`，次按钮 `border` + hover `amber-dim`。
 - **见解折叠**：卡片化 `rounded-xl`；头部区与内容区分隔更清晰；动效 **≤200ms**（仅 chevron / hover 色）。
 - **EchoPanel**：`PanelNavRow` 在 `active && href` 时增加 **左侧 2px 圆角琥珀条**（与 ActivityBar 一致），hint 行垂直节奏微调。
+- **主区 segment 条**：hero 下 **pill 横向导航**（`EchoSegmentNav`），与 `ECHO_SEGMENT_HREF` 单源同步侧栏链接；面包屑仅父级，**不与 h1 重复当前小节名**。
 - **设计系统**：色与环全部 `var(--amber)` / `ring-ring`；禁止新 hex；focus 一律 `focus-visible:`。
 
 ## 影响范围
