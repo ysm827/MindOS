@@ -2,6 +2,8 @@
 
 > **定位**：Phase 1。包含本地模式 + 远程模式 + 连接基础设施。独立可交付。
 
+> **相关扩展**：[spec-desktop-bundled-mindos.md](./spec-desktop-bundled-mindos.md)（安装包内置已构建 MindOS、与 npm 全局包版本择优及配置策略）。
+
 ## 目标
 
 将 MindOS 封装为 Electron 桌面应用，支持两种模式：
@@ -84,12 +86,9 @@
 app.whenReady()
   │
   ├─ 1. 读取 ~/.mindos/config.json
-  │     └─ 不存在 → 首次启动引导
   │
-  ├─ 2. 判断运行模式
-  │     ├─ config.desktopMode = 'local' → 本地模式流程
-  │     ├─ config.desktopMode = 'remote' → 远程模式流程
-  │     └─ 无 desktopMode → 首次选择
+  ├─ 2. 首次无 config 文件（且尚无 desktopMode）
+  │     └─ 先 showModeSelectWindow()，用户选定后再写入 desktopMode 并显示 splash，**不**默认 local
   │         ┌─────────────────────────────────────┐
   │         │  How would you like to use MindOS?   │
   │         │                                      │
@@ -99,6 +98,13 @@ app.whenReady()
   │         │  🌐 Remote                           │
   │         │     Connect to a MindOS server       │
   │         └─────────────────────────────────────┘
+  │     └─ 关窗取消 → 退出应用
+  │
+  ├─ 3. 确定运行模式（首启为步骤 2 所选；否则读取 config.desktopMode，缺省 local）
+  │     ├─ 'local' → 本地模式流程
+  │     └─ 'remote' → 远程模式流程
+  │
+  ├─ 4. 显示 splash → bootApp()（按模式启动服务或弹出远程连接窗）
   │
   ├─ [本地模式]
   │   ├─ 3a. 检测 CLI 冲突（mindos.pid）
