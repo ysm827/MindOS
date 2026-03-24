@@ -26,10 +26,8 @@ SidebarLayout (McpProvider)
        │    ├─ Skills → scroll 到面板内 Skills 区块
        │    ├─ Usage → <Link href="/help">
        │    └─ 一项「即将推出」（占位全局能力，无 API）
-       └─ AgentsPanelAgentRow（子组件）
-            ├─ 读取 agent + mcp.status
-            ├─ 展开区: transport（stdio/http）+ generateSnippet + copy
-            └─ install 按钮 stopPropagation，避免误触展开
+       └─ 列表行 AgentsPanelAgentListRow：点击进入详情
+       └─ AgentsPanelAgentDetail：整页内容区（顶栏返回 + transport + snippet + copy）；Detected 含 Install
 ```
 
 无新增 API；与设置页仍通过既有 `CustomEvent` 打开 MCP 标签。
@@ -41,13 +39,13 @@ SidebarLayout (McpProvider)
 
 2. **AgentsPanel 布局**  
    - `PanelHeader` 下、`overflow-y-auto` 内顶部：`py-2` 区块放置若干 `PanelNavRow`。  
-   - Overview 徽章显示当前 **已连接** 数量（与 Discover Use Cases 数字徽章同理）。  
-   - 分隔线后接现有 MCP 状态卡片（`id`/`ref` 供 Overview 滚动）。  
-   - Skills 区块加 `id`/`ref` 供 Skills 行滚动。  
+   - Overview 徽章显示当前 **已连接** 数量。Hub 仅 **三行**：Overview、**MCP**（打开设置）、**Skills**（滚到面板内 Skills），不含「使用与帮助」与「智能体洞察」占位。  
+   - 分隔线后接 MCP 状态卡片与列表。  
+   - Skills 区块 `ref` 供 Skills 行滚动。  
    - 底部「高级配置」保留。
 
-3. **可展开 Agent 行**  
-   新建 `AgentsPanelAgentRow.tsx`：折叠行展示状态点、名称、transport 标签、Detected 时 Install；展开后展示配置路径、`stdio`/`http` 切换、`generateSnippet` 预览（display）、复制真实 snippet。`notFound` 展开仅展示简短说明文案（i18n），不生成无效 snippet。
+3. **Agent 详情为面板内「内容页」**  
+   `AgentsPanelAgentListRow`：行内 Chevron + 状态点 + 名称；点击整行进入详情。`AgentsPanelAgentDetail`：顶栏「返回」+ 名称，正文为配置路径、transport、`generateSnippet` 预览与复制；Detected 在正文顶部保留 Install；`notFound` 仅说明文案。
 
 4. **设计系统**  
    新增交互控件使用 `focus-visible:ring-2 focus-visible:ring-ring`；沿用面板既有色板（与现有 Agents 卡片一致），**不引入硬编码 hex**（保持与当前文件一致的语义类名）。
@@ -56,11 +54,11 @@ SidebarLayout (McpProvider)
    复用 `generateSnippet`、`copyToClipboard`、`Toggle`（Skills）、`PanelHeader`；不引入新 UI 库。
 
 6. **文件规模**  
-   `AgentsPanel.tsx` 编排 + 空/载两种 MCP 状态条（略重复，可后续抽组件）；Hub 行 → `AgentsPanelHubNav.tsx`；分组列表 → `AgentsPanelAgentGroups.tsx`；展开卡片 → `AgentsPanelAgentRow.tsx`。核心逻辑文件均 <200 行、嵌套 ≤3 层。
+   `AgentsPanel.tsx` 编排；Hub → `AgentsPanelHubNav.tsx`；分组列表 → `AgentsPanelAgentGroups.tsx`；列表行 → `AgentsPanelAgentListRow.tsx`；详情页 → `AgentsPanelAgentDetail.tsx`。
 
 ## 影响范围
 
-- **变更文件**：`PanelNavRow.tsx`（新）、`AgentsPanelHubNav.tsx`（新）、`AgentsPanelAgentGroups.tsx`（新）、`AgentsPanelAgentRow.tsx`（新）、`DiscoverPanel.tsx`、`AgentsPanel.tsx`、`i18n-en.ts`、`i18n-zh.ts`、`vitest.config.ts`（include `*.test.tsx`）、`__tests__/panels/agents-panel-hub.test.tsx` 与 `__tests__/lib/i18n-new-keys.test.ts`、本 spec、`wiki/85-backlog.md`。
+- **变更文件**：`PanelNavRow.tsx`、`AgentsPanelHubNav.tsx`、`AgentsPanelAgentGroups.tsx`、`AgentsPanelAgentListRow.tsx`、`AgentsPanelAgentDetail.tsx`、`DiscoverPanel.tsx`、`AgentsPanel.tsx`、`i18n-en.ts`、`i18n-zh.ts`、相关测试、本 spec。
 - **不受影响**：`McpTab`、API 路由、`ActivityBar` `PanelId`（仍为 `agents`）。
 - **破坏性**：无；仅 UI 结构与文案扩展。
 
@@ -79,11 +77,10 @@ SidebarLayout (McpProvider)
 
 ## 验收标准
 
-- [ ] Agents 面板顶部存在与 Discover 同风格的 **≥4** 行导航（Overview、MCP、Skills、Usage）+ **≥1** 行「即将推出」。
-- [ ] 点击 Overview / Skills 可将对应区块滚入可视区域（平滑滚动）。
-- [ ] 点击 MCP 打开设置 **MCP & Skills** 标签（与底部「高级配置」一致）。
-- [ ] Usage 指向 `/help`。
-- [ ] 已连接/已检测 Agent 可展开，展开后可复制配置；Install 不触发展开切换。
+- [ ] Hub 为三行：Overview、MCP、Skills（MCP 打开设置；Skills 滚到面板内 Skills 区）。
+- [ ] Overview / Skills 滚动仍可用。
+- [ ] 点击某 Agent 进入面板内详情页（非行内折叠）；返回回到列表。
+- [ ] 详情页可复制配置；Detected 的 Install 仍在详情内可用。
 - [ ] `DiscoverPanel` 视觉与改前一致（共享 `PanelNavRow`）。
 - [ ] `npx vitest run` 全部通过；新增测试覆盖 i18n 键与静态渲染关键文案。
 
@@ -91,7 +88,7 @@ SidebarLayout (McpProvider)
 
 - **Library-First**：snippet 与剪贴板用现有模块；✓  
 - **Clean Architecture**：无业务规则下沉到 UI 外新层；事件与滚动纯表现层；✓  
-- **命名**：`PanelNavRow`、`AgentsPanelAgentRow`，避免 `utils`；✓  
+- **命名**：`PanelNavRow`、`AgentsPanelAgentListRow`、`AgentsPanelAgentDetail`，避免 `utils`；✓  
 - **复杂度**：拆子组件后单文件 <200 行；✓  
 
 ## 自我 review
