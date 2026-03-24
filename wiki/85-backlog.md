@@ -79,6 +79,7 @@
 
 ### 🟡 中优先
 
+- [x] **MCP `mindos_create_space` + `mindos_rename_space`** — App：`createSpaceFilesystem`、`renameSpaceDirectory`、`/api/file` op；MCP 仅转发。见 `wiki/specs/spec-mcp-space-tools.md`
 - [ ] **I4：CLI per-command `--help`** — `mindos start --help` 显示子命令选项。与 I1 一起做，CLI 专业度提升
 - [x] **I5：首次使用引导流程** — GuideCard 替换 WelcomeBanner，3 任务卡片（探索 KB / AI 对话 / 配置同步）+ 交互式完成追踪 + C2→C4 渐进推荐 + 后端 guideState 持久化 + Settings 恢复入口。[spec](./specs/spec-first-use-guide.md)
 - [x] **I13：Space 体验增强** — 新建一级目录自动生成 INSTRUCTION.md + README.md（Agent bootstrap 不再降级）+ 首页 "Recently Active" 按 Space 分组展示 + "All Spaces" 导航行。[spec](./specs/spec-space-auto-scaffolding.md)
