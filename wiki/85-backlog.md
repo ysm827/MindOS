@@ -76,6 +76,7 @@
 - [x] **补测试** — walkthrough-steps (4 cases) + explore-use-cases (7 cases) + i18n-new-keys (10 cases)，总计 50 文件 598 测试
 - [x] **I15：Discover 探索面板** — Activity Bar 新增 Discover 入口（Compass 图标），面板含使用案例（9 个，点击触发 Ask AI）+ 插件市场/技能市场占位。[spec](./specs/spec-discover-panel.md)
 - [x] **I16：Agents 面板 Hub 导航** — 顶部 Discover 同款大行导航（Overview / MCP & Skills / Skills / Usage & help / Agent insights 即将推出）+ 分隔线下列表；智能体行可展开查看路径、stdio|http、复制配置。[spec](./specs/spec-agents-panel-hub-nav.md)
+- [x] **I18：Agents Content-First Dashboard（P1）** — Sidebar 点击 Agents 进入 `/agents` 内容页；新增 Overview/MCP/Skills 三段视图与 `/agents/[agentKey]` 详情页；ActivityBar 的 Agents 按钮改为内容导航并保留旧右侧 detail 兼容期；新增 agents content i18n 与测试。[spec](./specs/spec-agents-content-first-dashboard.md)
 
 ### 🟡 中优先
 
