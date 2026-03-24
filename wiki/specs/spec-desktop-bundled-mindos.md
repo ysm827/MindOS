@@ -258,7 +258,8 @@
 |------|-----|
 | 已完成 | `pickMindOsRuntime`（纯函数）、`analyzeMindOsLayout`、`getDefaultBundledMindOsDirectory`（打包路径 `resources/mindos-runtime`；开发用 `MINDOS_DEV_BUNDLED_ROOT`）、`resolveLocalMindOsProjectRoot`、`startLocalMode` 接入；`config`：`mindosRuntimePolicy`、`mindosRuntimeRoot`、`MINDOS_RUNTIME_ROOT`、`mindosRuntimeStrictCompat`、`minMindOsVersion`、`maxTestedMindOsVersion`；Main 日志 `[MindOS] runtime pick …` |
 | 已完成 | Desktop `npm test`：`mindos-runtime-pick` + `mindos-runtime-layout` 单测（`semver` 择优与布局探测） |
-| 未做 | `extraResources` 打入真实 `mindos-runtime` 产物、三平台安装包冒烟、关于页双版本、托盘重启重新 resolve |
+| 进行中 | `electron-builder` 已配置 `extraResources` → `mindos-runtime`；`desktop/scripts/prepare-mindos-runtime.mjs` + `npm run prepare-mindos-runtime` / `dist:with-bundled`；详见 `desktop/resources/mindos-runtime/README.md` |
+| 未做 | CI 在发版流程中自动执行 prepare + 三平台安装包冒烟、关于页双版本、托盘重启重新 resolve |
 
 ## 验收标准
 
