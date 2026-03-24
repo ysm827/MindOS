@@ -1,5 +1,15 @@
 ## PENDING
 
+
+1. 合并插件到主程序
+2. Diff
+
+Agents 面板开发
+
+- Agents SideBar，点击每个 Agent，应该直接弹出Content页，而不是右侧边栏
+- 允许自定义 Agent 
+
+
 1. Desktop APP 首次打开直接默认了本地模式，而不是让用户选择本地还是remote。你看看有没有这个问题，有的话fix
 2. Desktop APP 能否内置一个build固定版本的mindos，如果用户没安装也能直接打开了；另外如果用户更新了npm mindos 发现版本更高，则回到更高版本build的页面，你觉得合理吗？
 

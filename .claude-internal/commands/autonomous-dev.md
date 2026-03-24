@@ -56,11 +56,15 @@
 ## 阶段 5：验证
 
 14. 跑全量测试（`npx vitest run`），必须全部通过
-15. 如果改动涉及 UI → 用 Playwright 截图关键页面，保存到 `/tmp/`
 
 ## 阶段 6：交付
 
 16. 更新文档：`wiki/`（架构变更、新坑记入 `80-known-pitfalls.md`）、`85-backlog.md`（打勾）
+
+## 阶段 7：提交
+
+主动询问用户是否提交，如果用户同意便：
+
 17. commit + push（遵循 CLAUDE.md Git 流程，Conventional Commits）
 18. 如果涉及 release → 执行冒烟验证（临时目录 `npx @geminilight/mindos@latest --version`）
 

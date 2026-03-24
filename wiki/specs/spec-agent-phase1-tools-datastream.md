@@ -10,7 +10,7 @@ MindOS Agent 当前仅 9 个工具，缺少 delete/rename/move/backlinks/history
 
 | 决策 | 选项 | 结论 |
 |------|------|------|
-| 新增工具范围 | 全部 20 个 MCP 工具 vs 仅补缺 7 个 | **7 个**。`read_lines`/`insert_lines`/`update_lines` 脆弱（行号易错位），`bootstrap` 请求时自动加载 |
+| 新增工具范围 | 与 MCP 全量对齐 vs 仅补缺少量工具 | **少量补缺**。`read_lines`/`insert_lines`/`update_lines` 脆弱（行号易错位），`bootstrap` 请求时自动加载 |
 | 流式协议 | `toTextStreamResponse()` vs `toUIMessageStreamResponse()` | **UIMessageStream**。AI SDK v6 原生支持，包含结构化 tool call 信息 |
 | 前端消费方式 | `@ai-sdk/react` useChat vs 手动解析 SSE | **手动解析**。项目未引入 `@ai-sdk/react`（0 import），手动消费控制力更强 |
 | 消息类型扩展 | 新建 UIMessage type vs 扩展现有 Message | **扩展 Message**。增加 `parts?: MessagePart[]`，向下兼容 |

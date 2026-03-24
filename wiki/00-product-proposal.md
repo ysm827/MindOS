@@ -86,7 +86,7 @@
 
 ## 核心功能 (Features)
 
-- **MCP Server (20+ 工具)** — stdio + HTTP 双传输，全阵容 Agent 兼容（OpenClaw, Claude Code, Cursor 等）
+- **MCP Server** — stdio + HTTP 双传输，全阵容 Agent 兼容（OpenClaw, Claude Code, Cursor 等）；工具与 App API 对齐
 - **人机协同 GUI** — 双模式编辑器（富文本 + Markdown 源码）、AI 对话、全局搜索、Wiki Graph
 - **MindOS Skills** — 结构感知路由，对话经验可沉淀为可复用 Skill
 - **11 个渲染器插件** — TODO Board, CSV Views, Wiki Graph, Timeline, Agent Inspector 等

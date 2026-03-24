@@ -166,7 +166,7 @@ GitHub：https://github.com/GeminiLight/MindOS
 安装：
 npm i -g @geminilight/mindos && mindos onboard
 
-技术栈 Next.js 16 + TipTap + MCP SDK，stdio 和 HTTP 两种传输，20 多个 MCP 工具，11 个渲染器（TODO Board、CSV Views、Wiki Graph 这些）。翻 GitHub 能看到更多。
+技术栈 Next.js 16 + TipTap + MCP SDK，stdio 和 HTTP 两种传输，完整 MCP 工具集，11 个渲染器（TODO Board、CSV Views、Wiki Graph 这些）。翻 GitHub 能看到更多。
 
 ---
 

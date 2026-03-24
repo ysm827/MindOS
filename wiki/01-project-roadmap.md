@@ -24,7 +24,7 @@ v0.1 (P0 ✅)              v0.2 (P1 ✅)              v0.3-0.4 (P1 ✅)         
 
 > 从零构建人机协同知识平台：浏览器可用、Agent 可接入、知识可结构化。
 
-**已交付：** Next.js 16 前端（双模式编辑器 + AI 对话 + 全局搜索 + Wiki Graph）、MCP Server（20+ 工具，stdio + HTTP 双传输，Bearer Token 认证）、11 个渲染器插件、MindOS Skills（EN + ZH）、CI/CD + Landing Page。
+**已交付：** Next.js 16 前端（双模式编辑器 + AI 对话 + 全局搜索 + Wiki Graph）、MCP Server（stdio + HTTP 双传输，Bearer Token 认证；工具与 App API 对齐）、11 个渲染器插件、MindOS Skills（EN + ZH）、CI/CD + Landing Page。
 
 ---
 
@@ -117,7 +117,7 @@ v0.1 (P0 ✅)              v0.2 (P1 ✅)              v0.3-0.4 (P1 ✅)         
 | 功能 | 状态 | 阶段 | 详情 |
 |------|------|------|------|
 | Next.js 16 前端 | ✅ | v0.1 | 双模式编辑、搜索、AI 对话、图谱 |
-| MCP Server (20+ 工具) | ✅ | v0.1 | stdio + HTTP, Bearer Token |
+| MCP Server | ✅ | v0.1 | stdio + HTTP, Bearer Token |
 | 11 个渲染器插件 | ✅ | v0.1 | [详情](./60-stage-plugins.md) |
 | 插件架构 (manifest + codegen + lazy) | ✅ | v0.4 | [详情](./61-plugin-architecture.md) |
 | CLI 模块化 (13 个 lib) | ✅ | v0.2 | onboard/start/open/sync/mcp/gateway/token |
