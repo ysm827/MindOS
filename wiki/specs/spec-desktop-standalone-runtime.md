@@ -53,10 +53,15 @@ electron-builder extraResources
 | 无 `app/.next/static`（极少见） | 跳过 static 同步；若运行缺资源再排查 |
 | 无 `app/public` | 跳过 public 同步 |
 | `materialize` 在 **source** 上写 standalone | 会修改开发者工作区 `app/.next/standalone`；为幂等可接受；CI 应在干净 build 后跑 prepare |
-| `serverExternalPackages` trace 遗漏 | 运行时 `MODULE_NOT_FOUND`；回退为补 `outputFileTracing` 或调整 external；验收以 `next build` + 本地 `node .../server.js` 冒烟为准 |
+| `serverExternalPackages` trace 遗漏 | 运行时 `MODULE_NOT_FOUND`；回退为补 `outputFileTracing` 或调整 external |
 | 交叉架构构建 | Next native 依赖需在与目标一致的环境 build；与现状一致，不单列新坑 |
+| **MCP 打包体积** | 整棵拷贝 `mcp/node_modules` 含 dev 依赖；prepare 后对目标 `mcp/` 执行 `npm ci --omit=dev`（需网络）；`tsx` 已改为 **dependencies**（运行 `src/index.ts` 必需，不可被 omit） |
+| **Next 监听地址** | 部分环境下 Next 默认绑定 **机器 hostname**，`127.0.0.1` 健康检查超时；Desktop / CLI 在未设置 `HOSTNAME` 时默认 `127.0.0.1` |
 
-**Mitigation**：Desktop `vitest` 覆盖 `materialize` / `copyApp` 的文件系统行为；根目录 `npm run build` 在实现后必须通过。
+**Mitigation**：
+
+- 仓库根 `npm run verify:standalone`：`materialize` + 起 `standalone/server.js` + `GET /api/health`（`scripts/verify-standalone.mjs`）；`scripts/release.sh` 在 `next build` 后自动执行。
+- Desktop `vitest` 覆盖 `materialize` / `copyApp`；prepare 可选 `SKIP_MCP_NPM_CI=1` 跳过 mcp 的 `npm ci`（离线场景）。
 
 ## 验收标准
 
@@ -66,3 +71,4 @@ electron-builder extraResources
 - [ ] `resources/mindos-runtime/app/.next/standalone/.next/static` 与 `.../public` 在 build 后存在（与 Next 要求一致）。
 - [ ] `cd desktop && npm test` 全部通过（含新建单测）。
 - [ ] 根目录 `cd app && npx vitest run` 通过（Next 配置不破坏现有测试）。
+- [ ] 根目录 `npm run verify:standalone` 在 `next build` 之后通过。
