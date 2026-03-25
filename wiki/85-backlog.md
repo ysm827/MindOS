@@ -86,6 +86,7 @@
 - [x] **I25：Agent Detail 全量 Skill/MCP 管理工作台（P2.1）** — `/agents/[agentKey]` 展示全部 skills（含 disabled）并支持搜索/来源过滤/启停；user skill 支持就地 read+edit+save；新增 MCP 管理区（scope/transport 应用、复制 snippet、刷新状态）实现“可见即可管”。[spec](./specs/spec-agent-detail-manage-all-skills-mcp.md)
 - [x] **I26：Agent 原生已安装 Skill/MCP 扫描可视化（P2.2）** — `/api/mcp/agents` 新增按 agent 隐藏目录/配置文件扫描：`configuredMcpServers`、`installedSkillNames` 与来源路径；`/agents/[agentKey]` 展示真实安装列表与空态，避免仅显示全局 catalog 造成“信息量不足”。[spec](./specs/spec-agents-agent-native-installed-scan-visualization.md)
 - [x] **I27：Agents 全页面 UI/UX Pro Max 刷新（P2.3）** — `/agents` 全部核心页新增 Workspace Pulse、MCP/Skills 筛选摘要与 Agent Detail 健康条，强化“摘要→操作→明细”层级，降低多 Agent 管理认知负担。[spec](./specs/spec-agents-ui-ux-pro-max-refresh.md)
+- [x] **I29：跨 Agent MCP/Skill 全量聚合与视觉升级（P2.4）** — 全局 MCP 页新增"全部已配置 MCP servers（跨 Agent）"chip 矩阵；Skills 页新增"全部已安装 skills（跨 Agent）"chip 矩阵；配置可见性/注册表/原生安装列表从纯文本升级为 dot indicator + chip 视觉；Agent Detail 的 native scan 从 bullet list 升级为可扫 chip 布局。
 - [x] **Ask 输入不中断（执行中可草拟）** — 修复 Agent 执行期间输入框被禁用：允许边执行边输入，提交仍串行；新增“可先输入下一步”提示与 jsdom 回归测试。测试：`app/__tests__/ask/ask-content-input-during-run.test.tsx`
 
 ### 🟡 中优先
