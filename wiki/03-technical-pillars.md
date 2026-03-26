@@ -117,6 +117,82 @@ Pillar 1 (群体调度)  ──→  Pillar 2 (经验编译)  ──→  Pillar 3
 
 ---
 
+## 已实现架构组件 (2026-03)
+
+### Activity Bar + Panel 布局
+- **状态：** ✅ 已实现
+- **说明：** 类 VS Code 的左侧 48px Activity Bar + 可切换 Panel 布局
+- **组件：** `components/ActivityBar.tsx`, `components/Panel.tsx`
+
+### Echo 回响系统
+- **状态：** ✅ 已实现
+- **说明：** 智能洞察系统，分析用户交互生成个性化内容
+- **类型：** `with-you`, `history`, `unfinished`, `related`, `growth`
+
+### Agents 智能体管理
+- **状态：** ✅ 已实现
+- **说明：** 多异构 Agent 的发现、配置、监控
+- **特性：** Agent Overview / MCP / Skills / Usage 四页签管理
+
+### Search Index (倒排索引)
+- **状态：** ✅ 已实现
+- **说明：** 内存倒排索引，懒加载 + 增量更新
+- **组件：** `lib/core/search-index.ts`
+
+### Changes 变更追踪
+- **状态：** ✅ 已实现
+- **说明：** 实时追踪文件变更，支持行级 diff 审查
+- **组件：** `components/changes/`, `lib/core/content-changes.ts`
+
+### 多空间支持 (Multi-Spaces)
+- **状态：** ✅ 已实现
+- **说明：** 支持多知识库空间隔离
+- **特性：** 空间创建向导、空间切换
+
+---
+
+## 已实现架构组件 (2026-03)
+
+以下架构组件已在 P1/P2 阶段完成实现：
+
+### Activity Bar + Panel 布局
+- **状态：** ✅ 已实现
+- **说明：** 类 VS Code 的左侧 48px Activity Bar + 可切换 Panel 布局
+- **核心代码：** `components/ActivityBar.tsx`, `components/Panel.tsx`, `components/SidebarLayout.tsx`
+- **特性：** Panel 宽度可拖拽调整 (200-400px)，按钮点击切换不同内容面板
+
+### Echo 回响系统
+- **状态：** ✅ 已实现
+- **说明：** 智能洞察系统，分析用户与知识库的交互生成个性化内容
+- **核心代码：** `app/echo/`, `components/echo/`, `lib/echo-*.ts`
+- **回响类型：** `with-you` (与你有关)、`history` (历史的你)、`unfinished` (未完待续)、`related` (相关推荐)、`growth` (心向生长)
+
+### Agents 智能体管理
+- **状态：** ✅ 已实现
+- **说明：** 多异构 Agent 的发现、配置、监控一体化管理
+- **核心代码：** `app/agents/`, `components/agents/`, `lib/mcp-agents.ts`
+- **特性：** Agent Overview / MCP / Skills / Usage 四页签管理，支持系统扫描和手动安装
+
+### Search Index (倒排索引)
+- **状态：** ✅ 已实现
+- **说明：** 内存倒排索引，大幅提升搜索性能
+- **核心代码：** `lib/core/search-index.ts`
+- **特性：** 懒加载 (首次搜索构建)、增量更新、候选裁剪、双搜索策略 (后端字面量/前端 Fuse.js)
+
+### Changes 变更追踪
+- **状态：** ✅ 已实现
+- **说明：** 实时追踪文件变更，支持变更审查
+- **核心代码：** `app/changes/`, `components/changes/`, `lib/core/content-changes.ts`
+- **特性：** 行级 diff 对比、一键接受/拒绝、批量操作
+
+### 多空间支持 (Multi-Spaces)
+- **状态：** ✅ 已实现
+- **说明：** 支持多知识库空间隔离管理
+- **核心代码：** `lib/core/create-space.ts`, `lib/core/list-spaces.ts`, `components/CreateSpaceModal.tsx`
+- **特性：** 空间创建向导、空间切换、独立配置
+
+---
+
 ## 与竞品的差异化
 
 | 能力 | Obsidian + AI | Notion AI | Mem.ai | Khoj | **MindOS** |
@@ -124,6 +200,10 @@ Pillar 1 (群体调度)  ──→  Pillar 2 (经验编译)  ──→  Pillar 3
 | 多 Agent 统一记忆 | 插件拼装 | 否 | API 接入，非 MCP 原生 | 单入口 | **MCP 协议原生支持** ✅ |
 | 本地优先 | 是 | 否 | 否 | 是 | **是** ✅ |
 | 开源 | 核心闭源 | 否 | 否 | 是 | **是** ✅ |
+| Activity Bar 布局 | 否 | 否 | 否 | 否 | **✅ 已实现** |
+| Echo 智能洞察 | 否 | 否 | 部分 | 否 | **✅ 已实现** |
+| Agents 管理 | 否 | 否 | 否 | 否 | **✅ 已实现** |
+| Changes 变更追踪 | 否 | 历史记录 | 否 | 否 | **✅ 已实现** |
 | 知识可执行 | 否 | 否 | 否 | 否 | Skills（经验自动回流）🔬 |
 | 记忆代谢 | 手动整理 | 否 | 自动但黑箱 | 部分（自动索引） | 自动 + 透明可审计 🔬 |
 | 多 Agent 治理 | 否 | 否 | 否 | 否 | ACL + 上下文路由 🔬 |
