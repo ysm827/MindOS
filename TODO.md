@@ -1,5 +1,7 @@
 ## PENDING
 
+一键删除 examples
+
 支持一键整理至空间
 
 Agent 对比视图

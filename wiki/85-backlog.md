@@ -17,6 +17,7 @@
 - [x] **AIP-001 统一错误处理**：`MindOSError` 类 + 12 个 `ErrorCodes` + `apiError()`。core/ 13 处 throw 已迁移，API 统一返回 `{ ok, error: { code, message } }` 格式
 - [x] **AIP-002 性能监控面板**：`MetricsCollector` 单例 + `GET /api/monitoring` + Settings Monitoring tab（系统/应用/知识库/MCP 指标，5s 轮询）
 - [x] **AIP-003 增量搜索索引**：倒排索引 + CJK bigram 分词，搜索候选集缩减后精确匹配。索引与 invalidateCache 联动自动失效
+- [x] **Decouple Pi Naming**：`~/.mindos/pi-sessions/` → `sessions/`；skill 扫描仅保留 3 目录（移除 `.pi/skills/` 和 `~/.pi/agent/skills/`）；mcporter CLI 调用 stub 化，MindOS MCP 内置。[spec](./specs/spec-decouple-pi-naming.md)
 
 <details><summary>已完成 ✅ (18 项)</summary>
 
