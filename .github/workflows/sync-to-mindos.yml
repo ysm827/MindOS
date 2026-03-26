@@ -32,9 +32,10 @@ on:
       - '.env.local.example'
       - 'package.json'
       - 'package-lock.json'
-      # Internal wiki trees — do not sync to public mindos repo.
+      # Internal/private wiki content — do not sync to public mindos repo.
       # Use negative patterns here because GitHub Actions does not allow
       # combining `paths` and `paths-ignore` in the same push trigger.
+      - '!wiki/0*.md'
       - '!wiki/specs/**'
       - '!wiki/discussions/**'
 
@@ -102,14 +103,11 @@ jobs:
             esac
             cp "$wf" /tmp/mindos/.github/workflows/
           done
-          # wiki/specs、wiki/discussions — dev-only; not copied to GeminiLight/mindos
+          # wiki/0*.md、wiki/specs、wiki/discussions — dev-only; not copied to GeminiLight/mindos
           [ -d wiki/ ] && rsync -av --delete \
+            --exclude='0*.md' \
             --exclude='specs/' \
             --exclude='discussions/' \
-            --exclude='00-product-proposal.md' \
-            --exclude='01-project-roadmap.md' \
-            --exclude='02-business-model.md' \
-            --exclude='03-technical-pillars.md' \
             --exclude='85-backlog.md' \
             --exclude='project-status-report.md' \
             --exclude='implementation-roadmap.md' \
