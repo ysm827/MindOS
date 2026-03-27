@@ -217,5 +217,16 @@ jobs:
                 -d "{\"ref\":\"main\",\"inputs\":{\"tag\":\"${TAG}\"}}" \
                 && echo "✅ Publish workflow dispatched for ${TAG}" \
                 || echo "⚠️ Failed to dispatch publish workflow — check PAT permissions"
+
+              # Mark npm release as pre-release so Desktop release stays "Latest"
+              # (GitHub auto-creates a release from the tag push; wait a moment for it)
+              sleep 5
+              curl -sf -X PATCH \
+                -H "Authorization: token ${PAT}" \
+                -H "Accept: application/vnd.github.v3+json" \
+                "https://api.github.com/repos/GeminiLight/MindOS/releases/tags/${TAG}" \
+                -d '{"prerelease":true}' \
+                && echo "✅ Marked ${TAG} as pre-release" \
+                || echo "⚠️ Could not mark ${TAG} as pre-release (release may not exist yet)"
             fi
           fi
