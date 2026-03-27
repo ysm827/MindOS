@@ -1,6 +1,6 @@
 ## PENDING
 
-一键删除 examples
+一键清理 examples
 
 支持一键整理至空间
 
