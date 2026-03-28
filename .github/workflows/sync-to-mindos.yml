@@ -143,15 +143,15 @@ jobs:
           # append changelog from previous version tag.
           if echo "$DEV_MSG" | grep -qxE '[0-9]+\.[0-9]+\.[0-9]+'; then
             cd "$GITHUB_WORKSPACE"
-            # Find the tag on HEAD, then get the one before it
-            CUR_TAG=$(git tag --points-at HEAD | grep -E '^v?[0-9]+\.[0-9]+\.[0-9]+' | head -1)
+            # pipefail + grep/head pipelines can exit non-zero; guard with || true
+            CUR_TAG=$(git tag --points-at HEAD | grep -E '^v?[0-9]+\.[0-9]+\.[0-9]+' | head -1 || true)
             if [ -n "$CUR_TAG" ]; then
               PREV_TAG=$(git describe --tags --abbrev=0 "${CUR_TAG}^" 2>/dev/null || true)
             else
               PREV_TAG=$(git describe --tags --abbrev=0 HEAD~1 2>/dev/null || true)
             fi
             if [ -n "$PREV_TAG" ]; then
-              CHANGELOG=$(git log "${PREV_TAG}..HEAD~1" --format='- %s' | head -20)
+              CHANGELOG=$(git log "${PREV_TAG}..HEAD~1" --format='- %s' | head -20 || true)
               if [ -n "$CHANGELOG" ]; then
                 DEV_MSG=$(printf '%s\n\n%s' "$DEV_MSG" "$CHANGELOG")
               fi
