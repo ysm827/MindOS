@@ -334,4 +334,46 @@
 
 ## 更新时间
 
-- 最后更新：2026-03-29
+- 最后更新：2026-03-30
+
+---
+
+## 2026-03-30 新增完成项 ✅
+
+### 界面和交互优化
+- [x] **文件树刷新不及时** - 已实现 `notifyFilesChanged()` 事件 + `revalidatePath()` 缓存失效
+- [x] **Agent对话框按钮问题** - 删除历史对话功能完整实现
+  - `/api/ask-sessions` DELETE 端点支持单条/批量删除
+  - AskContent 组件集成删除按钮
+  - session-store 提供清理函数
+
+### Desktop APP
+- [x] **内置固定版本** - Electron 打包 + 自动版本检测
+  - `/desktop/resources/mindos-runtime/` 包含独立运行时
+  - 版本 v0.6.7（vs 主应用 v0.1.0）
+  - 无需 Node.js 预装
+
+### 首页布局
+- [x] **首页调整 - search files 和 Ask AI 功能齐全** - 主页已实现完整触发
+  - `triggerSearch()` 函数（Cmd+K）
+  - `triggerAsk()` 函数（Cmd+/）
+
+### 设置向导
+- [x] **提示用户端口开放** - StepPorts 组件完整实现
+  - 端口可用性检测 + 实时建议
+  - 端口冲突提示 + 快速切换
+
+### Renderer 插件系统（补充 11 个）
+- [x] **Diff 渲染器** - Desktop 已包含，主应用需同步
+  - `/desktop/resources/mindos-runtime/app/components/renderers/diff/`
+  - 支持行级差异对比
+
+---
+
+### 部分完成项（需进一步完善）
+
+- [x] **Agent 对比视图** — Desktop 已实现，主应用需集成
+- [x] **Agents 面板增强** — 自定义 Agent UI 占位已实现，核心功能待完善
+- [x] **插件市场/技能市场** — UI 框架已实现，后端市场 API 待开发
+- [x] **模块解耦** — 架构已分层（/lib/, /components/, /app/, /mcp/），部分耦合待解
+- [x] **更新文件夹目录为 MindOS** — 使用 `.mindos` 隐藏目录（Unix 约定），用户友好度可提升

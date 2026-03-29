@@ -1,77 +1,48 @@
 # 待办清单 (TODO)
 
-毛玻璃的列表展开
+> 最后更新：2026-03-30
 
 ## 🔥 高优先级
 
-### 界面和交互优化
-- [ ] **文件树刷新不及时** - 文件增删时未及时显示
-- [ ] **Agent对话框按钮问题** - 删除历史对话等功能存在bug
-
 ### Agent 功能
-- [ ] **Agent 对比视图** - 实现Agent版本对比功能
-- [ ] **Agents 面板增强**
-  - 允许自定义Agent（当前有 addAgent UI，待完整自定义功能）
-- [ ] **ACP for call / Agent as Workflow** - Agent调用协议
+- [ ] **ACP for call / Agent as Workflow** - Agent调用协议（跨 Agent 协作机制）
 
 ### Desktop APP
-- [ ] **内置固定版本** - 内置build版本，未安装也能打开，检测到更高版本时切换
+- [ ] **内置版本升级检测** - 检测到更高版本时提示切换（基础运行已完成，升级流程待完善）
 
 ## ⚡ 功能增强
 
 - [ ] **webpage wording skill** - 网页文案技能
-- [ ] **插件市场/技能市场** - Discover中的市场功能完善（当前已实现UI占位，待后端功能）
-- [ ] **审计功能增强** - Review change优化
-- [ ] **多终端管理** - 多个Terminal端口管理
+- [ ] **插件市场/技能市场** - Discover 中的市场功能完善（当前已实现 UI 占位 + 本地插件管理，待后端市场 API）
+- [ ] **审计功能增强** - Review change 优化
+- [ ] **多终端管理** - 多个 Terminal 端口管理
 
 ## 🧩 架构与扩展
 
-- [ ] **模块解耦** - 模块化架构
 - [ ] **插件架构** - 保持灵活性和可扩展性，最小化侵入主代码
-- [ ] **避免硬编码** - json变量等
-- [ ] **评论/批注机制** - Human-AI异步协作
+- [ ] **评论/批注机制** - Human-AI 异步协作
   - `mindos_add_comment(path, line, content)`
   - `mindos_get_comments(path)`
 
-## 🔧 技术改进
-
-- [ ] **Editor功能增强** - 编辑器功能完善
-
 ## 🎨 UI/UX
 
-- [ ] **首页调整**
-  - search files 和 Ask AI 调换位置和大小
-  - ~~Plugins 放在 Recently Modified 上面~~ ✅ 已实现
 - [ ] **LANDING page** - 节日祝福例子
-- [ ] **分享功能** - 分享模板或md
+- [ ] **分享功能** - 分享模板或 md
+- [ ] 毛玻璃的列表展开
 
 ## 💡 创新功能
 
-- [ ] **AI自主执行** - Agent自主执行零散想法
-- [ ] **自动SOP复盘** - Agent帮助复盘，通过MCP存到MindOS
+- [ ] **AI 自主执行** - Agent 自主执行零散想法
+- [ ] **自动 SOP 复盘** - Agent 帮助复盘，通过 MCP 存到 MindOS
 - [ ] **创造者故事**
 
 ## 📝 其他
 
-- [ ] 优化Skill
-- [ ] 提示用户端口开放（外部访问GUI和MCP）
-- [ ] 更新文件夹目录为MindOS
-- [ ] CLI下载命令优化
+- [ ] 优化 Skill
+- [ ] CLI 下载命令优化
 
 ### 命令行和下载
 ```bash
 curl -L -o ~/Downloads/MindOS-0.1.0-arm64-mac.zip 'http://21.6.243.108:8080/desktop/dist/MindOS-0.1.0-arm64-mac.zip'
 cd ~/Downloads && unzip MindOS-0.1.0-arm64-mac.zip && open MindOS-0.1.0-arm64.dmg
 ```
-
-### CI 更新提示
-还没发布到 0.5.1，CI 还在跑。可以稍后手动执行：
-```bash
-npm install -g @geminilight/mindos@latest
-# 或者使用本地版本
-cd /data/home/geminitwang/code/mindos && npm link
-```
-
-### 用户体验待改进点
-- 历史对话的问题
-- 用户模糊/不友好的地方需要进一步识别
