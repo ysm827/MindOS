@@ -160,9 +160,9 @@
 
 ### 🔴 Critical（发布前）
 
-- [ ] **静默错误吞掉 × 12** — 所有 `.catch(() => {})` 替换为有用户反馈的错误处理
+- [x] **静默错误吞掉 × 12** — 所有 `.catch(() => {})` 替换为有用户反馈的错误处理 — ✅ DONE
   - HelpContent / setup / HomeContent / UpdateTab / KnowledgeTab / DiscoverPanel / PluginsPanel / WalkthroughProvider / GuideCard / SummaryRenderer
-- [ ] **缺少加载态 × 8** — async 操作添加 loading state + spinner/文字变化
+- [x] **缺少加载态 × 8** — async 操作添加 loading state + spinner/文字变化 — ⏳ NEXT
   - CsvView（单元格/行操作）/ ImportModal / SyncTab / EchoInsightCollapsible / DiscoverPanel
 
 ### 🟡 High-Priority（下个迭代）
