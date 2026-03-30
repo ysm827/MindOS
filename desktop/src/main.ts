@@ -1011,7 +1011,7 @@ function setupIPC(): void {
   ipcMain.handle('uninstall-app', async () => {
     try {
       // Stop managed child processes first
-      processManager?.stopAll();
+      await processManager?.stop();
 
       // Determine app bundle path per platform:
       // macOS:   /Applications/MindOS.app/Contents/MacOS/MindOS → /Applications/MindOS.app
@@ -1030,10 +1030,11 @@ function setupIPC(): void {
         appPath = path.dirname(appPath);
       }
 
-      // moveItemToTrash returns boolean (true = success)
-      const moved = shell.moveItemToTrash(appPath);
-      if (!moved) {
-        return { ok: false, error: `Failed to move ${appPath} to Trash. You may need to delete it manually.` };
+      // trashItem is the modern async replacement for deprecated moveItemToTrash
+      try {
+        await shell.trashItem(appPath);
+      } catch (trashErr) {
+        return { ok: false, error: `Failed to move ${appPath} to Trash: ${(trashErr as Error)?.message}. You may need to delete it manually.` };
       }
 
       // Quit after a brief delay to let the IPC response reach the renderer
