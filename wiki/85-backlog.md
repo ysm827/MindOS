@@ -162,8 +162,10 @@
 
 - [x] **静默错误吞掉 × 12** — 所有 `.catch(() => {})` 替换为有用户反馈的错误处理 — ✅ DONE
   - HelpContent / setup / HomeContent / UpdateTab / KnowledgeTab / DiscoverPanel / PluginsPanel / WalkthroughProvider / GuideCard / SummaryRenderer
-- [x] **缺少加载态 × 8** — async 操作添加 loading state + spinner/文字变化 — ⏳ NEXT
-  - CsvView（单元格/行操作）/ ImportModal / SyncTab / EchoInsightCollapsible / DiscoverPanel
+- [x] **缺少加载态 × 8** — async 操作添加 loading state + spinner/文字变化 — ✅ DONE
+  - CsvView（单元格/行操作）已修复：saving state + spinner + disabled buttons
+  - ImportModal / SyncTab / EchoInsightCollapsible 经审查已有 loading state，无需修改
+  - DiscoverPanel 为非关键预加载，已有 console.warn 降级
 
 ### 🟡 High-Priority（下个迭代）
 
