@@ -1117,7 +1117,7 @@ async function handleSplashAction(actionId: string): Promise<void> {
     case 'switch-remote': {
       // Validate that remote connection info exists before switching
       const cfg = loadConfig();
-      const hasRemote = cfg.remoteUrl || cfg.connections?.length;
+      const hasRemote = (cfg as any).remoteUrl || (cfg as any).connections?.length;
       if (!hasRemote) {
         const zh = navigator_lang() === 'zh';
         splashStatus({

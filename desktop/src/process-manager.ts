@@ -430,7 +430,7 @@ export class ProcessManager extends EventEmitter {
       const logPath = path.join(logDir, 'crash.log');
       const ts = new Date().toISOString();
       const entry = [
-        `--- [${ts}] ${which} crash #${this.crashCount[which]} ---`,
+        `--- [${ts}] ${which} crash #${this.crashCount[which as keyof typeof this.crashCount]} ---`,
         `exit code=${code} signal=${signal}`,
         ...stderr.map(l => `  ${l}`),
         '',
@@ -470,7 +470,7 @@ export class ProcessManager extends EventEmitter {
 
       this.crashCount[which]++;
       this.logCrash(which, code, signal, this.webStderrLines.slice(-20));
-      this.emit('crash', which, this.crashCount[which], code, this.webStderrLines.slice(-10));
+      this.emit('crash', which, this.crashCount[which as keyof typeof this.crashCount], code, this.webStderrLines.slice(-10));
 
       if (this.crashCount[which] < 3) {
         const delay = this.crashCount[which] === 1 ? 2000 : 5000;
