@@ -4,8 +4,8 @@
 
 ## 🔴 高优先（影响用户体验 / 产品可用性）
 
-- [ ] **Ask Panel 文件上下文不跟随切换** — 文件变了但 panel 保持开启时，AI 仍在聊旧文件的上下文。`AskContent` 的 effect 是边缘触发的（仅 visible false→true），不响应 `currentFile` 变化。Tab bar 和自动退出最大化缓解了一部分，但非最大化时直接点击另一个文件，panel 上下文仍是旧的。建议：检测 `currentFile` 变化时提示用户"文件已切换，是否刷新上下文？"或自动新建 session。
-  - 相关文件：`app/components/ask/AskContent.tsx:200-224`
+- [x] **Ask Panel 文件上下文不跟随切换** — ✅ 已修复。当用户切换文件时，`attachedFiles` 自动更新为新文件，AI 下次回复即感知新文件上下文。会话消息保留不丢失。
+  - 相关文件：`app/components/ask/AskContent.tsx:200-230`
 
 - [ ] **Electron Desktop App（Phase 1）** — spec 已写好（`wiki/specs/spec-electron-desktop-app.md`），但还未实施。本地+远程双模式桌面端，含共享连接 SDK、系统托盘/快捷键/自动更新。发桌面版的阻塞项。
 
