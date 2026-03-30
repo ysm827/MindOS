@@ -1114,12 +1114,27 @@ async function handleSplashAction(actionId: string): Promise<void> {
     case 'install-node':
       shell.openExternal('https://nodejs.org/');
       break;
-    case 'switch-remote':
+    case 'switch-remote': {
+      // Validate that remote connection info exists before switching
+      const cfg = loadConfig();
+      const hasRemote = cfg.remoteUrl || cfg.connections?.length;
+      if (!hasRemote) {
+        const zh = navigator_lang() === 'zh';
+        splashStatus({
+          error: zh ? '未配置远程连接。请先在设置中添加远程服务器。' : 'No remote connection configured. Add a remote server in Settings first.',
+          actions: [
+            { id: 'retry', label: 'retry', primary: true },
+            { id: 'quit', label: 'quit' },
+          ],
+        });
+        break;
+      }
       currentMode = 'remote';
       saveDesktopMode('remote');
       closeSplash();
       await bootApp();
       break;
+    }
     case 'retry':
       if (isBooting) break;
       isBooting = true;
