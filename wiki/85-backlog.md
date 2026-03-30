@@ -7,6 +7,7 @@
 ## Bug
 
 - [x] **Agent 框架迁移 Vercel AI SDK → pi-agent-core** — 完成 6 阶段迁移（Phase 0-5）。Spec v2 所有 6 个设计缺陷已修复。涉及 7 文件改写 + 完整 SSE 协议重定义。详见 `wiki/specs/migrate-to-pi-agent.md` — v0.6.0
+- [x] **A2A 协议 Phase 1** — Agent Card 发现端点 (`/.well-known/agent-card.json`) + JSON-RPC 端点 (`/api/a2a`)。支持 SendMessage / GetTask / CancelTask。5 个 KB 技能暴露。18 个测试覆盖。详见 `wiki/specs/spec-a2a-integration.md`
 
 ## 技术债
 
@@ -152,3 +153,25 @@
 - [ ] Windows WSL 下 daemon (systemd) 是否稳定
 - [ ] Git sync 在大知识库 (>1000 文件) 下的性能
 - [ ] 多 Mind 实例（~/MindOS 下多个大脑，如团队/个人）— 当前用子目录满足，等团队版(P2)或用户反馈再决策
+
+## UX 体验审计 (2026-03-31)
+
+> 详细描述见 `wiki/80-known-pitfalls.md` — UI / 前端交互 章节
+
+### 🔴 Critical（发布前）
+
+- [ ] **静默错误吞掉 × 12** — 所有 `.catch(() => {})` 替换为有用户反馈的错误处理
+  - HelpContent / setup / HomeContent / UpdateTab / KnowledgeTab / DiscoverPanel / PluginsPanel / WalkthroughProvider / GuideCard / SummaryRenderer
+- [ ] **缺少加载态 × 8** — async 操作添加 loading state + spinner/文字变化
+  - CsvView（单元格/行操作）/ ImportModal / SyncTab / EchoInsightCollapsible / DiscoverPanel
+
+### 🟡 High-Priority（下个迭代）
+
+- [ ] **截断文本无 tooltip × 18** — 所有 `truncate` / `line-clamp-*` 添加 `title` 属性
+  - PanelNavRow / DiscoverPanel / AgentsPanelAgentDetail / UseCaseCard / SearchPanel / SearchModal / SlashCommandPopover / MentionPopover / Backlinks / Breadcrumb / DirView
+- [ ] **禁用按钮无说明 × 10** — 所有 `disabled` 按钮添加 `title` 解释原因
+  - ImportModal / OnboardingView / CreateSpaceModal / SyncTab / AskContent / KnowledgeTab / EchoInsightCollapsible / StepDots / AiTab / WorkflowRenderer
+
+### 🟢 Nice-to-Have
+
+- [ ] **onClick div 无 cursor-pointer × 2** — DirView / ToolCallBlock
