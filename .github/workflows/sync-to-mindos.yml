@@ -162,6 +162,30 @@ jobs:
           # landing/ is deployed to gh-pages only — remove from main if it exists
           rm -rf /tmp/mindos/landing
           git add -A
+
+          # === SAFETY GUARD: fail if private files leaked into public repo ===
+          PRIVATE_PATTERNS="startup/ wiki/0[0-9] wiki/specs/ wiki/discussions/ wiki/85-backlog .claude-internal/ .claude/ 0_TASKS 0_BUGS TASKS.md .npmrc .dockerignore .gitignore.prod .github/workflows/sync-to-mindos.yml .github/workflows/ci.yml activities/ collect-session-ids"
+          LEAKED=""
+          for pat in $PRIVATE_PATTERNS; do
+            matches=$(git diff --cached --name-only | grep -F "$pat" || true)
+            if [ -n "$matches" ]; then
+              LEAKED="${LEAKED}${matches}"$'\n'
+            fi
+          done
+          # Also scan the full tree (not just staged changes)
+          for pat in $PRIVATE_PATTERNS; do
+            matches=$(git ls-files | grep -F "$pat" || true)
+            if [ -n "$matches" ]; then
+              LEAKED="${LEAKED}${matches}"$'\n'
+            fi
+          done
+          if [ -n "$LEAKED" ]; then
+            echo "::error::PRIVATE FILE LEAK DETECTED — aborting sync!"
+            echo "::error::The following private files were about to be pushed to the PUBLIC repo:"
+            echo "$LEAKED" | sort -u | while read -r f; do [ -n "$f" ] && echo "  ❌ $f"; done
+            exit 1
+          fi
+
           if git diff --cached --quiet; then
             echo "No changes to sync."
           else
