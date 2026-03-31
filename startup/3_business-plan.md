@@ -22,9 +22,10 @@ MindOS 是 AI 时代的认知复利引擎——一个人机共演化系统。用
 
 **品类定义：** 认知复利引擎（Cognitive Compound Engine）——不是笔记工具（Obsidian 做得更好），不是 AI 记忆系统（MemOS 做得更深），而是让人和 AI 共同成长的认知资产平台。
 
-- **阶段：** P0.5（产品已可用，正在进行用户验证冲刺）
-- **产品状态：** v0.6.x，已发布至 npm，桌面端已支持 macOS/Windows/Linux，支持 MCP + ACP 双协议
-- **用户：** 内测群约 30 人，GitHub 开源。⚠️ 尚无日活数据和付费意愿验证
+- **阶段：** P1.5（核心功能已交付，正在用户验证冲刺）
+- **产品状态：** v0.6.29，已发布至 npm，桌面端 macOS/Windows/Linux，支持 MCP + ACP/A2A 双协议 + Workflow 编排
+- **已实现：** GUI 工作台 + MCP Server + 一键导入（AI Organize）+ ACP Agent 发现 + Workflow YAML 编排 + 新手指引 + 11 个渲染器 + Skills 系统 + 桌面端
+- **用户：** 内测群约 30 人，GitHub 开源。尚无日活数据和付费意愿验证
 - **品牌主张：** 人类在此思考，Agents 依此执行。
 - **当前最高优先级：** 不是写新功能，是见用户——4 周验证冲刺（详见第九章）
 
