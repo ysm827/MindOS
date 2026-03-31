@@ -204,18 +204,18 @@ export default function SettingsContent({ visible, initialTab, variant, onClose 
             <button
               onClick={restoreFromEnv}
               disabled={saving || !data}
-              className={`flex items-center gap-1.5 ${isPanel ? 'px-2.5 py-1 text-[11px] rounded-md' : 'px-3 py-1 text-xs rounded-lg'} border border-border text-muted-foreground hover:text-foreground hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed transition-colors`}
+              className={`flex items-center gap-1.5 ${isPanel ? 'px-2.5 py-1 text-xs rounded-md' : 'px-3 py-1.5 text-sm rounded-lg'} border border-border text-muted-foreground hover:text-foreground hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed transition-colors`}
             >
-              <RotateCcw size={isPanel ? 11 : 12} />
+              <RotateCcw size={isPanel ? 12 : 13} />
               {t.settings.ai.restoreFromEnv}
             </button>
           )}
           {tab === 'knowledge' && (
             <a
               href="/setup?force=1"
-              className={`flex items-center gap-1.5 ${isPanel ? 'px-2.5 py-1 text-[11px] rounded-md' : 'px-3 py-1 text-xs rounded-lg'} border border-border text-muted-foreground hover:text-foreground hover:bg-muted transition-colors`}
+              className={`flex items-center gap-1.5 ${isPanel ? 'px-2.5 py-1 text-xs rounded-md' : 'px-3 py-1.5 text-sm rounded-lg'} border border-border text-muted-foreground hover:text-foreground hover:bg-muted transition-colors`}
             >
-              <RotateCcw size={isPanel ? 11 : 12} />
+              <RotateCcw size={isPanel ? 12 : 13} />
               {t.settings.reconfigure}
             </a>
           )}
