@@ -18,6 +18,7 @@ app/data
 .claude
 .claude-internal
 .cursor
+**/.claude
 .codebuddy
 .pi
 
