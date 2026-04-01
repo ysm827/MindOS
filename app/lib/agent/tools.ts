@@ -13,6 +13,7 @@ import { a2aTools } from '@/lib/a2a/a2a-tools';
 import { acpTools } from '@/lib/acp/acp-tools';
 import { buildLineDiff, collapseDiffContext } from '@/components/changes/line-diff';
 import { extractRelevantContent } from '@/lib/agent/paragraph-extract';
+import { computeDiffAsync } from '@/lib/agent/diff-async';
 
 // Max chars per file to avoid token overflow (~100k chars ≈ ~25k tokens)
 const MAX_FILE_CHARS = 20_000;
@@ -37,15 +38,39 @@ function textResult(text: string): AgentToolResult<Record<string, never>> {
 /** Build a compact diff summary for tool output. Max 30 diff lines to avoid bloating agent context. */
 function buildDiffSummary(before: string, after: string): string {
   if (before === after) return '';
-  // Skip diff for very large files — LCS is O(n*m), would block agent
   const beforeLines = before.split('\n').length;
   const afterLines = after.split('\n').length;
+  // For very large files, skip sync LCS (O(n*m) would block).
+  // The async worker is used by buildDiffSummaryAsync below.
   if (beforeLines > 2000 || afterLines > 2000) {
     const added = Math.max(0, afterLines - beforeLines);
     const removed = Math.max(0, beforeLines - afterLines);
-    return `(~+${added} ~−${removed}, ${afterLines} lines total)\n\n--- changes ---\n  (diff skipped — file too large)`;
+    return `(~+${added} ~−${removed}, ${afterLines} lines total)\n\n--- changes ---\n  (diff computing asynchronously — use read_file to see current state)`;
   }
-  const raw = buildLineDiff(before, after);
+  return formatDiff(buildLineDiff(before, after));
+}
+
+/** Async version of buildDiffSummary — offloads LCS to worker thread for large files. */
+async function buildDiffSummaryAsync(before: string, after: string): Promise<string> {
+  if (before === after) return '';
+  const beforeLines = before.split('\n').length;
+  const afterLines = after.split('\n').length;
+  if (beforeLines <= 2000 && afterLines <= 2000) {
+    return formatDiff(buildLineDiff(before, after));
+  }
+  // Offload to worker thread
+  const raw = await computeDiffAsync(before, after);
+  if (!raw) {
+    // Worker failed/timed out — fallback to line count summary
+    const added = Math.max(0, afterLines - beforeLines);
+    const removed = Math.max(0, beforeLines - afterLines);
+    return `(~+${added} ~−${removed}, ${afterLines} lines total)\n\n--- changes ---\n  (diff timed out)`;
+  }
+  return formatDiff(raw);
+}
+
+/** Format DiffLine[] into a compact string */
+function formatDiff(raw: import('@/components/changes/line-diff').DiffLine[]): string {
   const inserts = raw.filter(r => r.type === 'insert').length;
   const deletes = raw.filter(r => r.type === 'delete').length;
   const stats = `+${inserts} −${deletes}`;

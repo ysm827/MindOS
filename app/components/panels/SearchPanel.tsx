@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { Search, X, FileText, Table } from 'lucide-react';
 import { SearchResult } from '@/lib/types';
@@ -8,6 +8,7 @@ import { encodePath } from '@/lib/utils';
 import { apiFetch } from '@/lib/api';
 import { useLocale } from '@/lib/LocaleContext';
 import PanelHeader from './PanelHeader';
+import { Virtuoso } from 'react-virtuoso';
 
 /** Highlight matched text fragments in a snippet based on the query */
 function highlightSnippet(snippet: string, query: string): React.ReactNode {
@@ -128,42 +129,48 @@ export default function SearchPanel({ active, onNavigate, maximized, onMaximize 
         {results.length === 0 && !query && (
           <div className="px-4 py-8 text-center text-sm text-muted-foreground/60">{t.search.prompt}</div>
         )}
-        {results.map((result, i) => {
-          const ext = result.path.endsWith('.csv') ? '.csv' : '.md';
-          const parts = result.path.split('/');
-          const fileName = parts[parts.length - 1];
-          const dirPath = parts.slice(0, -1).join('/');
-          return (
-            <button
-              key={result.path}
-              onClick={() => navigate(result)}
-              onMouseEnter={() => setSelectedIndex(i)}
-              className={`
-                w-full px-4 py-2.5 flex items-start gap-3 text-left transition-colors duration-75
-                ${i === selectedIndex ? 'bg-muted' : 'hover:bg-muted/50'}
-                ${i < results.length - 1 ? 'border-b border-border' : ''}
-              `}
-            >
-              {ext === '.csv'
-                ? <Table size={13} className="text-success shrink-0 mt-0.5" />
-                : <FileText size={13} className="text-muted-foreground shrink-0 mt-0.5" />
-              }
-              <div className="min-w-0 flex-1">
-                <div className="flex items-baseline gap-2 flex-wrap">
-                  <span className="text-sm text-foreground font-medium truncate" title={fileName}>{fileName}</span>
-                  {dirPath && (
-                    <span className="text-xs text-muted-foreground truncate" title={dirPath}>{dirPath}</span>
-                  )}
-                </div>
-                {result.snippet && (
-                  <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2 leading-relaxed" title={result.snippet}>
-                    {highlightSnippet(result.snippet, query)}
-                  </p>
-                )}
-              </div>
-            </button>
-          );
-        })}
+        {results.length > 0 && (
+          <Virtuoso
+            totalCount={results.length}
+            overscan={100}
+            itemContent={(i) => {
+              const result = results[i];
+              const ext = result.path.endsWith('.csv') ? '.csv' : '.md';
+              const parts = result.path.split('/');
+              const fileName = parts[parts.length - 1];
+              const dirPath = parts.slice(0, -1).join('/');
+              return (
+                <button
+                  onClick={() => navigate(result)}
+                  onMouseEnter={() => setSelectedIndex(i)}
+                  className={`
+                    w-full px-4 py-2.5 flex items-start gap-3 text-left transition-colors duration-75
+                    ${i === selectedIndex ? 'bg-muted' : 'hover:bg-muted/50'}
+                    ${i < results.length - 1 ? 'border-b border-border' : ''}
+                  `}
+                >
+                  {ext === '.csv'
+                    ? <Table size={13} className="text-success shrink-0 mt-0.5" />
+                    : <FileText size={13} className="text-muted-foreground shrink-0 mt-0.5" />
+                  }
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-baseline gap-2 flex-wrap">
+                      <span className="text-sm text-foreground font-medium truncate" title={fileName}>{fileName}</span>
+                      {dirPath && (
+                        <span className="text-xs text-muted-foreground truncate" title={dirPath}>{dirPath}</span>
+                      )}
+                    </div>
+                    {result.snippet && (
+                      <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2 leading-relaxed" title={result.snippet}>
+                        {highlightSnippet(result.snippet, query)}
+                      </p>
+                    )}
+                  </div>
+                </button>
+              );
+            }}
+          />
+        )}
       </div>
 
       {/* Footer hints */}
