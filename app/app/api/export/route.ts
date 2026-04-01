@@ -10,9 +10,14 @@ export async function GET(req: NextRequest) {
   const { searchParams } = req.nextUrl;
   const filePath = searchParams.get('path');
   const format = searchParams.get('format') ?? 'md';
+  const VALID_FORMATS = new Set(['md', 'html', 'zip', 'zip-html']);
 
   if (!filePath) {
     return NextResponse.json({ error: 'Missing path parameter' }, { status: 400 });
+  }
+
+  if (!VALID_FORMATS.has(format)) {
+    return NextResponse.json({ error: `Invalid format: ${format}. Use: ${[...VALID_FORMATS].join(', ')}` }, { status: 400 });
   }
 
   // Path traversal defense-in-depth

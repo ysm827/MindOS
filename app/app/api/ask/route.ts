@@ -53,30 +53,67 @@ type MindOSSSEvent =
 
 // ---------------------------------------------------------------------------
 // Type Guards for AgentEvent variants (safe event handling)
+// AgentEvent from pi-coding-agent is a union; these interfaces describe the
+// actual shapes that arrive at runtime for each event.type.
 // ---------------------------------------------------------------------------
 
-function isTextDeltaEvent(e: AgentEvent): boolean {
-  return e.type === 'message_update' && (e as any).assistantMessageEvent?.type === 'text_delta';
+/** Fields present on message_update events (text_delta / thinking_delta). */
+interface MessageUpdateEvent extends AgentEvent {
+  type: 'message_update';
+  assistantMessageEvent?: { type: string; delta?: string };
+}
+
+/** Fields present on tool_execution_start events. */
+interface ToolExecStartEvent extends AgentEvent {
+  type: 'tool_execution_start';
+  toolCallId?: string;
+  toolName?: string;
+  args?: unknown;
+}
+
+/** Fields present on tool_execution_end events. */
+interface ToolExecEndEvent extends AgentEvent {
+  type: 'tool_execution_end';
+  toolCallId?: string;
+  result?: { content?: Array<{ type: string; text?: string }> };
+  isError?: boolean;
+}
+
+/** Fields present on turn_end events. */
+interface TurnEndEvent extends AgentEvent {
+  type: 'turn_end';
+  toolResults?: Array<{ toolName: string; content: unknown }>;
+  usage?: { inputTokens: number; outputTokens?: number };
+}
+
+/** Fields present on agent_end events. */
+interface AgentEndEvent extends AgentEvent {
+  type: 'agent_end';
+  messages?: Array<{ role: string; content?: Array<{ type: string; text?: string }> }>;
+}
+
+function isTextDeltaEvent(e: AgentEvent): e is MessageUpdateEvent {
+  return e.type === 'message_update' && (e as MessageUpdateEvent).assistantMessageEvent?.type === 'text_delta';
 }
 
 function getTextDelta(e: AgentEvent): string {
-  return (e as any).assistantMessageEvent?.delta ?? '';
+  return (e as MessageUpdateEvent).assistantMessageEvent?.delta ?? '';
 }
 
-function isThinkingDeltaEvent(e: AgentEvent): boolean {
-  return e.type === 'message_update' && (e as any).assistantMessageEvent?.type === 'thinking_delta';
+function isThinkingDeltaEvent(e: AgentEvent): e is MessageUpdateEvent {
+  return e.type === 'message_update' && (e as MessageUpdateEvent).assistantMessageEvent?.type === 'thinking_delta';
 }
 
 function getThinkingDelta(e: AgentEvent): string {
-  return (e as any).assistantMessageEvent?.delta ?? '';
+  return (e as MessageUpdateEvent).assistantMessageEvent?.delta ?? '';
 }
 
-function isToolExecutionStartEvent(e: AgentEvent): boolean {
+function isToolExecutionStartEvent(e: AgentEvent): e is ToolExecStartEvent {
   return e.type === 'tool_execution_start';
 }
 
 function getToolExecutionStart(e: AgentEvent): { toolCallId: string; toolName: string; args: unknown } {
-  const evt = e as any;
+  const evt = e as ToolExecStartEvent;
   return {
     toolCallId: evt.toolCallId ?? '',
     toolName: evt.toolName ?? 'unknown',
@@ -84,15 +121,15 @@ function getToolExecutionStart(e: AgentEvent): { toolCallId: string; toolName: s
   };
 }
 
-function isToolExecutionEndEvent(e: AgentEvent): boolean {
+function isToolExecutionEndEvent(e: AgentEvent): e is ToolExecEndEvent {
   return e.type === 'tool_execution_end';
 }
 
 function getToolExecutionEnd(e: AgentEvent): { toolCallId: string; output: string; isError: boolean } {
-  const evt = e as any;
+  const evt = e as ToolExecEndEvent;
   const outputText = evt.result?.content
-    ?.filter((p: any) => p.type === 'text')
-    .map((p: any) => p.text)
+    ?.filter((p) => p.type === 'text')
+    .map((p) => p.text ?? '')
     .join('') ?? '';
   return {
     toolCallId: evt.toolCallId ?? '',
@@ -101,13 +138,13 @@ function getToolExecutionEnd(e: AgentEvent): { toolCallId: string; output: strin
   };
 }
 
-function isTurnEndEvent(e: AgentEvent): boolean {
+function isTurnEndEvent(e: AgentEvent): e is TurnEndEvent {
   return e.type === 'turn_end';
 }
 
 function getTurnEndData(e: AgentEvent): { toolResults: Array<{ toolName: string; content: unknown }> } {
   return {
-    toolResults: ((e as any).toolResults as any[]) ?? [],
+    toolResults: (e as TurnEndEvent).toolResults ?? [],
   };
 }
 
@@ -215,10 +252,10 @@ function textToolResult(text: string): AgentToolResult<Record<string, never>> {
 
 function getProtectedPaths(toolName: string, args: Record<string, unknown>): string[] {
   const pathsToCheck: string[] = [];
-  if (toolName === 'batch_create_files' && Array.isArray((args as any).files)) {
-    (args as any).files.forEach((f: any) => { if (f.path) pathsToCheck.push(f.path); });
+  if (toolName === 'batch_create_files' && Array.isArray(args.files)) {
+    (args.files as Array<{ path?: string }>).forEach((f) => { if (f.path) pathsToCheck.push(f.path); });
   } else {
-    const singlePath = (args as any).path ?? (args as any).from_path;
+    const singlePath = (args.path ?? args.from_path) as string | undefined;
     if (typeof singlePath === 'string') pathsToCheck.push(singlePath);
   }
   return pathsToCheck;
@@ -229,7 +266,7 @@ function toPiCustomToolDefinitions(tools: AgentTool<any>[]): ToolDefinition[] {
     name: tool.name,
     label: tool.label,
     description: tool.description,
-    parameters: tool.parameters as any,
+    parameters: tool.parameters as Record<string, unknown>,
     execute: async (toolCallId, params, signal, onUpdate) => {
       const args = (params ?? {}) as Record<string, unknown>;
 
@@ -604,7 +641,7 @@ export async function POST(req: NextRequest) {
             stepCount++;
 
             // Record token usage if available from the turn
-            const turnUsage = (event as any).usage;
+            const turnUsage = (event as TurnEndEvent).usage;
             if (turnUsage && typeof turnUsage.inputTokens === 'number') {
               metrics.recordTokens(turnUsage.inputTokens, turnUsage.outputTokens ?? 0);
             }
@@ -639,7 +676,7 @@ export async function POST(req: NextRequest) {
             // Capture model errors from the last assistant message.
             // pi-coding-agent resolves prompt() without throwing after retries;
             // the error is only visible in agent_end event messages.
-            const msgs = (event as any).messages;
+            const msgs = (event as AgentEndEvent).messages;
             if (Array.isArray(msgs)) {
               for (let i = msgs.length - 1; i >= 0; i--) {
                 const m = msgs[i];

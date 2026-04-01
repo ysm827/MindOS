@@ -25,6 +25,10 @@ export async function GET(req: NextRequest) {
     };
 
     if (targetDir) {
+      // Reject path traversal attempts
+      if (targetDir.includes('..') || path.isAbsolute(targetDir)) {
+        return NextResponse.json({ error: 'invalid target_dir' }, { status: 400 });
+      }
       result.target_readme = tryRead(path.join(targetDir, 'README.md'));
       result.target_instruction = tryRead(path.join(targetDir, 'INSTRUCTION.md'));
       result.target_config_json = tryRead(path.join(targetDir, 'CONFIG.json'));

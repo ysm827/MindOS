@@ -11,6 +11,13 @@ import { countCjkChars } from '@/lib/core/cjk';
 
 const DEV = process.env.NODE_ENV === 'development';
 
+// AgentMessage is opaque; cast to access role/content at runtime.
+interface AgentMessageFields {
+  role: string;
+  content: string | Array<{ type: string; text?: string }>;
+}
+function asMsg(m: AgentMessage): AgentMessageFields { return m as unknown as AgentMessageFields; }
+
 // ---------------------------------------------------------------------------
 // Token estimation — CJK-aware (CJK ~1.5 tokens/char, ASCII ~0.25 tokens/char)
 // ---------------------------------------------------------------------------
@@ -30,7 +37,7 @@ export function estimateStringTokens(text: string): number {
 /** Rough token count for a single AgentMessage */
 function messageTokens(msg: AgentMessage): number {
   if ('content' in msg) {
-    const content = (msg as any).content;
+    const content = asMsg(msg).content;
     if (typeof content === 'string') return estimateStringTokens(content);
     if (Array.isArray(content)) {
       let tokens = 0;
@@ -123,11 +130,11 @@ export function truncateToolOutputs(messages: AgentMessage[]): AgentMessage[] {
   // Find the index of the last 'toolResult' role message
   let lastToolIdx = -1;
   for (let i = messages.length - 1; i >= 0; i--) {
-    if ((messages[i] as any).role === 'toolResult') { lastToolIdx = i; break; }
+    if (asMsg(messages[i]).role === 'toolResult') { lastToolIdx = i; break; }
   }
 
   return messages.map((msg, idx) => {
-    const m = msg as any;
+    const m = asMsg(msg);
     if (m.role !== 'toolResult' || idx === lastToolIdx) return msg;
 
     const toolMsg = m as ToolResultMessage;
@@ -162,7 +169,7 @@ Be concise and factual. Output only the summary, no preamble.`;
 
 /** Extract a short text representation from an AgentMessage for summarization */
 function messageToText(m: AgentMessage): string {
-  const msg = m as any;
+  const msg = asMsg(m);
   const role = msg.role;
   let content = '';
 
@@ -204,7 +211,7 @@ export async function compactMessages(
   // Adjust split point to avoid cutting between an assistant (with tool calls)
   // and its tool result.
   let splitIdx = messages.length - 6;
-  while (splitIdx > 0 && (messages[splitIdx] as any).role === 'toolResult') {
+  while (splitIdx > 0 && asMsg(messages[splitIdx]).role === 'toolResult') {
     splitIdx--;
   }
   if (splitIdx < 2) {
@@ -232,7 +239,7 @@ export async function compactMessages(
 
     const summaryText = summaryMessage.content
       .filter(p => p.type === 'text')
-      .map(p => (p as any).text)
+      .map(p => (p as { text?: string }).text)
       .join('');
 
     if (DEV) console.log(`[ask] Compacted ${earlyMessages.length} early messages into summary (${summaryText.length} chars)`);
@@ -241,8 +248,8 @@ export async function compactMessages(
 
     // If first recent message is also 'user', merge summary into it to avoid
     // consecutive user messages (Anthropic rejects user→user sequences).
-    if ((recentMessages[0] as any)?.role === 'user') {
-      const merged = { ...(recentMessages[0] as any) };
+    if (asMsg(recentMessages[0])?.role === 'user') {
+      const merged = { ...asMsg(recentMessages[0]) } as AgentMessageFields;
       if (typeof merged.content === 'string') {
         merged.content = `${summaryContent}\n\n---\n\n${merged.content}`;
       } else if (Array.isArray(merged.content)) {
@@ -309,20 +316,20 @@ export function hardPrune(
   }
 
   // Ensure we don't cut between an assistant (with tool calls) and its tool result.
-  while (cutIdx < messages.length - 1 && (messages[cutIdx] as any).role === 'toolResult') {
+  while (cutIdx < messages.length - 1 && asMsg(messages[cutIdx]).role === 'toolResult') {
     total -= messageTokens(messages[cutIdx]);
     cutIdx++;
   }
 
   // Ensure first message is 'user' (Anthropic requirement)
-  while (cutIdx < messages.length - 1 && (messages[cutIdx] as any).role !== 'user') {
+  while (cutIdx < messages.length - 1 && asMsg(messages[cutIdx]).role !== 'user') {
     total -= messageTokens(messages[cutIdx]);
     cutIdx++;
   }
 
   // Fallback: if no user message found in remaining messages, inject a synthetic one
   const pruned = cutIdx > 0 ? messages.slice(cutIdx) : messages;
-  if (pruned.length > 0 && (pruned[0] as any).role !== 'user') {
+  if (pruned.length > 0 && asMsg(pruned[0]).role !== 'user') {
     if (DEV) console.log(`[ask] Hard pruned ${cutIdx} messages, injecting synthetic user message (${messages.length} → ${pruned.length + 1})`);
     const syntheticUser: UserMessage = {
       role: 'user',
@@ -330,7 +337,7 @@ export function hardPrune(
       timestamp: Date.now(),
     };
     return [syntheticUser as AgentMessage, ...pruned];
-  } else if (cutIdx > 0 && pruned.length > 0 && (pruned[0] as any).role === 'user') {
+  } else if (cutIdx > 0 && pruned.length > 0 && asMsg(pruned[0]).role === 'user') {
     // If we pruned and the first message IS a user message, prepend the warning to it
     const firstMsg = { ...pruned[0] } as UserMessage;
     firstMsg.content = `[System Note: Older conversation history has been truncated due to context length limits. The user may refer to things you can no longer see. If so, kindly ask them to repeat the context.]\n\n` + firstMsg.content;

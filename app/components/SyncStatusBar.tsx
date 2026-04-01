@@ -183,7 +183,7 @@ export default function SyncStatusBar({ collapsed, onOpenSyncSettings }: SyncSta
     const currentLevel = getStatusLevel(status, false);
     const prev = prevLevelRef.current;
     if (prev !== currentLevel) {
-      const syncT = (t as any).sidebar?.sync;
+      const syncT = t.sidebar?.sync;
       // Recovery: was error/conflicts, now synced
       if ((prev === 'error' || prev === 'conflicts') && currentLevel === 'synced') {
         setToast(syncT?.syncRestored ?? 'Sync restored');

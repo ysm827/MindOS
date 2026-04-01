@@ -95,21 +95,12 @@ description: >
 | 列出顶层心智空间 | `mindos_list_spaces` | 只需分区概览却拉整棵 `list_files` |
 | 找文件 | `mindos_search_notes`（2-4 条并行关键词变体）| 单关键词搜索 |
 | 读内容 | `mindos_read_file` 或 `mindos_read_lines`（大文件） | 只需 10 行却读整文件 |
-| 小范围文字修改 | `mindos_update_section` / `update_lines` / `insert_after_heading` | 小修改用 `write_file` |
-| 追加到末尾 | `mindos_append_to_file` | 为了加一行重写整文件 |
-| 整文件替换 | `mindos_write_file` | 用它做章节级编辑 |
-| 新建文件 | `mindos_create_file` | 自动创建父目录，但不会生成空间脚手架文件 |
-| 新建心智空间（目录 + README + INSTRUCTION）| `mindos_create_space` | 创建空间的唯一方式。`create_file` 只创建普通目录 |
-| 重命名空间目录 | `mindos_rename_space` | `rename_file`（仅文件，不能重命名文件夹）|
-| 追加 CSV | `mindos_append_csv`（校验表头）| 手动拼字符串不校验 |
-| 重命名前查影响 | `mindos_get_backlinks` | 不查引用就重命名 |
-| 查看近期变动 | `mindos_get_recent` | 猜最近改了什么 |
-| 恢复历史版本 | `mindos_get_file_at_version` | 让用户回忆之前内容 |
+
+写入、结构变更、历史工具 → [references/write-supplement.md](./references/write-supplement.md)。
 
 ### 回退
 
 - `mindos_bootstrap` 不可用 → 手动读根 `INSTRUCTION.md` + `README.md`。
-- 行级/章节级工具不可用 → 读 + 受限 `mindos_write_file`（模拟最小修改）。
 - 搜索无结果 → 不放弃：(1) 扫上下文中的树；(2) 直接读候选文件；(3) `mindos_list_files` 细化子目录；(4) 用同义词/中英文变体重试。
 
 ---
@@ -119,15 +110,6 @@ description: >
 | 模式 | 适用场景 | 关键步骤 |
 |------|----------|----------|
 | **只读问答** | 查找 / 总结 / 引用 | 目录树推断 → 搜索 → 读取 → 标注来源 → 明确说信息缺口 |
-| **单文件编辑** | 目标文件明确 | 启动协议 → 读目标 + 局部约定 → 最小修改 → 验证 → 总结 |
-| **多文件路由** | 非结构化输入，多个目的地 | 解析为语义单元 → 路由表 → 确认 → 编辑 → 汇总 |
-| **对话复盘** | 提炼 / 沉淀会话 | 确认范围 → 抽取决策/踩坑/下一步 → 路由 → 记录变更 |
-| **SOP 执行** | 可重复流程 | 完整读 SOP → 分步执行 → 更新过时段落 → 偏差则提议更新 |
-| **结构变更** | 重命名 / 移动 / 删除 | `get_backlinks` → 影响报告 → 确认 → 执行 → 更新引用 → 同步 README |
-| **CSV 追加** | 追加表格行 | 读表头 → 校验字段 → `mindos_append_csv` |
-| **跨 Agent 接力** | 继续其他 Agent 的工作 | 读任务状态+决策 → 无需重新探索直接接续 → 回写进度 |
-| **周期性回顾** | 汇总近期变动 | `get_recent`/`get_history` → 读变动文件 → 结构化总结 |
-| **交接文档** | 创建简报 | 读来源 → 合成（背景、决策、状态、待办）→ 放项目目录 |
 
 写入模式详细执行步骤 → [references/write-supplement.md](./references/write-supplement.md)。
 

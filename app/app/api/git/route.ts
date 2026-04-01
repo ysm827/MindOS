@@ -19,7 +19,8 @@ export async function GET(req: NextRequest) {
       case 'history': {
         const filePath = req.nextUrl.searchParams.get('path');
         if (!filePath) return err('missing path');
-        const limit = parseInt(req.nextUrl.searchParams.get('limit') ?? '10', 10);
+        const rawLimit = parseInt(req.nextUrl.searchParams.get('limit') ?? '10', 10);
+        const limit = Number.isFinite(rawLimit) ? Math.max(1, Math.min(rawLimit, 100)) : 10;
         const entries = gitLog(filePath, limit);
         return NextResponse.json({ entries });
       }

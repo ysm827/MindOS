@@ -323,10 +323,19 @@ export function listMindSpaces(): MindSpaceSummary[] {
   return summarizeTopLevelSpaces(getMindRoot(), ensureCache().tree);
 }
 
+/** Appends a structured change event to the change log. */
 export function appendContentChange(input: ContentChangeInput): ContentChangeEvent {
   return coreAppendContentChange(getMindRoot(), input);
 }
 
+/**
+ * Lists content change events with optional filtering.
+ * @param options.path   Filter by file path (prefix match)
+ * @param options.limit  Max events to return (default: unlimited)
+ * @param options.source Filter by source: 'user' | 'agent' | 'system'
+ * @param options.op     Filter by operation type (e.g. 'create', 'update', 'delete')
+ * @param options.q      Free-text search within change descriptions
+ */
 export function listContentChanges(options: {
   path?: string;
   limit?: number;
@@ -337,10 +346,12 @@ export function listContentChanges(options: {
   return coreListContentChanges(getMindRoot(), options);
 }
 
+/** Marks all unseen content changes as seen. */
 export function markContentChangesSeen(): void {
   coreMarkContentChangesSeen(getMindRoot());
 }
 
+/** Returns a summary of content changes (total, unseen count, latest timestamp). */
 export function getContentChangeSummary(): ContentChangeSummary {
   return coreGetContentChangeSummary(getMindRoot());
 }
@@ -411,6 +422,10 @@ export function getDirEntries(dirPath: string): FileNode[] {
   return nodes;
 }
 
+/**
+ * Returns the N most recently modified files.
+ * @param limit Max files to return (default: 10)
+ */
 export function getRecentlyModified(limit = 10): Array<{ path: string; mtime: number }> {
   const root = getMindRoot();
   const allFiles = collectAllFiles();
@@ -447,6 +462,10 @@ export function createFile(filePath: string, initialContent = ''): void {
   invalidateCacheForNewFile(filePath);
 }
 
+/**
+ * Deletes a file and moves it to the trash.
+ * @returns Trash metadata for undo support
+ */
 export function deleteFile(filePath: string): void {
   coreDeleteFile(getMindRoot(), filePath);
   invalidateCacheForDeletedFile(filePath);
@@ -480,20 +499,41 @@ export function convertToSpace(dirPath: string): void {
 
 // ─── Public API: Line-level operations (delegated to @mindos/core) ───────────
 
+/**
+ * Reads all lines of a file as an array of strings.
+ * @param filePath Relative path from MIND_ROOT
+ */
 export function readLines(filePath: string): string[] {
   return coreReadLines(getMindRoot(), filePath);
 }
 
+/**
+ * Inserts lines after the given index (0-based).
+ * @param filePath   Relative path from MIND_ROOT
+ * @param afterIndex Insert after this line index (-1 = prepend)
+ * @param lines      Lines to insert
+ */
 export function insertLines(filePath: string, afterIndex: number, lines: string[]): void {
   coreInsertLines(getMindRoot(), filePath, afterIndex, lines);
   invalidateCacheForFile(filePath);
 }
 
+/**
+ * Replaces lines in the range [startIndex, endIndex] (inclusive, 0-based).
+ * @param filePath   Relative path from MIND_ROOT
+ * @param startIndex First line to replace
+ * @param endIndex   Last line to replace
+ * @param newLines   Replacement lines
+ */
 export function updateLines(filePath: string, startIndex: number, endIndex: number, newLines: string[]): void {
   coreUpdateLines(getMindRoot(), filePath, startIndex, endIndex, newLines);
   invalidateCacheForFile(filePath);
 }
 
+/**
+ * Deletes lines in the range [startIndex, endIndex] (inclusive, 0-based).
+ * @throws {MindOSError} If indices are out of range
+ */
 export function deleteLines(filePath: string, startIndex: number, endIndex: number): void {
   const existing = readLines(filePath);
   if (startIndex < 0 || endIndex < 0) throw new MindOSError(ErrorCodes.INVALID_RANGE, 'Invalid line index: indices must be >= 0', { startIndex, endIndex });
@@ -505,16 +545,19 @@ export function deleteLines(filePath: string, startIndex: number, endIndex: numb
 
 // ─── Public API: High-level semantic operations (delegated to @mindos/core) ──
 
+/** Appends content to the end of a file with a leading newline separator. */
 export function appendToFile(filePath: string, content: string): void {
   coreAppendToFile(getMindRoot(), filePath, content);
   invalidateCacheForFile(filePath);
 }
 
+/** Inserts content after the first occurrence of a markdown heading. */
 export function insertAfterHeading(filePath: string, heading: string, content: string): void {
   coreInsertAfterHeading(getMindRoot(), filePath, heading, content);
   invalidateCacheForFile(filePath);
 }
 
+/** Replaces the content of a markdown section (heading to next heading of same or higher level). */
 export function updateSection(filePath: string, heading: string, newContent: string): void {
   coreUpdateSection(getMindRoot(), filePath, heading, newContent);
   invalidateCacheForFile(filePath);
@@ -668,6 +711,10 @@ function generateSnippet(
 
 // ─── Public API: CSV (delegated to @mindos/core) ────────────────────────────
 
+/**
+ * Appends a row to a CSV file.
+ * @returns Object with the new total row count
+ */
 export function appendCsvRow(filePath: string, row: string[]): { newRowCount: number } {
   const result = coreAppendCsvRow(getMindRoot(), filePath, row);
   invalidateCache();
@@ -676,6 +723,10 @@ export function appendCsvRow(filePath: string, row: string[]): { newRowCount: nu
 
 // ─── Public API: Move file (delegated to @mindos/core) ──────────────────────
 
+/**
+ * Moves a file from one path to another, updating internal wikilinks.
+ * @returns The new path and list of files whose links were updated
+ */
 export function moveFile(fromPath: string, toPath: string): { newPath: string; affectedFiles: string[] } {
   const result = coreMoveFile(getMindRoot(), fromPath, toPath, coreFindBacklinks);
   invalidateCache();
@@ -684,14 +735,25 @@ export function moveFile(fromPath: string, toPath: string): { newPath: string; a
 
 // ─── Public API: Git operations (delegated to @mindos/core) ─────────────────
 
+/** Returns whether the knowledge base root is a git repository. */
 export function isGitRepo(): boolean {
   return coreIsGitRepo(getMindRoot());
 }
 
+/**
+ * Returns git log entries for a file.
+ * @param filePath Relative path from MIND_ROOT
+ * @param limit    Max entries (default: 10)
+ */
 export function gitLog(filePath: string, limit = 10): Array<{ hash: string; date: string; message: string; author: string }> {
   return coreGitLog(getMindRoot(), filePath, limit);
 }
 
+/**
+ * Shows file content at a specific git commit.
+ * @param filePath Relative path from MIND_ROOT
+ * @param commit   Git commit hash or ref
+ */
 export function gitShowFile(filePath: string, commit: string): string {
   return coreGitShowFile(getMindRoot(), filePath, commit);
 }
@@ -716,40 +778,55 @@ import {
 } from './core/trash';
 export type { TrashMeta } from './core/trash';
 
+/** Moves a file to the .mindos/.trash/ directory for later recovery. */
 export function moveToTrashFile(filePath: string) {
   const result = coreMoveToTrash(getMindRoot(), filePath);
   invalidateCache();
   return result;
 }
 
+/**
+ * Restores a file from trash to its original path.
+ * @param trashId   The trash entry ID
+ * @param overwrite If true, overwrite existing file at original path
+ */
 export function restoreFromTrash(trashId: string, overwrite = false) {
   const result = coreRestoreFromTrash(getMindRoot(), trashId, overwrite);
   invalidateCache();
   return result;
 }
 
+/** Restores a file from trash as a copy (appends suffix to avoid conflict). */
 export function restoreAsCopy(trashId: string) {
   const result = coreRestoreAsCopy(getMindRoot(), trashId);
   invalidateCache();
   return result;
 }
 
+/** Permanently deletes a file from trash (no recovery possible). */
 export function permanentlyDeleteFromTrash(trashId: string) {
   corePermanentlyDelete(getMindRoot(), trashId);
 }
 
+/** Lists all items currently in the trash. */
 export function listTrash() {
   return coreListTrash(getMindRoot());
 }
 
+/** Permanently deletes all items in the trash. */
 export function emptyTrashAll() {
   return coreEmptyTrash(getMindRoot());
 }
 
+/** Removes trash items older than 30 days. Called automatically on listTrash. */
 export function purgeExpiredTrash() {
   return corePurgeExpired(getMindRoot());
 }
 
+/**
+ * Finds all files that link to the given target path via wikilinks.
+ * Uses the pre-built LinkIndex for O(1) source lookup.
+ */
 export function findBacklinks(targetPath: string): BacklinkEntry[] {
   const mindRoot = getMindRoot();
   // Use LinkIndex for O(1) source lookup, then only scan matching files
