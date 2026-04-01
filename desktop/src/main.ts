@@ -462,6 +462,12 @@ async function startLocalMode(): Promise<string | null> {
     env: getEnrichedEnv(nodePath),
   });
 
+  // Clean up any previous processManager (e.g. from retry or mode switch)
+  if (processManager) {
+    processManager.removeAllListeners();
+    processManager.stop().catch(() => {});
+  }
+
   processManager = createProcessManager(webPort, mcpPort);
 
   try {
@@ -1152,20 +1158,6 @@ async function handleSplashAction(actionId: string): Promise<void> {
       shell.openExternal('https://nodejs.org/');
       break;
     case 'switch-remote': {
-      // Validate that remote connection info exists before switching
-      const cfg = loadConfig();
-      const hasRemote = (cfg as any).remoteUrl || (cfg as any).connections?.length;
-      if (!hasRemote) {
-        const zh = navigator_lang() === 'zh';
-        splashStatus({
-          error: zh ? '未配置远程连接。请先在设置中添加远程服务器。' : 'No remote connection configured. Add a remote server in Settings first.',
-          actions: [
-            { id: 'retry', label: 'retry', primary: true },
-            { id: 'quit', label: 'quit' },
-          ],
-        });
-        break;
-      }
       currentMode = 'remote';
       saveDesktopMode('remote');
       closeSplash();
@@ -1355,7 +1347,13 @@ app.on('before-quit', (e) => {
     if (mainWindow && !mainWindow.isDestroyed()) saveWindowState(mainWindow);
     const cleanup = async () => {
       try {
-        if (processManager) await processManager.stop();
+        if (processManager) {
+          // Timeout: force exit if stop() hangs (child process not responding)
+          await Promise.race([
+            processManager.stop(),
+            new Promise<void>((_, reject) => setTimeout(() => reject(new Error('stop timeout')), 8000)),
+          ]);
+        }
       } catch { /* best-effort */ }
       if (connectionMonitor) connectionMonitor.stop();
       if (activeRecoveryPoll) { clearInterval(activeRecoveryPoll); activeRecoveryPoll = null; }

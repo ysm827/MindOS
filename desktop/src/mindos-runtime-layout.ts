@@ -109,7 +109,10 @@ export function analyzeMindOsLayout(root: string): MindOsLayoutAnalysis {
 
   const appDir = path.join(root, 'app');
   const mcpDir = path.join(root, 'mcp');
-  const runnable = isNextBuildValid(appDir) && existsSync(mcpDir);
+  // MCP must have either pre-built bundle (dist/index.cjs) or source (src/) to be runnable
+  const mcpRunnable = existsSync(path.join(mcpDir, 'dist', 'index.cjs'))
+    || existsSync(path.join(mcpDir, 'src'));
+  const runnable = isNextBuildValid(appDir) && mcpRunnable;
 
   return { version, runnable };
 }

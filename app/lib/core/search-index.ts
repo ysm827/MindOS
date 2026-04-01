@@ -8,11 +8,18 @@ const MAX_CONTENT_LENGTH = 50_000;
 // CJK Unicode ranges: Chinese, Japanese Hiragana/Katakana, Korean
 const CJK_REGEX = /[\u4e00-\u9fff\u3040-\u309f\u30a0-\u30ff\uac00-\ud7af]/;
 
+// Intl.Segmenter for proper CJK word segmentation (available in Node 16+)
+const zhSegmenter = typeof Intl !== 'undefined' && Intl.Segmenter
+  ? new Intl.Segmenter('zh', { granularity: 'word' })
+  : null;
+
 /**
- * Tokenize text for indexing: split on word boundaries + CJK bigrams.
+ * Tokenize text for indexing: split on word boundaries + CJK word segmentation.
  *
  * Latin/ASCII: split on non-alphanumeric characters, lowercased.
- * CJK: generate character-level bigrams (overlapping pairs).
+ * CJK: uses Intl.Segmenter for proper word boundaries (e.g. "知识管理"
+ *   → ["知识", "管理"] instead of bigrams ["知识", "识管", "管理"]).
+ *   Falls back to bigrams if Intl.Segmenter is unavailable.
  * Mixed text: both strategies applied, tokens merged.
  */
 function tokenize(text: string): Set<string> {
@@ -29,27 +36,42 @@ function tokenize(text: string): Set<string> {
     }
   }
 
-  // CJK bigrams + single chars (unigrams carry meaning in CJK scripts)
+  // CJK word segmentation
   if (CJK_REGEX.test(lower)) {
-    const cjkChars: string[] = [];
-    for (const ch of lower) {
-      if (CJK_REGEX.test(ch)) {
-        cjkChars.push(ch);
-      } else {
-        // Emit bigrams for accumulated CJK run
-        if (cjkChars.length > 0) {
-          emitCjkTokens(cjkChars, tokens);
-          cjkChars.length = 0;
+    if (zhSegmenter) {
+      // Intl.Segmenter: proper word boundaries
+      for (const { segment, isWordLike } of zhSegmenter.segment(lower)) {
+        if (!isWordLike) continue;
+        const word = segment.trim();
+        if (!word) continue;
+        tokens.add(word);
+        // Also add individual CJK characters as unigrams (for single-char queries)
+        for (const ch of word) {
+          if (CJK_REGEX.test(ch)) tokens.add(ch);
         }
       }
+    } else {
+      // Fallback: bigrams + unigrams
+      const cjkChars: string[] = [];
+      for (const ch of lower) {
+        if (CJK_REGEX.test(ch)) {
+          cjkChars.push(ch);
+        } else {
+          if (cjkChars.length > 0) {
+            emitCjkBigrams(cjkChars, tokens);
+            cjkChars.length = 0;
+          }
+        }
+      }
+      if (cjkChars.length > 0) emitCjkBigrams(cjkChars, tokens);
     }
-    if (cjkChars.length > 0) emitCjkTokens(cjkChars, tokens);
   }
 
   return tokens;
 }
 
-function emitCjkTokens(chars: string[], tokens: Set<string>): void {
+/** Fallback CJK tokenizer: bigrams + unigrams (when Intl.Segmenter unavailable) */
+function emitCjkBigrams(chars: string[], tokens: Set<string>): void {
   for (let i = 0; i < chars.length; i++) {
     tokens.add(chars[i]); // unigram
     if (i + 1 < chars.length) {

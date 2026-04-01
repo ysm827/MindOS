@@ -185,8 +185,8 @@ export function searchFiles(mindRoot: string, query: string, opts: SearchOptions
   // ── Pre-scan: compute document frequency for each query term ──
   // We count how many candidate files contain each term via literal match.
   // This is more accurate than using the inverted index token df, because
-  // the index tokenizes differently (CJK bigrams, min length 2) than our
-  // literal search terms.
+  // the index tokenizes via Intl.Segmenter (CJK word boundaries) which may
+  // split query terms differently than our literal substring match.
   const termDf = new Map<string, number>();
   const fileContents = new Map<string, string>();
 
