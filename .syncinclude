@@ -99,4 +99,5 @@ blocked_patterns:
   - DOCKER.md
   - note.md
   - todo.md
-  - TODO.md
+  # NOTE: TODO.md removed from blocked patterns — templates/*/TODO.md is legitimate.
+  # Root-level TODO.md is excluded via global_exclude instead.
