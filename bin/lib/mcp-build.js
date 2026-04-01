@@ -1,7 +1,7 @@
 import { existsSync, readdirSync, statSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { ROOT } from './constants.js';
-import { yellow } from './colors.js';
+import { yellow, red } from './colors.js';
 import { run, npmInstall } from './utils.js';
 
 export const MCP_DIR = resolve(ROOT, 'mcp');
@@ -43,6 +43,10 @@ function hasBuildDeps() {
 export function needsMcpBuild() {
   if (!existsSync(MCP_BUNDLE)) return true;
 
+  // If there's no source directory (npm install strips it or it was never included),
+  // the pre-built bundle is all we have — no rebuild possible or needed.
+  if (!existsSync(MCP_SRC_DIR)) return false;
+
   const bundleMtime = safeMtime(MCP_BUNDLE);
   const sourceMtime = Math.max(
     latestTreeMtime(MCP_SRC_DIR),
@@ -50,11 +54,22 @@ export function needsMcpBuild() {
     safeMtime(MCP_PACKAGE_LOCK),
   );
 
+  // Guard against npm install mtime reset: if source and bundle were extracted
+  // at the same time (within 2s), trust the bundle as-is.
+  if (Math.abs(sourceMtime - bundleMtime) < 2000) return false;
+
   return sourceMtime > bundleMtime;
 }
 
 export function ensureMcpBundle() {
   if (!needsMcpBuild()) return;
+
+  // If bundle is missing AND there's no source to build from, this is a corrupted install
+  if (!existsSync(MCP_BUNDLE) && !existsSync(MCP_SRC_DIR)) {
+    console.error(red('\n✘ MCP server bundle is missing and cannot be rebuilt (no source code).\n'));
+    console.error('  Fix: npm install -g @geminilight/mindos@latest\n');
+    process.exit(1);
+  }
 
   const hadBundle = existsSync(MCP_BUNDLE);
 

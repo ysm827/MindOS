@@ -58,6 +58,7 @@
     "!assets/images",
     "!mcp/node_modules",
     "!mcp/package-lock.json",
+    "!mcp/src",
     "!mcp/*.tgz",
     "!app/package-lock.json"
   ],

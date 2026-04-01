@@ -109,6 +109,14 @@ export function ensureAppDeps({ force = false } = {}) {
   // force=true bypasses this (used by `mindos dev` which always needs app/node_modules).
   if (!force && hasPrebuiltStandalone()) return;
 
+  // If standalone server exists but version doesn't match, this is a stale installation.
+  // Don't silently install 400+ packages — tell user to reinstall.
+  if (!force && existsSync(STANDALONE_SERVER)) {
+    console.error(red('\n✘ MindOS version mismatch — prebuilt server is outdated.\n'));
+    console.error('  Fix: npm install -g @geminilight/mindos@latest\n');
+    process.exit(1);
+  }
+
   const appNext = resolve(ROOT, 'app', 'node_modules', 'next', 'package.json');
   const needsInstall = !existsSync(appNext) || depsChanged();
   if (!needsInstall) return;

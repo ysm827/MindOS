@@ -22,7 +22,7 @@ export async function printStartupInfo(webPort, mcpPort) {
   // Clear stale update status from previous update cycles
   clearUpdateStatus();
 
-  // Fire update check immediately (non-blocking)
+  // Fire update check in background — don't block server startup
   const updatePromise = checkForUpdate().catch(() => null);
 
   let config = {};
@@ -69,15 +69,11 @@ export async function printStartupInfo(webPort, mcpPort) {
     } catch { /* sync check is best-effort */ }
   }
 
-  // Wait for update check result (max 4s, then give up)
-  const latestVersion = await Promise.race([
-    updatePromise,
-    new Promise(r => setTimeout(() => r(null), 4000)),
-  ]);
-  if (latestVersion) printUpdateHint(latestVersion);
+  console.log(`${'─'.repeat(53)}\n`);
 
-  // Skill version check (best-effort, non-blocking)
+  // Skill check runs BEFORE server starts (may prompt user in TTY mode)
   await runSkillCheck();
 
-  console.log(`${'─'.repeat(53)}\n`);
+  // Update check prints AFTER server starts (non-blocking network call)
+  updatePromise.then(v => { if (v) printUpdateHint(v); });
 }

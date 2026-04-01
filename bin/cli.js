@@ -441,11 +441,15 @@ const commands = {
         process.exit(err.status || 1);
       }
     } else {
-      run(
-        `${NEXT_BIN} start -p ${webPort} ${extra}`,
-        resolve(ROOT, 'app'),
-        { HOSTNAME: '127.0.0.1' }
-      );
+      // Standalone missing — this means the installation is incomplete.
+      // Don't attempt `next start` (app/node_modules isn't shipped).
+      console.error(red('\n✘ MindOS installation is incomplete (prebuilt server missing).\n'));
+      console.error('  This usually means the npm package was corrupted during install.');
+      console.error('  Fix: ' + bold('npm install -g @geminilight/mindos@latest') + '\n');
+      console.error('  If the problem persists, try:');
+      console.error('    npm cache clean --force');
+      console.error('    npm install -g @geminilight/mindos@latest\n');
+      process.exit(EXIT.ERROR);
     }
   },
 
