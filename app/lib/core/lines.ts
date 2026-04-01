@@ -46,7 +46,7 @@ export function updateLines(mindRoot: string, filePath: string, startIndex: numb
 
 /**
  * Appends content to the end of a file using fs.appendFileSync.
- * Only reads the last 2 bytes to determine separator — avoids reading the entire file.
+ * Only reads the last 8 bytes to determine separator — avoids reading the entire file.
  * This is O(1) instead of O(file-size) for the common append-to-log/journal use case.
  */
 export function appendToFile(mindRoot: string, filePath: string, content: string): void {

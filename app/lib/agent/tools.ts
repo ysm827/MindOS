@@ -581,7 +581,7 @@ export const knowledgeBaseTools: AgentTool<any>[] = [
     execute: safeExecute(async (_id, params: Static<typeof WriteFileParams>) => {
       const before = safeReadContent(params.path);
       saveFileContent(params.path, params.content);
-      const diff = buildDiffSummary(before, params.content);
+      const diff = await buildDiffSummaryAsync(before, params.content);
       return textResult(`File written: ${params.path}${diff ? ' ' + diff : ''}`);
     }),
   },
@@ -630,7 +630,7 @@ export const knowledgeBaseTools: AgentTool<any>[] = [
       const before = safeReadContent(params.path);
       appendToFile(params.path, params.content);
       const after = safeReadContent(params.path);
-      const diff = buildDiffSummary(before, after);
+      const diff = await buildDiffSummaryAsync(before, after);
       return textResult(`Content appended to: ${params.path}${diff ? ' ' + diff : ''}`);
     }),
   },
@@ -644,7 +644,7 @@ export const knowledgeBaseTools: AgentTool<any>[] = [
       const before = safeReadContent(params.path);
       insertAfterHeading(params.path, params.heading, params.content);
       const after = safeReadContent(params.path);
-      const diff = buildDiffSummary(before, after);
+      const diff = await buildDiffSummaryAsync(before, after);
       return textResult(`Content inserted after heading "${params.heading}" in ${params.path}${diff ? ' ' + diff : ''}`);
     }),
   },
@@ -658,7 +658,7 @@ export const knowledgeBaseTools: AgentTool<any>[] = [
       const before = safeReadContent(params.path);
       updateSection(params.path, params.heading, params.content);
       const after = safeReadContent(params.path);
-      const diff = buildDiffSummary(before, after);
+      const diff = await buildDiffSummaryAsync(before, after);
       return textResult(`Section "${params.heading}" updated in ${params.path}${diff ? ' ' + diff : ''}`);
     }),
   },
@@ -677,7 +677,7 @@ export const knowledgeBaseTools: AgentTool<any>[] = [
       const { updateLines } = await import('@/lib/core');
       updateLines(mindRoot, fp, start, end, content.split('\n'));
       const after = safeReadContent(fp);
-      const diff = buildDiffSummary(before, after);
+      const diff = await buildDiffSummaryAsync(before, after);
       return textResult(`Lines ${start_line}-${end_line} replaced in ${fp}${diff ? ' ' + diff : ''}`);
     }),
   },
