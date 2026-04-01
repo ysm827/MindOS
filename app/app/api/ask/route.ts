@@ -633,7 +633,8 @@ export async function POST(req: NextRequest) {
               void session.abort();
             }
 
-            console.log(`[ask] Step ${stepCount}/${stepLimit}`);
+            // Step count logged in dev only to avoid polluting production output
+            if (process.env.NODE_ENV === 'development') console.log(`[ask] Step ${stepCount}/${stepLimit}`);
           } else if (event.type === 'agent_end') {
             // Capture model errors from the last assistant message.
             // pi-coding-agent resolves prompt() without throwing after retries;

@@ -19,6 +19,10 @@
     "type": "git",
     "url": "https://github.com/GeminiLight/MindOS"
   },
+  "homepage": "https://mindos.app",
+  "bugs": {
+    "url": "https://github.com/GeminiLight/MindOS/issues"
+  },
   "bin": {
     "mindos": "bin/cli.js"
   },

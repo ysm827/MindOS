@@ -451,14 +451,15 @@ export function installAutoApproval(acpProc: AcpProcess): () => void {
 
       // ── Permission requests (auto-approve all) ──
       case 'session/request_permission': {
-        console.log(`[ACP] Auto-approving permission: ${JSON.stringify(params.toolCall ?? {}).slice(0, 200)}`);
+        // Auto-approve in production; log in dev for debugging
+        if (process.env.NODE_ENV === 'development') console.log(`[ACP] Auto-approving permission: ${JSON.stringify(params.toolCall ?? {}).slice(0, 200)}`);
         sendResponse(acpProc, req.id, { outcome: { selected: { optionId: 'allow_once' } } });
         return;
       }
 
       // ── Unknown methods: auto-approve for backwards compat ──
       default: {
-        console.log(`[ACP] Auto-approving unknown agent request: ${method} (id=${req.id})`);
+        if (process.env.NODE_ENV === 'development') console.log(`[ACP] Auto-approving unknown agent request: ${method} (id=${req.id})`);
         sendResponse(acpProc, req.id, {});
       }
     }
