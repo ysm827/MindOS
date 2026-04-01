@@ -162,7 +162,53 @@ function ensureCache(): FileTreeCache {
   if (isCacheValid()) return _cache!;
   const root = getMindRoot();
   _cache = buildCache(root);
+  // Lazily start the file watcher on first cache build
+  if (!_watcher) startFileWatcher();
   return _cache;
+}
+
+// ─── File System Watcher ──────────────────────────────────────────────────────
+// Watches mindRoot for external changes (VSCode, Finder, git pull) and
+// invalidates cache immediately instead of waiting for the 5s TTL.
+
+let _watcher: fs.FSWatcher | null = null;
+let _watchDebounce: ReturnType<typeof setTimeout> | null = null;
+
+/**
+ * Start watching mindRoot for file changes. Idempotent — safe to call multiple times.
+ * Uses Node.js built-in fs.watch (recursive) with 500ms debounce to batch rapid changes.
+ */
+export function startFileWatcher(): void {
+  if (_watcher) return; // already watching
+  let root: string;
+  try { root = getMindRoot(); } catch { return; }
+
+  try {
+    _watcher = fs.watch(root, { recursive: true }, (_event, filename) => {
+      if (!filename) return;
+      // Ignore .git internals, node_modules, .next
+      if (filename.startsWith('.git') || filename.includes('node_modules') || filename.includes('.next')) return;
+      // Debounce: batch rapid file changes into one cache invalidation
+      if (_watchDebounce) clearTimeout(_watchDebounce);
+      _watchDebounce = setTimeout(() => {
+        _cache = null; // Invalidate tree cache — next read will rebuild
+        _watchDebounce = null;
+      }, 500);
+    });
+    _watcher.on('error', () => {
+      // Watcher failed (e.g. too many open files) — degrade gracefully to TTL cache
+      stopFileWatcher();
+    });
+  } catch {
+    // fs.watch not supported on this platform — degrade gracefully
+    _watcher = null;
+  }
+}
+
+/** Stop the file watcher. Safe to call even if not watching. */
+export function stopFileWatcher(): void {
+  if (_watchDebounce) { clearTimeout(_watchDebounce); _watchDebounce = null; }
+  if (_watcher) { _watcher.close(); _watcher = null; }
 }
 
 // ─── Internal builders ────────────────────────────────────────────────────────
