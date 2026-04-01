@@ -58,39 +58,39 @@ type MindOSSSEvent =
 // ---------------------------------------------------------------------------
 
 /** Fields present on message_update events (text_delta / thinking_delta). */
-interface MessageUpdateEvent extends AgentEvent {
+type MessageUpdateEvent = AgentEvent & {
   type: 'message_update';
   assistantMessageEvent?: { type: string; delta?: string };
-}
+};
 
 /** Fields present on tool_execution_start events. */
-interface ToolExecStartEvent extends AgentEvent {
+type ToolExecStartEvent = AgentEvent & {
   type: 'tool_execution_start';
   toolCallId?: string;
   toolName?: string;
   args?: unknown;
-}
+};
 
 /** Fields present on tool_execution_end events. */
-interface ToolExecEndEvent extends AgentEvent {
+type ToolExecEndEvent = AgentEvent & {
   type: 'tool_execution_end';
   toolCallId?: string;
   result?: { content?: Array<{ type: string; text?: string }> };
   isError?: boolean;
-}
+};
 
 /** Fields present on turn_end events. */
-interface TurnEndEvent extends AgentEvent {
+type TurnEndEvent = AgentEvent & {
   type: 'turn_end';
   toolResults?: Array<{ toolName: string; content: unknown }>;
   usage?: { inputTokens: number; outputTokens?: number };
-}
+};
 
 /** Fields present on agent_end events. */
-interface AgentEndEvent extends AgentEvent {
+type AgentEndEvent = AgentEvent & {
   type: 'agent_end';
   messages?: Array<{ role: string; content?: Array<{ type: string; text?: string }> }>;
-}
+};
 
 function isTextDeltaEvent(e: AgentEvent): e is MessageUpdateEvent {
   return e.type === 'message_update' && (e as MessageUpdateEvent).assistantMessageEvent?.type === 'text_delta';
