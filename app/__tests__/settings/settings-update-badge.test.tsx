@@ -57,6 +57,12 @@ vi.mock('@/components/settings/KnowledgeTab', () => ({ KnowledgeTab: () => null 
 vi.mock('@/components/settings/SyncTab', () => ({ SyncTab: () => null }));
 vi.mock('@/components/settings/McpTab', () => ({ McpTab: () => null }));
 
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ push: vi.fn(), replace: vi.fn(), prefetch: vi.fn(), back: vi.fn() }),
+  usePathname: () => '/',
+  useSearchParams: () => new URLSearchParams(),
+}));
+
 describe('Settings update badge synchronization', () => {
   beforeEach(() => {
     vi.clearAllMocks();

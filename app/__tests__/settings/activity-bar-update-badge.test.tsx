@@ -63,7 +63,6 @@ describe('ActivityBar update badge synchronization', () => {
           expanded
           onExpandedChange={vi.fn()}
           onSettingsClick={vi.fn()}
-          onHelpClick={vi.fn()}
           onSyncClick={vi.fn()}
         />,
       );

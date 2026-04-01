@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useState, useCallback, useRef } from 'react';
-import { Settings, Loader2, AlertCircle, CheckCircle2, RotateCcw, Sparkles, Palette, Database, RefreshCw, Plug, Download, X, Trash2 } from 'lucide-react';
+import { Settings, Loader2, AlertCircle, CheckCircle2, RotateCcw, Sparkles, Palette, Database, RefreshCw, Plug, Download, X, Trash2, HelpCircle } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import { useLocale } from '@/lib/LocaleContext';
 import { apiFetch } from '@/lib/api';
 import type { AiSettings, AgentSettings, SettingsData, Tab } from './types';
@@ -26,6 +27,7 @@ export default function SettingsContent({ visible, initialTab, variant, onClose 
   const [saving, setSaving] = useState(false);
   const [status, setStatus] = useState<'idle' | 'saved' | 'error' | 'load-error'>('idle');
   const { t, locale, setLocale } = useLocale();
+  const router = useRouter();
   const saveTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
   const dataLoaded = useRef(false);
 
@@ -315,6 +317,13 @@ export default function SettingsContent({ visible, initialTab, variant, onClose 
               {tabItem.badge && <span className="w-1.5 h-1.5 rounded-full bg-error shrink-0" />}
             </button>
           ))}
+          <button
+            onClick={() => { onClose?.(); router.push('/help'); }}
+            className="flex items-center gap-1.5 px-3 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap border-transparent text-muted-foreground hover:text-foreground"
+          >
+            <HelpCircle size={iconSize} />
+            {t.sidebar.help}
+          </button>
         </div>
         {renderContent()}
         {renderFooter()}
@@ -348,6 +357,16 @@ export default function SettingsContent({ visible, initialTab, variant, onClose 
               </button>
             ))}
           </nav>
+          {/* Help link at bottom of sidebar */}
+          <div className="shrink-0 border-t border-border px-4 py-2">
+            <button
+              onClick={() => { onClose?.(); router.push('/help'); }}
+              className="flex items-center gap-2 w-full px-0 py-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <HelpCircle size={13} />
+              {t.sidebar.help}
+            </button>
+          </div>
         </div>
 
         {/* Right content area */}
