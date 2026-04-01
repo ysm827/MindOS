@@ -27,6 +27,7 @@ export async function createFileAction(dirPath: string, fileName: string): Promi
 export async function deleteFileAction(filePath: string): Promise<{ success: boolean; error?: string }> {
   try {
     moveToTrash(getMindRoot(), filePath);
+    invalidateCache();
     revalidatePath('/', 'layout');
     return { success: true };
   } catch (err) {
@@ -61,6 +62,7 @@ export async function deleteFolderAction(
 ): Promise<{ success: boolean; error?: string }> {
   try {
     moveToTrash(getMindRoot(), dirPath);
+    invalidateCache();
     revalidatePath('/', 'layout');
     return { success: true };
   } catch (err) {
@@ -85,7 +87,8 @@ export async function deleteSpaceAction(
   spacePath: string,
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    deleteDirectory(spacePath);
+    moveToTrash(getMindRoot(), spacePath);
+    invalidateCache();
     revalidatePath('/', 'layout');
     return { success: true };
   } catch (err) {

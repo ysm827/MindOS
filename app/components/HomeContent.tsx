@@ -331,6 +331,9 @@ export default function HomeContent({ recent, existingFiles, spaces }: { recent:
         </div>
       </div>
 
+      {/* ── Section: Pinned Files ── */}
+      <PinnedFilesSection formatTime={formatTime} />
+
       {/* ── Section: Spaces ── */}
       <section className="mb-12">
         <SectionTitle
@@ -611,6 +614,54 @@ export default function HomeContent({ recent, existingFiles, spaces }: { recent:
         <span>{t.app.footer}</span>
       </div>
     </div>
+  );
+}
+
+/* ── Pinned Files Section ── */
+function PinnedFilesSection({ formatTime }: { formatTime: (t: number) => string }) {
+  const { t } = useLocale();
+  const { pinnedFiles, removePin } = usePinnedFiles();
+
+  if (pinnedFiles.length === 0) return null;
+
+  return (
+    <section className="mb-12">
+      <SectionTitle icon={<Star size={13} />} count={pinnedFiles.length}>
+        {t.pinnedFiles.title}
+      </SectionTitle>
+      <div className="flex flex-col gap-0.5">
+        {pinnedFiles.map((filePath) => {
+          const name = filePath.split('/').pop() || filePath;
+          const dir = filePath.split('/').slice(0, -1).join('/');
+          const isCSV = filePath.endsWith('.csv');
+          return (
+            <div key={filePath} className="group/pin relative">
+              <Link
+                href={`/view/${encodePath(filePath)}`}
+                className="flex items-center gap-3 px-3 py-2 rounded-lg transition-all duration-100 hover:translate-x-0.5 hover:bg-muted"
+              >
+                <Star size={12} className="shrink-0 fill-[var(--amber)] text-[var(--amber)]" />
+                {isCSV
+                  ? <Table size={12} className="shrink-0 text-success" />
+                  : <FileText size={12} className="shrink-0 text-muted-foreground" />
+                }
+                <div className="flex-1 min-w-0">
+                  <span className="text-sm truncate block text-foreground" suppressHydrationWarning>{name}</span>
+                  {dir && <span className="text-xs truncate block text-muted-foreground opacity-50" suppressHydrationWarning>{dir}</span>}
+                </div>
+              </Link>
+              <button
+                onClick={(e) => { e.preventDefault(); e.stopPropagation(); removePin(filePath); }}
+                className="absolute right-2 top-1/2 -translate-y-1/2 hidden group-hover/pin:flex p-1 rounded text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                title={t.pinnedFiles.removedToast}
+              >
+                <X size={12} />
+              </button>
+            </div>
+          );
+        })}
+      </div>
+    </section>
   );
 }
 
