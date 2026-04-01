@@ -38,7 +38,7 @@
  *   mindos config validate          — validate config file
  */
 
-import { execSync, spawn as nodeSpawn } from 'node:child_process';
+import { execSync, execFileSync, spawn as nodeSpawn } from 'node:child_process';
 import { existsSync, readFileSync, writeFileSync, rmSync, cpSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { homedir } from 'node:os';
@@ -50,7 +50,7 @@ import { bold, dim, cyan, green, red, yellow } from './lib/colors.js';
 const NEXT_BIN = resolve(ROOT, 'app', 'node_modules', '.bin', 'next');
 import { run, npmInstall } from './lib/utils.js';
 import { loadConfig, getStartMode, isDaemonMode } from './lib/config.js';
-import { needsBuild, writeBuildStamp, cleanNextDir, ensureAppDeps } from './lib/build.js';
+import { needsBuild, writeBuildStamp, cleanNextDir, ensureAppDeps, hasPrebuiltStandalone } from './lib/build.js';
 import { isPortInUse, assertPortFree } from './lib/port.js';
 import { savePids, clearPids } from './lib/pid.js';
 import { stopMindos } from './lib/stop.js';
@@ -130,6 +130,17 @@ function getUpdatedRoot() {
  * Used by `mindos update` to pre-build before restarting the daemon.
  */
 function buildIfNeeded(newRoot) {
+  // Check for prebuilt standalone first (npm package ships with it)
+  const standaloneServer = resolve(newRoot, '_standalone', 'server.js');
+  const standaloneStamp = resolve(newRoot, '_standalone', '.mindos-build-version');
+  if (existsSync(standaloneServer)) {
+    try {
+      const builtVersion = readFileSync(standaloneStamp, 'utf-8').trim();
+      const pkgVersion = JSON.parse(readFileSync(resolve(newRoot, 'package.json'), 'utf-8')).version;
+      if (builtVersion === pkgVersion) return; // prebuilt standalone matches, no build needed
+    } catch { /* fall through to legacy build */ }
+  }
+
   const newBuildStamp = resolve(newRoot, 'app', '.next', '.mindos-build-version');
   const newNextBin = resolve(newRoot, 'app', 'node_modules', '.bin', 'next');
 
@@ -282,7 +293,7 @@ const commands = {
     const mcpPort = process.env.MINDOS_MCP_PORT;
     await assertPortFree(Number(webPort), 'web');
     await assertPortFree(Number(mcpPort), 'mcp');
-    ensureAppDeps();
+    ensureAppDeps({ force: true }); // dev mode always needs app/node_modules
     const mcp = spawnMcp(isVerbose);
     savePids(process.pid, mcp.pid);
     process.on('exit', () => { stopSyncDaemon().catch(() => {}); clearPids(); });
@@ -406,16 +417,31 @@ const commands = {
       startSyncDaemon(mindRoot).catch(() => {});
     }
     await printStartupInfo(webPort, mcpPort);
-    run(
-      `${NEXT_BIN} start -p ${webPort} ${extra}`,
-      resolve(ROOT, 'app'),
-      { HOSTNAME: '127.0.0.1' }
-    );
+    // Prefer prebuilt standalone server (shipped with npm package) over next start.
+    // Standalone includes its own traced node_modules — no app/node_modules needed.
+    if (hasPrebuiltStandalone()) {
+      const standaloneServer = resolve(ROOT, '_standalone', 'server.js');
+      try {
+        execFileSync(process.execPath, [standaloneServer], {
+          cwd: resolve(ROOT, '_standalone'),
+          stdio: 'inherit',
+          env: { ...process.env, NODE_ENV: 'production', HOSTNAME: '127.0.0.1', PORT: webPort },
+        });
+      } catch (err) {
+        process.exit(err.status || 1);
+      }
+    } else {
+      run(
+        `${NEXT_BIN} start -p ${webPort} ${extra}`,
+        resolve(ROOT, 'app'),
+        { HOSTNAME: '127.0.0.1' }
+      );
+    }
   },
 
   // ── build ──────────────────────────────────────────────────────────────────
   build: () => {
-    ensureAppDeps();
+    ensureAppDeps({ force: true }); // build always needs app/node_modules
     cleanNextDir();
     run('node scripts/gen-renderer-index.js', ROOT);
     run(`${NEXT_BIN} build --webpack ${extra}`, resolve(ROOT, 'app'));
@@ -630,7 +656,9 @@ ${dim('Shortcut: mindos start --daemon  →  install + start in one step')}
     }
 
     // 5. Build
-    if (!existsSync(resolve(ROOT, 'app', '.next'))) {
+    if (hasPrebuiltStandalone()) {
+      ok('Production build is up to date (prebuilt standalone)');
+    } else if (!existsSync(resolve(ROOT, 'app', '.next'))) {
       warn(`App not built yet — will build automatically on next ${dim('mindos start')}`);
     } else if (needsBuild()) {
       warn(`Build is outdated — will rebuild automatically on next ${dim('mindos start')}`);

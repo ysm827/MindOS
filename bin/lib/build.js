@@ -2,11 +2,22 @@ import { execSync } from 'node:child_process';
 import { existsSync, readFileSync, writeFileSync, rmSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { resolve } from 'node:path';
-import { ROOT, BUILD_STAMP, DEPS_STAMP } from './constants.js';
+import { ROOT, BUILD_STAMP, DEPS_STAMP, STANDALONE_SERVER, STANDALONE_STAMP } from './constants.js';
 import { red, dim, yellow } from './colors.js';
 import { run, npmInstall } from './utils.js';
 
 export function needsBuild() {
+  // Prefer prebuilt standalone shipped with the npm package.
+  // If _standalone/server.js exists and its version stamp matches, skip build entirely.
+  if (existsSync(STANDALONE_SERVER)) {
+    try {
+      const builtVersion = readFileSync(STANDALONE_STAMP, 'utf-8').trim();
+      const currentVersion = JSON.parse(readFileSync(resolve(ROOT, 'package.json'), 'utf-8')).version;
+      if (builtVersion === currentVersion) return false;
+    } catch { /* stamp unreadable — fall through to legacy check */ }
+  }
+
+  // Fallback: check local app/.next/ build (for dev installs or after `mindos build`)
   const nextDir = resolve(ROOT, 'app', '.next');
   if (!existsSync(nextDir)) return true;
   try {
@@ -81,7 +92,23 @@ function verifyDeps() {
   return true;
 }
 
-export function ensureAppDeps() {
+export function hasPrebuiltStandalone() {
+  if (!existsSync(STANDALONE_SERVER)) return false;
+  try {
+    const builtVersion = readFileSync(STANDALONE_STAMP, 'utf-8').trim();
+    const currentVersion = JSON.parse(readFileSync(resolve(ROOT, 'package.json'), 'utf-8')).version;
+    return builtVersion === currentVersion;
+  } catch {
+    return false;
+  }
+}
+
+export function ensureAppDeps({ force = false } = {}) {
+  // Skip dependency installation when prebuilt standalone is available —
+  // standalone bundles its own traced node_modules and doesn't need app/node_modules.
+  // force=true bypasses this (used by `mindos dev` which always needs app/node_modules).
+  if (!force && hasPrebuiltStandalone()) return;
+
   const appNext = resolve(ROOT, 'app', 'node_modules', 'next', 'package.json');
   const needsInstall = !existsSync(appNext) || depsChanged();
   if (!needsInstall) return;
