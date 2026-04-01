@@ -922,6 +922,9 @@ async function switchToMode(targetMode: 'local' | 'remote'): Promise<void> {
   // 2. Preheat: keep old alive, start new
   const oldPM = processManager;
   const oldCM = connectionMonitor;
+  const oldWebPort = currentWebPort;
+  const oldMcpPort = currentMcpPort;
+  const oldRemoteAddress = currentRemoteAddress;
   processManager = null;
   connectionMonitor = null;
   if (targetMode === 'local') { clearActiveTunnel(); currentRemoteAddress = undefined; }
@@ -1235,17 +1238,23 @@ async function bootApp(): Promise<void> {
   const loadUrl = currentMode === 'local' ? resolveLocalMindOsBrowseUrl(url) : url;
   mainWindow.loadURL(loadUrl);
 
+  // Remove stale listeners from previous bootApp() calls to prevent stacking
+  mainWindow.webContents.removeAllListeners('did-fail-load');
+  mainWindow.webContents.removeAllListeners('did-finish-load');
+
   mainWindow.webContents.on('did-fail-load', (_event, code, desc, failedUrl) => {
     console.error('[MindOS] main window did-fail-load', code, desc, failedUrl);
     closeSplash();
     const zh = navigator_lang() === 'zh';
-    void dialog.showMessageBox(mainWindow!, {
-      type: 'error',
-      title: zh ? '页面加载失败' : 'Page failed to load',
-      message: zh ? `无法加载：${failedUrl}` : `Could not load: ${failedUrl}`,
-      detail: `${desc} (code ${code})\n\n${zh ? '若使用本地模式，请在终端执行 MINDOS_OPEN_DEVTOOLS=1 启动应用以打开开发者工具，或在浏览器访问同一地址对比。' : 'Tip: launch with MINDOS_OPEN_DEVTOOLS=1 to open DevTools, or open the same URL in a browser.'}`,
-    });
-    mainWindow?.show();
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      void dialog.showMessageBox(mainWindow, {
+        type: 'error',
+        title: zh ? '页面加载失败' : 'Page failed to load',
+        message: zh ? `无法加载：${failedUrl}` : `Could not load: ${failedUrl}`,
+        detail: `${desc} (code ${code})\n\n${zh ? '若使用本地模式，请在终端执行 MINDOS_OPEN_DEVTOOLS=1 启动应用以打开开发者工具，或在浏览器访问同一地址对比。' : 'Tip: launch with MINDOS_OPEN_DEVTOOLS=1 to open DevTools, or open the same URL in a browser.'}`,
+      });
+      mainWindow.show();
+    }
   });
 
   // Show main + hide splash on each navigation (not just the first)

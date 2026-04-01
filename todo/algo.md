@@ -13,8 +13,7 @@
 - [x] **增量索引更新** — ✅ 已实现。`SearchIndex.addFile/removeFile/updateFile` 增量更新，`fileTokens` 逆映射使 removeFile 从 O(all-tokens) 优化到 O(tokens-in-file)
 
 ### P1 — 中文分词
-- [ ] **中文分词优化** — 当前用 bigram 切分（`search-index.ts:16-57`），"知识管理" 被切成 "知识/识管/管理"，召回率低
-  - 方案：接入 jieba 或 Intl.Segmenter API
+- [x] **中文分词优化** — ✅ 已实现。使用 `Intl.Segmenter('zh', { granularity: 'word' })` 替代 bigram，“知识管理” 正确分为 ["知识", "管理"]。保留单字 unigram 兼容单字查询，无 Intl.Segmenter 时回退 bigram
 
 ### P2 — 语义搜索
 - [ ] **Embedding 向量搜索** — 纯关键词匹配无法处理同义词/概念相似（"部署" 搜不到 "deployment"）
@@ -31,9 +30,7 @@
   - 方案：在 model config 中启用 `cache: { enabled: true, breakpoints: ['system'] }`
 
 ### P0 — Token 估算
-- [ ] **精确 Token 计数** — 当前用 `Math.ceil(content.length / 4)`（`context.ts:16-30`），中文字符实际 ~1.5 token/字，误差可达 6 倍
-  - 文件：`app/lib/agent/context.ts:16-30`
-  - 方案：引入 tiktoken 或 Anthropic 的 token counting API
+- [x] **精确 Token 计数** — ✅ 已实现。CJK ~1.5 tokens/char, ASCII ~0.25 tokens/char，比 `length/4` 对中文准确 3-4 倍
 
 ### P1 — 大文件处理
 - [ ] **智能段落提取** — 当前 >20k 字符直接截断（`tools.ts:17`），丢失后半部分全部信息
@@ -78,8 +75,7 @@
 - [x] **API 重试机制** — ✅ 已实现。`session.prompt()` 包裹指数退避重试（最多 3 次，1s/2s），仅对瞬态错误重试（timeout/429/5xx/ECONNRESET），已发送内容后不重试。`isTransientError` 抽取到 `lib/agent/retry.ts`
 
 ### P1 — 循环检测增强
-- [ ] **语义循环检测** — 当前只检测完全相同的 tool + args（`route.ts:589-599`）。应检测模式循环（read A → read B → read A → read B）
-  - 方案：维护滑动窗口，检测 tool 序列的周期性
+- [x] **语义循环检测** — ✅ 已实现。除了完全相同的 tool+args 3x 重复外，新增模式循环检测（A→B→A→B，周期长度 2-4）。提取到 `lib/agent/loop-detection.ts`
 
 ### P2 — Tool 输出流式化
 - [ ] **长时间工具流式反馈** — web_fetch 等工具执行期间 UI 无进度反馈
