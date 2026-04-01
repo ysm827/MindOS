@@ -25,7 +25,7 @@
 ## 🧠 AI 上下文管理
 
 ### P0 — 成本优化
-- [ ] **Prompt Caching** — 系统提示（~600 tokens）每次请求都重新发送。Anthropic 支持缓存前缀，可省 50%+ 成本
+- [x] **Prompt Caching** — ✅ 已由 pi-ai 自动启用。Anthropic provider 默认 `cacheRetention: "short"` → `cache_control: { type: "ephemeral" }`，系统提示块自动缓存
   - 文件：`app/lib/agent/prompt.ts`, `app/api/ask/route.ts`
   - 方案：在 model config 中启用 `cache: { enabled: true, breakpoints: ['system'] }`
 
