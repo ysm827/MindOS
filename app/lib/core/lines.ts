@@ -1,5 +1,8 @@
+import fs from 'fs';
+import path from 'path';
 import { readFile, writeFile } from './fs-ops';
 import { MindOSError, ErrorCodes } from '@/lib/errors';
+import { resolveSafe } from './security';
 
 /**
  * Reads a file and returns its content split into lines.
@@ -42,12 +45,33 @@ export function updateLines(mindRoot: string, filePath: string, startIndex: numb
 }
 
 /**
- * Appends content to the end of a file, adding a newline separator if needed.
+ * Appends content to the end of a file using fs.appendFileSync.
+ * Only reads the last 2 bytes to determine separator — avoids reading the entire file.
+ * This is O(1) instead of O(file-size) for the common append-to-log/journal use case.
  */
 export function appendToFile(mindRoot: string, filePath: string, content: string): void {
-  const existing = readFile(mindRoot, filePath);
-  const separator = existing.length > 0 && !existing.endsWith('\n\n') ? '\n' : '';
-  writeFile(mindRoot, filePath, existing + separator + content);
+  const absPath = resolveSafe(mindRoot, filePath);
+  try {
+    const stat = fs.statSync(absPath);
+    if (stat.size === 0) {
+      // Empty file — just write content directly
+      fs.appendFileSync(absPath, content, 'utf-8');
+      return;
+    }
+    // Read last 2 bytes to determine if we need a newline separator
+    const fd = fs.openSync(absPath, 'r');
+    const buf = Buffer.alloc(2);
+    const bytesRead = fs.readSync(fd, buf, 0, 2, Math.max(0, stat.size - 2));
+    fs.closeSync(fd);
+    const tail = buf.toString('utf-8', 0, bytesRead);
+    const separator = tail.endsWith('\n\n') ? '' : '\n';
+    fs.appendFileSync(absPath, separator + content, 'utf-8');
+  } catch (err) {
+    // Fallback to read-write for edge cases (e.g., file doesn't exist yet)
+    const existing = readFile(mindRoot, filePath);
+    const separator = existing.length > 0 && !existing.endsWith('\n\n') ? '\n' : '';
+    writeFile(mindRoot, filePath, existing + separator + content);
+  }
 }
 
 /**
