@@ -261,7 +261,7 @@ function getProtectedPaths(toolName: string, args: Record<string, unknown>): str
   return pathsToCheck;
 }
 
-function toPiCustomToolDefinitions(tools: AgentTool<any>[]): ToolDefinition[] {
+function toPiCustomToolDefinitions(tools: AgentTool<any>[]): ToolDefinition<any, unknown>[] {
   return tools.map((tool) => ({
     name: tool.name,
     label: tool.label,
