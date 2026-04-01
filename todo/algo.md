@@ -10,9 +10,7 @@
   - 方案：计算 `idf = log((N - df + 0.5) / (df + 0.5))`，结合文档长度归一化
 
 ### P0 — 索引性能
-- [ ] **增量索引更新** — 当前任何写入操作都使整个搜索索引失效（`fs.ts:101-104`），导致全量重建 O(n)。应改为只更新被修改文件的 token
-  - 文件：`app/lib/fs.ts:99-105`, `search-index.ts:112-117`
-  - 方案：`removeFileTokens(path)` → `reindexFile(path)`
+- [x] **增量索引更新** — ✅ 已实现。`SearchIndex.addFile/removeFile/updateFile` 增量更新，`fileTokens` 逆映射使 removeFile 从 O(all-tokens) 优化到 O(tokens-in-file)
 
 ### P1 — 中文分词
 - [ ] **中文分词优化** — 当前用 bigram 切分（`search-index.ts:16-57`），"知识管理" 被切成 "知识/识管/管理"，召回率低
@@ -59,17 +57,14 @@
   - 方案：改用 `fs.promises.readdir` + `Promise.all` 并行遍历
 
 ### P0 — 缓存粒度
-- [ ] **路径级缓存失效** — 当前修改一个文件会清除所有缓存（`fs.ts:99-105`），应改为只失效受影响的路径
-  - 文件：`app/lib/fs.ts:99-105`
-  - 方案：`invalidatePath(filePath)` 替代 `invalidateAll()`
+- [x] **路径级缓存失效** — ✅ 已实现。`invalidateCacheForFile/NewFile/DeletedFile` 替代全局 invalidateCache，写入操作触发增量搜索索引更新
 
 ### P1 — 文件监听
 - [ ] **文件系统 Watcher** — 外部编辑（VSCode、Finder）不被检测，5s 缓存期间可能提供过期数据
   - 方案：引入 chokidar 监听 mindRoot，变动时精准失效缓存 + 推送 SSE 事件
 
 ### P1 — 搜索索引持久化
-- [ ] **磁盘持久化搜索索引** — 进程重启后索引从零重建。应持久化到 `~/.mindos/search-index.json`，启动时热加载
-  - 方案：`persistIndex()` + `loadIndex()` with mtime 校验
+- [x] **磁盘持久化搜索索引** — ✅ 已实现。`persist()` 序列化到 `~/.mindos/search-index.json`，`load()` 启动时恢复（含 mtime 采样校验）。写操作后 5s debounce 自动持久化
 
 ### P2 — 启动预热
 - [ ] **冷启动索引预热** — 第一次搜索会卡顿（需要建索引）。应在 `mindos start` 时异步预构建

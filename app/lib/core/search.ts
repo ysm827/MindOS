@@ -1,5 +1,6 @@
 import fs from 'fs';
 import path from 'path';
+import os from 'os';
 import { collectAllFiles } from './tree';
 import { readFile } from './fs-ops';
 import { SearchIndex } from './search-index';
@@ -11,9 +12,45 @@ import type { SearchResult, SearchOptions } from './types';
  */
 const searchIndex = new SearchIndex();
 
+/** Path to ~/.mindos/ for index persistence. */
+function getMindosDir(): string {
+  return path.join(os.homedir(), '.mindos');
+}
+
 /** Invalidate the core search index. Called from `lib/fs.ts` on write operations. */
 export function invalidateSearchIndex(): void {
   searchIndex.invalidate();
+}
+
+/** Incrementally update a single file in the search index (after write/edit). */
+export function updateSearchIndexFile(mindRoot: string, filePath: string): void {
+  if (!searchIndex.isBuilt()) return;
+  searchIndex.updateFile(mindRoot, filePath);
+  schedulePersist();
+}
+
+/** Incrementally add a new file to the search index (after create). */
+export function addSearchIndexFile(mindRoot: string, filePath: string): void {
+  if (!searchIndex.isBuilt()) return;
+  searchIndex.addFile(mindRoot, filePath);
+  schedulePersist();
+}
+
+/** Incrementally remove a file from the search index (after delete). */
+export function removeSearchIndexFile(filePath: string): void {
+  if (!searchIndex.isBuilt()) return;
+  searchIndex.removeFile(filePath);
+  schedulePersist();
+}
+
+/** Debounced persist — writes index to disk 5s after last write operation. */
+let _persistTimer: ReturnType<typeof setTimeout> | null = null;
+function schedulePersist(): void {
+  if (_persistTimer) clearTimeout(_persistTimer);
+  _persistTimer = setTimeout(() => {
+    _persistTimer = null;
+    try { searchIndex.persist(getMindosDir()); } catch { /* non-critical */ }
+  }, 5000);
 }
 
 /* ── BM25 Parameters ── */
@@ -84,7 +121,13 @@ export function searchFiles(mindRoot: string, query: string, opts: SearchOptions
 
   // Ensure search index is built for this mindRoot
   if (!searchIndex.isBuiltFor(mindRoot)) {
-    searchIndex.rebuild(mindRoot);
+    // Try loading from disk first (fast path — avoids full rebuild)
+    const loaded = searchIndex.load(getMindosDir(), mindRoot);
+    if (!loaded) {
+      searchIndex.rebuild(mindRoot);
+      // Persist for next cold start (fire-and-forget)
+      try { searchIndex.persist(getMindosDir()); } catch { /* non-critical */ }
+    }
   }
 
   const totalDocs = searchIndex.getFileCount();

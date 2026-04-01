@@ -166,4 +166,74 @@ describe('SearchIndex', () => {
       expect(candidates).toContain('Notes/large.md');
     });
   });
+
+  describe('incremental updates', () => {
+    it('updateFile re-indexes a modified file without full rebuild', () => {
+      index.rebuild(mindRoot);
+      expect(index.getCandidates('quantum')).toHaveLength(0);
+
+      // Modify file to contain new term
+      seedFile(mindRoot, 'Profile/Identity.md', '# My Identity\n\nI study quantum computing.');
+      index.updateFile(mindRoot, 'Profile/Identity.md');
+
+      const candidates = index.getCandidates('quantum');
+      expect(candidates).toContain('Profile/Identity.md');
+      // Old term should still be findable in other files
+      expect(index.getCandidates('search')).toContain('Projects/TODO.md');
+    });
+
+    it('updateFile removes old tokens that no longer exist in file', () => {
+      index.rebuild(mindRoot);
+      expect(index.getCandidates('developer')).toContain('Profile/Identity.md');
+
+      // Rewrite file without "developer"
+      seedFile(mindRoot, 'Profile/Identity.md', '# My Identity\n\nI am a designer.');
+      index.updateFile(mindRoot, 'Profile/Identity.md');
+
+      expect(index.getCandidates('developer')).toHaveLength(0);
+      expect(index.getCandidates('designer')).toContain('Profile/Identity.md');
+    });
+
+    it('updateFile maintains correct fileCount', () => {
+      index.rebuild(mindRoot);
+      expect(index.getFileCount()).toBe(4);
+
+      seedFile(mindRoot, 'Profile/Identity.md', 'updated content');
+      index.updateFile(mindRoot, 'Profile/Identity.md');
+
+      expect(index.getFileCount()).toBe(4); // same file, count unchanged
+    });
+
+    it('removeFile removes a file from the index', () => {
+      index.rebuild(mindRoot);
+      expect(index.getCandidates('archived')).toContain('Archive/old.md');
+
+      index.removeFile('Archive/old.md');
+
+      expect(index.getCandidates('archived')).toHaveLength(0);
+      expect(index.getFileCount()).toBe(3);
+    });
+
+    it('addFile indexes a new file without full rebuild', () => {
+      index.rebuild(mindRoot);
+      expect(index.getFileCount()).toBe(4);
+
+      seedFile(mindRoot, 'Notes/fresh.md', 'brand new blockchain content');
+      index.addFile(mindRoot, 'Notes/fresh.md');
+
+      expect(index.getFileCount()).toBe(5);
+      expect(index.getCandidates('blockchain')).toContain('Notes/fresh.md');
+    });
+
+    it('updateFile updates BM25 docLength stats', () => {
+      index.rebuild(mindRoot);
+      const oldLen = index.getDocLength('Profile/Identity.md');
+
+      seedFile(mindRoot, 'Profile/Identity.md', 'short');
+      index.updateFile(mindRoot, 'Profile/Identity.md');
+
+      expect(index.getDocLength('Profile/Identity.md')).toBe(5);
+      expect(index.getDocLength('Profile/Identity.md')).not.toBe(oldLen);
+    });
+  });
 });

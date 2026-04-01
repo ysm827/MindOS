@@ -1,3 +1,5 @@
+import fs from 'fs';
+import path from 'path';
 import { collectAllFiles } from './tree';
 import { readFile } from './fs-ops';
 
@@ -76,12 +78,15 @@ export class SearchIndex {
   /** BM25 statistics — populated during rebuild() */
   private docLengths = new Map<string, number>();  // filePath → char count
   private totalChars = 0;
+  /** Reverse mapping: filePath → Set<token> for efficient removeFile. */
+  private fileTokens = new Map<string, Set<string>>();
 
   /** Full rebuild: read all files and build inverted index. */
   rebuild(mindRoot: string): void {
     const allFiles = collectAllFiles(mindRoot);
     const inverted = new Map<string, Set<string>>();
     const docLengths = new Map<string, number>();
+    const fileTokensMap = new Map<string, Set<string>>();
     let totalChars = 0;
 
     for (const filePath of allFiles) {
@@ -103,6 +108,7 @@ export class SearchIndex {
       // Also index the file path itself
       const allText = filePath + '\n' + content;
       const tokens = tokenize(allText);
+      fileTokensMap.set(filePath, tokens);
 
       for (const token of tokens) {
         let set = inverted.get(token);
@@ -119,6 +125,7 @@ export class SearchIndex {
     this.fileCount = allFiles.length;
     this.docLengths = docLengths;
     this.totalChars = totalChars;
+    this.fileTokens = fileTokensMap;
   }
 
   /** Clear the index. Next search will trigger a lazy rebuild. */
@@ -128,6 +135,75 @@ export class SearchIndex {
     this.fileCount = 0;
     this.docLengths.clear();
     this.totalChars = 0;
+    this.fileTokens.clear();
+  }
+
+  // ── Incremental updates ──────────────────────────────────────────────
+
+  /**
+   * Remove a single file from the index (e.g. after deletion).
+   * O(tokens-in-file) — much faster than full rebuild.
+   */
+  removeFile(filePath: string): void {
+    if (!this.invertedIndex) return;
+
+    // Use reverse mapping for O(tokens-in-file) instead of O(all-tokens)
+    const tokens = this.fileTokens.get(filePath);
+    if (tokens) {
+      for (const token of tokens) {
+        this.invertedIndex.get(token)?.delete(filePath);
+      }
+      this.fileTokens.delete(filePath);
+    }
+
+    // Update BM25 stats
+    const oldLen = this.docLengths.get(filePath) ?? 0;
+    this.totalChars -= oldLen;
+    this.docLengths.delete(filePath);
+    this.fileCount = Math.max(0, this.fileCount - 1);
+  }
+
+  /**
+   * Add a new file to the index (e.g. after creation).
+   * O(tokens-in-file) — much faster than full rebuild.
+   */
+  addFile(mindRoot: string, filePath: string): void {
+    if (!this.invertedIndex) return;
+
+    let content: string;
+    try { content = readFile(mindRoot, filePath); } catch { return; }
+
+    // Update BM25 stats
+    this.docLengths.set(filePath, content.length);
+    this.totalChars += content.length;
+    this.fileCount++;
+
+    // Index tokens
+    if (content.length > MAX_CONTENT_LENGTH) {
+      content = content.slice(0, MAX_CONTENT_LENGTH);
+    }
+    const allText = filePath + '\n' + content;
+    const tokens = tokenize(allText);
+    this.fileTokens.set(filePath, tokens);
+
+    for (const token of tokens) {
+      let set = this.invertedIndex.get(token);
+      if (!set) {
+        set = new Set<string>();
+        this.invertedIndex.set(token, set);
+      }
+      set.add(filePath);
+    }
+  }
+
+  /**
+   * Re-index a single file after modification.
+   * Equivalent to removeFile + addFile but avoids double traversal of inverted index.
+   */
+  updateFile(mindRoot: string, filePath: string): void {
+    if (!this.invertedIndex) return;
+    this.removeFile(filePath);
+    this.addFile(mindRoot, filePath);
   }
 
   /** Whether the index has been built for the given mindRoot. */
@@ -245,4 +321,103 @@ export class SearchIndex {
 
     return result ? Array.from(result) : [];
   }
+
+  // ── Persistence ──────────────────────────────────────────────────────
+
+  /**
+   * Serialize the index to a JSON file for persistence across restarts.
+   * Stored at `<mindosDir>/search-index.json`.
+   */
+  persist(mindosDir: string): void {
+    if (!this.invertedIndex) return;
+
+    const data: PersistedIndex = {
+      version: 1,
+      builtForRoot: this.builtForRoot ?? '',
+      fileCount: this.fileCount,
+      totalChars: this.totalChars,
+      docLengths: Object.fromEntries(this.docLengths),
+      invertedIndex: {},
+      timestamp: Date.now(),
+    };
+
+    for (const [token, fileSet] of this.invertedIndex) {
+      data.invertedIndex[token] = [...fileSet];
+    }
+
+    const filePath = path.join(mindosDir, 'search-index.json');
+    try {
+      fs.mkdirSync(mindosDir, { recursive: true });
+      fs.writeFileSync(filePath, JSON.stringify(data), 'utf-8');
+    } catch {
+      // Non-critical — index will be rebuilt on next search
+    }
+  }
+
+  /**
+   * Load a previously persisted index from disk.
+   * Returns true if loaded successfully, false if stale/missing/corrupt.
+   *
+   * Staleness check: if any indexed file's mtime is newer than the persisted
+   * timestamp, the index is considered stale and not loaded.
+   */
+  load(mindosDir: string, mindRoot: string): boolean {
+    const filePath = path.join(mindosDir, 'search-index.json');
+
+    let raw: string;
+    try { raw = fs.readFileSync(filePath, 'utf-8'); } catch { return false; }
+
+    let data: PersistedIndex;
+    try { data = JSON.parse(raw); } catch { return false; }
+
+    if (data.version !== 1 || data.builtForRoot !== mindRoot) return false;
+
+    // Staleness check: sample up to 20 files for mtime
+    const docPaths = Object.keys(data.docLengths);
+    const sampleSize = Math.min(20, docPaths.length);
+    const step = Math.max(1, Math.floor(docPaths.length / sampleSize));
+    for (let i = 0; i < docPaths.length; i += step) {
+      try {
+        const abs = path.join(mindRoot, docPaths[i]);
+        const stat = fs.statSync(abs);
+        if (stat.mtimeMs > data.timestamp) return false; // stale
+      } catch {
+        return false; // file deleted since index was built
+      }
+    }
+
+    // Restore state
+    this.builtForRoot = data.builtForRoot;
+    this.fileCount = data.fileCount;
+    this.totalChars = data.totalChars;
+    this.docLengths = new Map(Object.entries(data.docLengths).map(([k, v]) => [k, v as number]));
+
+    const inverted = new Map<string, Set<string>>();
+    const fileTokensMap = new Map<string, Set<string>>();
+    for (const [token, files] of Object.entries(data.invertedIndex)) {
+      const fileSet = new Set(files as string[]);
+      inverted.set(token, fileSet);
+      // Rebuild reverse mapping
+      for (const f of fileSet) {
+        let tokens = fileTokensMap.get(f);
+        if (!tokens) { tokens = new Set(); fileTokensMap.set(f, tokens); }
+        tokens.add(token);
+      }
+    }
+    this.invertedIndex = inverted;
+    this.fileTokens = fileTokensMap;
+
+    return true;
+  }
+}
+
+/** Shape of the persisted index JSON. */
+interface PersistedIndex {
+  version: number;
+  builtForRoot: string;
+  fileCount: number;
+  totalChars: number;
+  docLengths: Record<string, number>;
+  invertedIndex: Record<string, string[]>;
+  timestamp: number;
 }
