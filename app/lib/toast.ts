@@ -15,9 +15,10 @@ export interface Toast {
   message: string;
   type: 'success' | 'error' | 'info';
   duration: number;
+  action?: { label: string; onClick: () => void };
 }
 
-type ToastInput = { message: string; type?: Toast['type']; duration?: number };
+type ToastInput = { message: string; type?: Toast['type']; duration?: number; action?: Toast['action'] };
 
 const DEFAULT_DURATION = 2000;
 const MAX_TOASTS = 3;
@@ -51,6 +52,7 @@ function addToast(input: ToastInput) {
     message: input.message,
     type: input.type ?? 'info',
     duration: input.duration ?? DEFAULT_DURATION,
+    action: input.action,
   };
   toasts = [...toasts, t].slice(-MAX_TOASTS);
   emit();
@@ -67,6 +69,10 @@ function toast(message: string, opts?: { type?: Toast['type']; duration?: number
 /** Show a success toast */
 toast.success = (message: string, duration?: number) =>
   addToast({ message, type: 'success', duration });
+
+/** Show a toast with an undo action (5 second default) */
+toast.undo = (message: string, onUndo: () => void, opts?: { duration?: number; label?: string }) =>
+  addToast({ message, type: 'info', duration: opts?.duration ?? 5000, action: { label: opts?.label ?? 'Undo', onClick: onUndo } });
 
 /** Show an error toast */
 toast.error = (message: string, duration?: number) =>

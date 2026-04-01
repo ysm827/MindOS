@@ -9,15 +9,15 @@ import { ConfirmDialog } from '@/components/agents/AgentsPrimitives';
 import { toast } from '@/lib/toast';
 import type { TrashMeta } from '@/lib/core/trash';
 
-function relativeTimeShort(iso: string): string {
+function relativeTimeShort(iso: string, t: { justNow?: string; minutesAgo?: (m: number) => string; hoursAgo?: (h: number) => string; daysAgo?: (d: number) => string }): string {
   const delta = Date.now() - new Date(iso).getTime();
   const mins = Math.floor(delta / 60000);
-  if (mins < 1) return 'just now';
-  if (mins < 60) return `${mins}m ago`;
+  if (mins < 1) return t.justNow ?? 'just now';
+  if (mins < 60) return t.minutesAgo?.(mins) ?? `${mins}m ago`;
   const hours = Math.floor(mins / 60);
-  if (hours < 24) return `${hours}h ago`;
+  if (hours < 24) return t.hoursAgo?.(hours) ?? `${hours}h ago`;
   const days = Math.floor(hours / 24);
-  return `${days}d ago`;
+  return t.daysAgo?.(days) ?? `${days}d ago`;
 }
 
 function daysUntil(iso: string): number {
@@ -162,7 +162,7 @@ export default function TrashPageClient({ initialItems }: { initialItems: TrashM
                     <div className="flex items-center justify-between">
                       <div className="flex flex-col gap-0.5">
                         <span className="text-2xs text-muted-foreground">
-                          {t.trash.deletedAgo(relativeTimeShort(item.deletedAt))}
+                          {t.trash.deletedAgo(relativeTimeShort(item.deletedAt, t.trash))}
                         </span>
                         <span className={`text-2xs ${isExpiring ? 'text-error' : 'text-muted-foreground/60'}`}>
                           {isExpiring && <AlertTriangle size={9} className="inline mr-0.5" />}
@@ -203,7 +203,7 @@ export default function TrashPageClient({ initialItems }: { initialItems: TrashM
         title={t.trash.emptyTrash}
         message={t.trash.emptyTrashConfirm}
         confirmLabel={t.trash.emptyTrash}
-        cancelLabel={t.export?.cancel ?? 'Cancel'}
+        cancelLabel={t.trash.cancel ?? 'Cancel'}
         onConfirm={() => void handleEmptyTrash()}
         onCancel={() => setConfirmEmpty(false)}
         variant="destructive"
@@ -215,7 +215,7 @@ export default function TrashPageClient({ initialItems }: { initialItems: TrashM
         title={t.trash.deletePermanently}
         message={confirmDelete ? t.trash.deletePermanentlyConfirm(confirmDelete.fileName) : ''}
         confirmLabel={t.trash.deletePermanently}
-        cancelLabel={t.export?.cancel ?? 'Cancel'}
+        cancelLabel={t.trash.cancel ?? 'Cancel'}
         onConfirm={() => void handlePermanentDelete()}
         onCancel={() => setConfirmDelete(null)}
         variant="destructive"
@@ -238,7 +238,7 @@ export default function TrashPageClient({ initialItems }: { initialItems: TrashM
                 onClick={() => setConflictItem(null)}
                 className="px-3 py-1.5 rounded-md text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
               >
-                {t.export?.cancel ?? 'Cancel'}
+                {t.trash.cancel ?? 'Cancel'}
               </button>
               <button
                 type="button"

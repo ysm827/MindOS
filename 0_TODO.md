@@ -1,20 +1,20 @@
 # 待办清单 (TODO)
 
-> 最后更新：2026-03-30
+> 最后更新：2026-04-01
 
 ## 🔥 高优先级
 
 ### Agent 功能
-- [ ] **ACP for call / Agent as Workflow** - Agent调用协议（跨 Agent 协作机制）
+- [x] **ACP for call / Agent as Workflow** - Agent调用协议（跨 Agent 协作机制）✅ 完整实现 `app/lib/acp/`，含 session/bridge/registry/subprocess + 测试覆盖
 
 ### Desktop APP
-- [ ] **内置版本升级检测** - 检测到更高版本时提示切换（基础运行已完成，升级流程待完善）
+- [x] **内置版本升级检测** - Desktop (Electron) + Browser 双模式更新检测 ✅ `UpdateTab.tsx` 完整实现
 
 ## ⚡ 功能增强
 
 - [ ] **webpage wording skill** - 网页文案技能
 - [ ] **插件市场/技能市场** - Discover 中的市场功能完善（当前已实现 UI 占位 + 本地插件管理，待后端市场 API）
-- [ ] **审计功能增强** - Review change 优化
+- [x] **审计功能增强** - Review change ✅ `ChangesBanner.tsx` + `agent-audit-log.ts` 完整实现
 - [ ] **多终端管理** - 多个 Terminal 端口管理
 
 ## 🧩 架构与扩展
@@ -27,12 +27,12 @@
 ## 🎨 UI/UX
 
 - [ ] **LANDING page** - 节日祝福例子
-- [ ] **分享功能** - 分享模板或 md
+- [x] **分享功能** - 分享模板或 md ✅ `ExportModal.tsx` + `export.ts` 支持 MD/HTML 导出
 - [ ] 毛玻璃的列表展开
 
 ## 💡 创新功能
 
-- [ ] **AI 自主执行** - Agent 自主执行零散想法
+- [x] **AI 自主执行** - Agent 自主执行 ✅ 通过 ACP session + A2A orchestrator 实现
 - [ ] **自动 SOP 复盘** - Agent 帮助复盘，通过 MCP 存到 MindOS
 - [ ] **创造者故事**
 

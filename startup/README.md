@@ -7,55 +7,24 @@
 ## 文档结构
 
 ```
-思考层                          行动层
-  │                               │
-  1  战略                         │
-  │  为什么做？                    │
-  ▼                               │
-  2  产品设计                      │
-  │  怎么做？                      │
-  ▼                               │
-  3  技术支撑                      │
-  │  技术上怎么实现？               │
-  ▼                               │
-  4  商业计划                      │
-  │  商业上怎么成立？               │
-  ▼                               │
-  5  竞品分析                      │
-  │  和谁竞争？                    │
-  ▼                               │
-  6  营销                          │
-  │  怎么让用户知道？               │
-  ▼                               │
-  7  产品提升                      │
-  │  还能怎么更好？                 │
-  ▼                               │
-  8  用户访谈  ← 现在最该做的事     │
-  ▼                               │
-  9  VC 尽调                       │
-  │  投资人怎么看？                 │
-  ▼                               ▼
-  10 Super Thinker 审视
+1  战略         — 为什么做？
+2  产品设计     — 怎么做？
+3  技术支撑     — 技术上怎么实现？
+4  商业计划     — 商业上怎么成立？
+5  竞品分析     — 和谁竞争？
+6  用户访谈     — 现在最该做的事
 ```
-
----
 
 ## 文件说明
 
-| # | 文件 | 回答什么问题 | 关键内容 |
-|---|------|-------------|---------|
-| 1 | `1_strategy.md` | 为什么做？ | 时代背景、根本问题、品类定位、认知复利、人机共演化、五层模型、双杠杆 |
-| 2 | `2_product-design.md` | 怎么做？ | 双层楔子、路线图（P1→P4 含状态）、核心概念、验证计划、10x Vision |
-| 3 | `3_technical-pillars.md` | 技术上怎么实现？ | 四根支柱（群体调度/经验编译/记忆代谢/认知镜像）、愿景→技术映射、已实现 vs 待突破 |
-| 4 | `4_business-plan.md` | 商业上怎么成立？ | 执行摘要、市场机会、商业模式、财务预测、团队、风险、融资需求 |
-| 5 | `5_competitive-analysis.md` | 和谁竞争？ | vs Obsidian/Notion/MemOS/OpenAI Memory、竞品象限图、四个独占优势 |
-| 6 | `6_marketing.md` | 怎么让用户知道？ | Landing page 文案、Persona 模拟、多平台策略、品牌命名探索 |
-| 7 | `7_product-improvement-ideas.md` | 还能怎么更好？ | 6 个维度：旅程断裂点、JTBD、竞品动作、技术趋势、10x 思考、5 个自问 |
-| 8 | `8_user-interview-guide.md` | 现在最该做什么？ | 16 个访谈问题、5 部分结构、记录模板、找人渠道 |
-| 9 | `9_vc-due-diligence-report.md` | 投资人怎么看？ | VC 尽调（Series A + 天使轮）、合伙人会问的问题、建议 |
-| 10 | `10_super-thinker-review.md` | 综合审视 | 7 阶段深度审视、事实 vs 假设、系统图、10x ideas |
-
----
+| # | 文件 | 回答什么问题 |
+|---|------|-------------|
+| 1 | `1_strategy.md` | 时代背景、根本问题、品类定位、认知复利、人机共演化、五层模型、双杠杆 |
+| 2 | `2_product-design.md` | 双层楔子、路线图（P1→P4 含状态）、核心概念、验证计划、10x Vision |
+| 3 | `3_technical-pillars.md` | 四根支柱（群体调度/经验编译/记忆代谢/认知镜像）、已实现 vs 待突破 |
+| 4 | `4_business-plan.md` | 执行摘要、市场机会、商业模式、财务预测、融资需求 |
+| 5 | `5_competitive-analysis.md` | vs Obsidian/Notion/MemOS/OpenAI Memory、四个独占优势 |
+| 6 | `6_user-interview-guide.md` | 16 个访谈问题、记录模板、找人渠道 |
 
 ## 核心定位速查
 
@@ -68,28 +37,22 @@
 | 差异化 | Cursor 让你写得更快，MindOS 让你想得更深 |
 | 共演化 | 不只是 AI 变准——你也在变强 |
 
----
+## 归档文件
 
-## 阅读建议
+以下文件移入 `.archive/`，有需要时可查阅：
 
-- **想了解全貌** → 读 1（战略）+ 4（商业计划）
-- **想了解产品** → 读 2（产品设计）+ 7（提升思路）
-- **想了解技术** → 读 3（技术支撑）+ `wiki/03-technical-pillars.md`
-- **想了解竞争** → 读 5（竞品分析）
-- **想了解投资视角** → 读 9（VC 尽调）
-- **想开始行动** → 读 8（用户访谈）
-- **想做营销** → 读 6（营销）+ `marketing/` 文件夹
-- **想全面审视** → 读 10（Super Thinker 审视）
+| 文件 | 内容 |
+|------|------|
+| `6_marketing.md` | 营销文案和平台策略（详见 `marketing/` 文件夹） |
+| `7_product-improvement-ideas.md` | 6 维度产品提升思路 |
+| `9_vc-due-diligence-report.md` | 模拟 VC 尽调报告 |
+| `10_super-thinker-review.md` | Super Thinker 7 阶段审视 |
 
----
+## 相关
 
-## 相关文件夹
-
-| 文件夹 | 内容 |
-|--------|------|
-| `wiki/00-product-proposal.md` | 产品"宪法"，所有产品决策的锚点 |
-| `wiki/03-technical-pillars.md` | 技术支柱详细版（含研究方向和待办） |
-| `wiki/02-business-model.md` | 商业模式详述（Business Model Canvas） |
-| `marketing/community.md` | 社区分发渠道清单（30+ 平台） |
-| `marketing/copy/` | 各平台已备文案 |
-| `landing/content.md` | Landing page 文案管理 |
+| 位置 | 内容 |
+|------|------|
+| `wiki/00-product-proposal.md` | 产品"宪法" |
+| `wiki/03-technical-pillars.md` | 技术支柱详细版 |
+| `marketing/` | 营销文案和社区策略 |
+| `landing/content.md` | Landing page 文案 |

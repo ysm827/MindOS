@@ -24,11 +24,20 @@ export default function Toaster() {
         >
           {icons[t.type]}
           <span className="text-sm text-foreground flex-1 truncate">{t.message}</span>
+          {t.action && (
+            <button
+              type="button"
+              onClick={() => { t.action!.onClick(); dismiss(t.id); }}
+              className="shrink-0 px-2.5 py-1 rounded text-xs font-medium text-[var(--amber)] hover:bg-[var(--amber-dim)] transition-colors min-h-[28px] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            >
+              {t.action.label}
+            </button>
+          )}
           <button
             type="button"
             onClick={() => dismiss(t.id)}
-            className="shrink-0 p-0.5 rounded text-muted-foreground hover:text-foreground transition-colors"
-            aria-label="Dismiss"
+            className="shrink-0 p-0.5 rounded text-muted-foreground hover:text-foreground transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            aria-label={t.action?.label ? 'Close' : 'Dismiss'}
           >
             <X size={13} />
           </button>

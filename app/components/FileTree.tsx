@@ -8,7 +8,8 @@ import {
   ChevronDown, FileText, Table, Folder, FolderOpen, Plus, Loader2,
   Trash2, Pencil, Layers, ScrollText, FolderInput, Copy, MoreHorizontal, Star,
 } from 'lucide-react';
-import { createFileAction, deleteFileAction, renameFileAction, renameSpaceAction, deleteSpaceAction, convertToSpaceAction, deleteFolderAction } from '@/lib/actions';
+import { createFileAction, deleteFileAction, renameFileAction, renameSpaceAction, deleteSpaceAction, convertToSpaceAction, deleteFolderAction, undoDeleteAction } from '@/lib/actions';
+import { toast } from '@/lib/toast';
 import { useLocale } from '@/lib/LocaleContext';
 import { ConfirmDialog } from '@/components/agents/AgentsPrimitives';
 import { usePinnedFiles } from '@/lib/hooks/usePinnedFiles';
@@ -536,7 +537,7 @@ function DirectoryNode({ node, depth, currentPath, onNavigate, maxOpenDepth, onI
         title={deleteConfirm === 'space' ? t.fileTree.deleteSpace : t.fileTree.deleteFolder}
         message={deleteConfirm === 'space' ? t.fileTree.confirmDeleteSpace(node.name) : t.fileTree.confirmDeleteFolder(node.name)}
         confirmLabel={deleteConfirm === 'space' ? t.fileTree.deleteSpace : t.fileTree.deleteFolder}
-        cancelLabel="Cancel"
+        cancelLabel={t.view?.cancel ?? 'Cancel'}
         variant="destructive"
         onCancel={() => setDeleteConfirm(null)}
         onConfirm={() => {
@@ -546,7 +547,16 @@ function DirectoryNode({ node, depth, currentPath, onNavigate, maxOpenDepth, onI
             const result = kind === 'space'
               ? await deleteSpaceAction(node.path)
               : await deleteFolderAction(node.path);
-            if (result.success) { router.push('/'); router.refresh(); notifyFilesChanged(); }
+            if (result.success && result.trashId) {
+              const trashId = result.trashId;
+              const name = node.path.split('/').pop() ?? node.path;
+              toast.undo(`${t.trash?.movedToTrash ?? 'Deleted'} ${name}`, async () => {
+                const undo = await undoDeleteAction(trashId);
+                if (undo.success) { router.refresh(); notifyFilesChanged(); }
+                else toast.error(undo.error ?? 'Undo failed');
+              }, { label: t.trash?.undo ?? 'Undo' });
+              router.push('/'); router.refresh(); notifyFilesChanged();
+            }
           });
         }}
       />
@@ -718,14 +728,25 @@ function FileNodeItem({ node, depth, currentPath, onNavigate }: {
         title={t.fileTree.delete}
         message={t.fileTree.confirmDelete(node.name)}
         confirmLabel={t.fileTree.delete}
-        cancelLabel="Cancel"
+        cancelLabel={t.view?.cancel ?? 'Cancel'}
         variant="destructive"
         onCancel={() => setShowDeleteConfirm(false)}
         onConfirm={() => {
           setShowDeleteConfirm(false);
           startDeleteTransition(async () => {
             const result = await deleteFileAction(node.path);
-            if (result.success) { router.push('/'); router.refresh(); notifyFilesChanged(); }
+            if (result.success) {
+              if (result.trashId) {
+                const trashId = result.trashId;
+                const name = node.path.split('/').pop() ?? node.path;
+                toast.undo(`${t.trash?.movedToTrash ?? 'Deleted'} ${name}`, async () => {
+                  const undo = await undoDeleteAction(trashId);
+                  if (undo.success) { router.refresh(); notifyFilesChanged(); }
+                  else toast.error(undo.error ?? 'Undo failed');
+                }, { label: t.trash?.undo ?? 'Undo' });
+              }
+              router.refresh(); notifyFilesChanged();
+            }
           });
         }}
       />

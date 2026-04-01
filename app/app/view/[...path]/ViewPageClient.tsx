@@ -17,7 +17,8 @@ import { resolveRenderer, isRendererEnabled } from '@/lib/renderers/registry';
 import { encodePath } from '@/lib/utils';
 import { useLocale } from '@/lib/LocaleContext';
 import DirPicker from '@/components/DirPicker';
-import { renameFileAction, deleteFileAction } from '@/lib/actions';
+import { renameFileAction, deleteFileAction, undoDeleteAction } from '@/lib/actions';
+import { toast } from '@/lib/toast';
 import { ConfirmDialog } from '@/components/agents/AgentsPrimitives';
 import { buildLineDiff } from '@/components/changes/line-diff';
 import { usePinnedFiles } from '@/lib/hooks/usePinnedFiles';
@@ -132,15 +133,28 @@ export default function ViewPageClient({
 
   const handleConfirmDelete = useCallback(() => {
     setShowDeleteConfirm(false);
+    const fileName = filePath.split('/').pop() ?? filePath;
     startTransition(async () => {
       const result = await deleteFileAction(filePath);
       if (result.success) {
+        if (result.trashId) {
+          const trashId = result.trashId;
+          toast.undo(`${t.trash?.movedToTrash ?? 'Deleted'} ${fileName}`, async () => {
+            const undo = await undoDeleteAction(trashId);
+            if (undo.success) {
+              router.refresh();
+              window.dispatchEvent(new Event('mindos:files-changed'));
+            } else {
+              toast.error(undo.error ?? 'Undo failed');
+            }
+          }, { label: t.trash?.undo ?? 'Undo' });
+        }
         router.push('/');
         router.refresh();
         window.dispatchEvent(new Event('mindos:files-changed'));
       }
     });
-  }, [filePath, router]);
+  }, [filePath, router, t]);
 
   // Keep first paint deterministic between server and client to avoid hydration mismatch.
   const effectiveUseRaw = hydrated ? useRaw : false;
@@ -588,8 +602,8 @@ export default function ViewPageClient({
               className="w-full bg-muted border border-border rounded-md px-3 py-1.5 text-sm text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
             />
             <div className="flex justify-end gap-2 mt-3">
-              <button onClick={() => setRenaming(false)} className="px-3 py-1.5 rounded-md text-xs bg-muted text-muted-foreground hover:bg-accent transition-colors">Cancel</button>
-              <button onClick={handleCommitRename} className="px-3 py-1.5 rounded-md text-xs bg-[var(--amber)] text-[var(--amber-foreground)] transition-colors">Rename</button>
+              <button onClick={() => setRenaming(false)} className="px-3 py-1.5 rounded-md text-xs bg-muted text-muted-foreground hover:bg-accent transition-colors">{t.view?.cancel ?? 'Cancel'}</button>
+              <button onClick={handleCommitRename} className="px-3 py-1.5 rounded-md text-xs bg-[var(--amber)] text-[var(--amber-foreground)] transition-colors">{t.view?.rename ?? 'Rename'}</button>
             </div>
           </div>
         </div>
@@ -598,10 +612,10 @@ export default function ViewPageClient({
       {/* Delete confirm */}
       <ConfirmDialog
         open={showDeleteConfirm}
-        title="Delete"
-        message={`Delete "${filePath.split('/').pop()}"? This cannot be undone.`}
-        confirmLabel="Delete"
-        cancelLabel="Cancel"
+        title={t.view?.delete ?? 'Delete'}
+        message={t.view?.deleteConfirm?.(filePath.split('/').pop() ?? '') ?? `Delete "${filePath.split('/').pop()}"?`}
+        confirmLabel={t.view?.delete ?? 'Delete'}
+        cancelLabel={t.view?.cancel ?? 'Cancel'}
         variant="destructive"
         onCancel={() => setShowDeleteConfirm(false)}
         onConfirm={handleConfirmDelete}

@@ -114,7 +114,7 @@ export default function ExportModal({ open, onClose, filePath, isDirectory, file
               {isDirectory ? (t.export?.exportSpace ?? 'Export Space') : (t.export?.exportFile ?? 'Export File')}
             </h3>
           </div>
-          <button onClick={handleClose} className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors">
+          <button onClick={handleClose} className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring" aria-label={t.export?.cancel ?? 'Close'}>
             <X size={14} />
           </button>
         </div>
@@ -179,7 +179,7 @@ export default function ExportModal({ open, onClose, filePath, isDirectory, file
                 {t.export?.downloadAgain ?? 'Download Again'}
               </button>
               <button onClick={handleClose} className="px-3 py-1.5 rounded-md text-xs font-medium bg-[var(--amber-dim)] text-[var(--amber-text)] hover:opacity-80 transition-colors">
-                {t.export?.cancel === 'Cancel' ? 'Done' : (t.export?.done ?? 'Done')}
+                {t.export?.close ?? 'Done'}
               </button>
             </>
           ) : state === 'error' ? (

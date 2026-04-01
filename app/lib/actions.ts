@@ -24,12 +24,12 @@ export async function createFileAction(dirPath: string, fileName: string): Promi
   }
 }
 
-export async function deleteFileAction(filePath: string): Promise<{ success: boolean; error?: string }> {
+export async function deleteFileAction(filePath: string): Promise<{ success: boolean; trashId?: string; error?: string }> {
   try {
-    moveToTrash(getMindRoot(), filePath);
+    const meta = moveToTrash(getMindRoot(), filePath);
     invalidateCache();
     revalidatePath('/', 'layout');
-    return { success: true };
+    return { success: true, trashId: meta.id };
   } catch (err) {
     return { success: false, error: err instanceof Error ? err.message : 'Failed to delete file' };
   }
@@ -59,12 +59,12 @@ export async function convertToSpaceAction(
 
 export async function deleteFolderAction(
   dirPath: string,
-): Promise<{ success: boolean; error?: string }> {
+): Promise<{ success: boolean; trashId?: string; error?: string }> {
   try {
-    moveToTrash(getMindRoot(), dirPath);
+    const meta = moveToTrash(getMindRoot(), dirPath);
     invalidateCache();
     revalidatePath('/', 'layout');
-    return { success: true };
+    return { success: true, trashId: meta.id };
   } catch (err) {
     return { success: false, error: err instanceof Error ? err.message : 'Failed to delete folder' };
   }
@@ -85,14 +85,25 @@ export async function renameSpaceAction(
 
 export async function deleteSpaceAction(
   spacePath: string,
-): Promise<{ success: boolean; error?: string }> {
+): Promise<{ success: boolean; trashId?: string; error?: string }> {
   try {
-    moveToTrash(getMindRoot(), spacePath);
+    const meta = moveToTrash(getMindRoot(), spacePath);
+    invalidateCache();
+    revalidatePath('/', 'layout');
+    return { success: true, trashId: meta.id };
+  } catch (err) {
+    return { success: false, error: err instanceof Error ? err.message : 'Failed to delete space' };
+  }
+}
+
+export async function undoDeleteAction(trashId: string): Promise<{ success: boolean; error?: string }> {
+  try {
+    restoreFromTrash(getMindRoot(), trashId, false);
     invalidateCache();
     revalidatePath('/', 'layout');
     return { success: true };
   } catch (err) {
-    return { success: false, error: err instanceof Error ? err.message : 'Failed to delete space' };
+    return { success: false, error: err instanceof Error ? err.message : 'Undo failed' };
   }
 }
 
