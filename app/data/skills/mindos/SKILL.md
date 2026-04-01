@@ -96,21 +96,12 @@ It covers: startup protocol, write tool selection, and step-by-step execution de
 | List top-level Mind Spaces | `mindos_list_spaces` | Full `mindos_list_files` when you only need zone names and README blurbs |
 | Find files | `mindos_search_notes` (2-4 parallel keyword variants) | Single-keyword search |
 | Read content | `mindos_read_file` or `mindos_read_lines` (for large files) | Reading entire large file when you need 10 lines |
-| Small text edit | `mindos_update_section` / `mindos_update_lines` / `mindos_insert_after_heading` | `mindos_write_file` for small changes |
-| Append to end | `mindos_append_to_file` | Rewriting entire file to add a line |
-| Full file replacement | `mindos_write_file` | Using this when a section edit suffices |
-| New file | `mindos_create_file` | Creates parent dirs but does NOT scaffold Space files |
-| New Mind Space (zone + README + INSTRUCTION) | `mindos_create_space` | The only way to create a Space. `create_file` creates plain folders |
-| Rename a Space directory | `mindos_rename_space` | `rename_file` (files only; does not rename folders) |
-| Add CSV row | `mindos_append_csv` (validates header) | Manual string append without header check |
-| Check impact before rename | `mindos_get_backlinks` | Renaming without checking references |
-| Inspect recent changes | `mindos_get_recent` | Guessing what changed recently |
-| Recover old version | `mindos_get_file_at_version` | Asking user to recall what was there |
+
+Write, structural, and history tools → [references/write-supplement.md](./references/write-supplement.md).
 
 ### Fallbacks
 
 - `mindos_bootstrap` unavailable → manual reads of root `INSTRUCTION.md` + `README.md`.
-- Line/section tools unavailable → read + constrained `mindos_write_file` (simulate minimal edit).
 - Search returns empty → don't give up: (1) scan tree in context, (2) read candidate files directly, (3) `mindos_list_files` on specific subdirectories, (4) try synonym/alternate-language keywords.
 
 ---
@@ -120,17 +111,8 @@ It covers: startup protocol, write tool selection, and step-by-step execution de
 | Pattern | When | Key steps |
 |---------|------|-----------|
 | **Read-only Q&A** | Lookup / summarize / quote | Tree reasoning → search → read → answer with citations → state gaps |
-| **Single-file edit** | One clear target file | Startup → read target + local conventions → minimal edit → verify → summarize |
-| **Multi-file routing** | Unstructured input, multiple destinations | Parse into semantic units → routing table → confirm → edit → summarize |
-| **Conversation retrospective** | Distill / capture session | Confirm scope → extract decisions/pitfalls/actions → route → trace changes |
-| **SOP execution** | Repeatable procedure | Read SOP fully → execute stepwise → update stale sections → propose SOP update if diverged |
-| **Structural change** | Rename / move / delete | `get_backlinks` → impact report → confirm → execute → update refs → sync READMEs |
-| **CSV append** | Add row to a table | Read header → validate fields → `mindos_append_csv` |
-| **Cross-agent handoff** | Continue another agent's work | Read task state + decisions → continue without re-discovery → write back progress |
-| **Periodic review** | Summarize recent changes | `get_recent`/`get_history` → read changed files → structured summary |
-| **Handoff doc** | Create a briefing | Read sources → synthesize (background, decisions, status, open items) → place in project dir |
 
-For detailed execution steps on write patterns → [references/write-supplement.md](./references/write-supplement.md).
+For write, SOP, structural, and handoff patterns → [references/write-supplement.md](./references/write-supplement.md).
 
 ---
 
