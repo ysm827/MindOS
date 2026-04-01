@@ -1,6 +1,7 @@
 export const dynamic = 'force-dynamic';
 import type { AgentTool, AgentToolResult } from '@mariozechner/pi-agent-core';
 import { isTransientError } from '@/lib/agent/retry';
+import { retryDelay, sleep } from '@/lib/agent/reconnect';
 import { detectLoop } from '@/lib/agent/loop-detection';
 import {
   type AgentSessionEvent as AgentEvent,
@@ -653,86 +654,125 @@ export async function POST(req: NextRequest) {
         // ── Route to ACP agent if selected, otherwise use MindOS agent ──
         const runAgent = async () => {
           if (selectedAcpAgent) {
-            // Route to ACP agent with real-time streaming
+            // Route to ACP agent with real-time streaming.
+            // Retry with exponential backoff on transient failures, same as the MindOS path.
+            // Only retry if no content has been streamed yet.
+            const ACP_MAX_RETRIES = 3;
             let acpSessionId: string | undefined;
+            let lastAcpError: Error | null = null;
+
             try {
-              const acpSession = await createSession(selectedAcpAgent.id, {
-                cwd: getMindRoot(),
-              });
-              acpSessionId = acpSession.id;
-
-              await promptStream(acpSessionId, lastUserContent, (update: AcpSessionUpdate) => {
-                switch (update.type) {
-                  // Text chunks → standard text_delta
-                  case 'agent_message_chunk':
-                  case 'text':
-                    if (update.text) {
-                      hasContent = true;
-                      send({ type: 'text_delta', delta: update.text });
-                    }
-                    break;
-
-                  // Agent thinking → thinking_delta (reuses existing Anthropic thinking UI)
-                  case 'agent_thought_chunk':
-                    if (update.text) {
-                      hasContent = true;
-                      send({ type: 'thinking_delta', delta: update.text });
-                    }
-                    break;
-
-                  // Tool calls → tool_start (reuses existing tool call UI)
-                  case 'tool_call':
-                    if (update.toolCall) {
-                      hasContent = true;
-                      send({
-                        type: 'tool_start',
-                        toolCallId: update.toolCall.toolCallId,
-                        toolName: update.toolCall.title ?? update.toolCall.kind ?? 'tool',
-                        args: safeParseJson(update.toolCall.rawInput),
-                      });
-                    }
-                    break;
-
-                  // Tool call updates → tool_end when completed/failed
-                  case 'tool_call_update':
-                    if (update.toolCall && (update.toolCall.status === 'completed' || update.toolCall.status === 'failed')) {
-                      send({
-                        type: 'tool_end',
-                        toolCallId: update.toolCall.toolCallId,
-                        output: update.toolCall.rawOutput ?? '',
-                        isError: update.toolCall.status === 'failed',
-                      });
-                    }
-                    break;
-
-                  // Plan → emit as text with structured format
-                  case 'plan':
-                    if (update.plan?.entries) {
-                      const planText = update.plan.entries
-                        .map(e => {
-                          const icon = e.status === 'completed' ? '\u2705' : e.status === 'in_progress' ? '\u26a1' : '\u23f3';
-                          return `${icon} ${e.content}`;
-                        })
-                        .join('\n');
-                      send({ type: 'text_delta', delta: `\n\n${planText}\n\n` });
-                    }
-                    break;
-
-                  // Error → stream error
-                  case 'error':
-                    send({ type: 'error', message: update.error ?? 'ACP agent error' });
-                    break;
+              for (let attempt = 1; attempt <= ACP_MAX_RETRIES; attempt++) {
+                // Close any previous session before retrying
+                if (acpSessionId) {
+                  await closeSession(acpSessionId).catch(() => {});
+                  acpSessionId = undefined;
                 }
-              });
+                try {
+                  const acpSession = await createSession(selectedAcpAgent.id, {
+                    cwd: getMindRoot(),
+                  });
+                  acpSessionId = acpSession.id;
 
-              send({ type: 'done' });
-            } catch (acpErr) {
-              const errMsg = acpErr instanceof Error ? acpErr.message : String(acpErr);
-              send({ type: 'error', message: `ACP Agent Error: ${errMsg}` });
+                  await promptStream(acpSessionId, lastUserContent, (update: AcpSessionUpdate) => {
+                    switch (update.type) {
+                      // Text chunks → standard text_delta
+                      case 'agent_message_chunk':
+                      case 'text':
+                        if (update.text) {
+                          hasContent = true;
+                          send({ type: 'text_delta', delta: update.text });
+                        }
+                        break;
+
+                      // Agent thinking → thinking_delta (reuses existing Anthropic thinking UI)
+                      case 'agent_thought_chunk':
+                        if (update.text) {
+                          hasContent = true;
+                          send({ type: 'thinking_delta', delta: update.text });
+                        }
+                        break;
+
+                      // Tool calls → tool_start (reuses existing tool call UI)
+                      case 'tool_call':
+                        if (update.toolCall) {
+                          hasContent = true;
+                          send({
+                            type: 'tool_start',
+                            toolCallId: update.toolCall.toolCallId,
+                            toolName: update.toolCall.title ?? update.toolCall.kind ?? 'tool',
+                            args: safeParseJson(update.toolCall.rawInput),
+                          });
+                        }
+                        break;
+
+                      // Tool call updates → tool_end when completed/failed
+                      case 'tool_call_update':
+                        if (update.toolCall && (update.toolCall.status === 'completed' || update.toolCall.status === 'failed')) {
+                          send({
+                            type: 'tool_end',
+                            toolCallId: update.toolCall.toolCallId,
+                            output: update.toolCall.rawOutput ?? '',
+                            isError: update.toolCall.status === 'failed',
+                          });
+                        }
+                        break;
+
+                      // Plan → emit as text with structured format
+                      case 'plan':
+                        if (update.plan?.entries) {
+                          const planText = update.plan.entries
+                            .map(e => {
+                              const icon = e.status === 'completed' ? '\u2705' : e.status === 'in_progress' ? '\u26a1' : '\u23f3';
+                              return `${icon} ${e.content}`;
+                            })
+                            .join('\n');
+                          hasContent = true; // plan text is visible — prevents retry after partial output
+                          send({ type: 'text_delta', delta: `\n\n${planText}\n\n` });
+                        }
+                        break;
+
+                      // Error → stream error (suppress further output — promptStream may also throw)
+                      case 'error':
+                        if (!hasContent) {
+                          // Only forward if nothing streamed yet; otherwise the error is already surfaced via content
+                          send({ type: 'error', message: update.error ?? 'ACP agent error' });
+                        }
+                        break;
+                    }
+                  });
+
+                  lastAcpError = null;
+                  break; // success
+                } catch (acpErr) {
+                  lastAcpError = acpErr instanceof Error ? acpErr : new Error(String(acpErr));
+
+                  // Close the failed session before sleeping (loop-top close handles subsequent attempts)
+                  if (acpSessionId) {
+                    await closeSession(acpSessionId).catch(() => {});
+                    acpSessionId = undefined;
+                  }
+
+                  // Only retry if: (1) no content streamed yet, (2) retries remaining, (3) transient error
+                  const canRetry = !hasContent && attempt < ACP_MAX_RETRIES && isTransientError(lastAcpError);
+                  if (!canRetry) break;
+
+                  const delayMs = retryDelay(attempt); // exponential: 2s, 4s, 8s…
+                  send({ type: 'status', message: `Request failed, retrying (${attempt}/${ACP_MAX_RETRIES})...` });
+                  await sleep(delayMs, req.signal); // abort early if client disconnects
+                }
+              }
             } finally {
+              // Guarantee session cleanup regardless of how the loop exits (including AbortError from sleep)
               if (acpSessionId) {
                 await closeSession(acpSessionId).catch(() => {});
               }
+            }
+
+            if (lastAcpError) {
+              send({ type: 'error', message: `ACP Agent Error: ${lastAcpError.message}` });
+            } else {
+              send({ type: 'done' });
             }
             safeClose();
           } else {
@@ -752,12 +792,13 @@ export async function POST(req: NextRequest) {
                 lastPromptError = err instanceof Error ? err : new Error(String(err));
 
                 // Only retry if: (1) no content streamed yet, (2) retries remaining, (3) transient error
+                // `attempt < MAX_RETRIES`: on attempt 3 (last), don't retry — let it throw.
                 const canRetry = !hasContent && attempt < MAX_RETRIES && isTransientError(lastPromptError);
                 if (!canRetry) break;
 
-                const delayMs = 1000 * Math.pow(2, attempt - 1); // 1s, 2s
+                const delayMs = retryDelay(attempt); // exponential: 2s, 4s, 8s…
                 send({ type: 'status', message: `Request failed, retrying (${attempt}/${MAX_RETRIES})...` });
-                await new Promise(resolve => setTimeout(resolve, delayMs));
+                await sleep(delayMs, req.signal); // abort early if client disconnects
               }
             }
 

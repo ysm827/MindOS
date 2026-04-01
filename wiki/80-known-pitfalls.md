@@ -1198,3 +1198,18 @@
 - **设计规则：** 任何非 `<button>` / `<a>` / `<Link>` 元素如果有 `onClick`，必须加 `cursor-pointer`。更好的做法是直接用语义正确的 `<button>` 元素。
 
 
+
+## Agent 重试 / Retry
+
+### backend sleep() 未传 AbortSignal → 客户端断开仍浪费 LLM 配额（2026-04-01）
+
+- **症状：** 用户关闭对话窗口后，后端仍在 sleep 等待，睡醒后再次发起 LLM API 调用，浪费 token 配额
+- **根因：** `route.ts` 的 retry 循环调用 `sleep(delayMs)` 没有透传 `req.signal`，无法感知 HTTP 请求已被客户端取消
+- **解决：** 改为 `sleep(delayMs, req.signal)`；`sleep()` 内部已支持 AbortSignal，会提前 reject 并中止重试
+- **规则：** 任何在 HTTP handler 内的 `sleep()` 调用都必须传入 `req.signal`，防止僵尸重试
+
+### retry loop off-by-one: `attempt < MAX_RETRIES` 正确，`attempt <= MAX_RETRIES` 多跑一次
+
+- **含义：** 当 `attempt == MAX_RETRIES`（最后一次），`canRetry = false` → 直接 throw，避免第 4 次尝试
+- **助记：** 试了 MAX_RETRIES 次 → 放弃。`attempt < MAX_RETRIES` 保证只有前 N-1 次才会 sleep+retry
+

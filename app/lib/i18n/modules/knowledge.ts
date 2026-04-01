@@ -70,6 +70,21 @@ export const knowledgeEn = {
     cleanupExamplesButton: 'Clean up',
     cleanupExamplesDone: 'Example files removed',
   },
+  echoSpotlight: {
+    title: 'Echo',
+    dailyLine: 'Today\'s thought',
+    placeholder: 'A quiet line for today...',
+    invite: 'Record today\'s one thought',
+    inviteDesc: 'One line, no pressure. Echo reflects your thinking patterns over time.',
+    goToEcho: 'Open Echo',
+    savedLocally: 'Saved locally on this device',
+  },
+  suggestion: {
+    title: 'You might want to',
+    staleFiles: (n: number) => `${n} file${n !== 1 ? 's' : ''} not updated in 30+ days`,
+    reviewStale: 'Review',
+    dismiss: 'Dismiss',
+  },
   pulse: {
     title: 'Knowledge Pulse',
     manage: 'Manage',
@@ -371,6 +386,21 @@ export const knowledgeZh = {
     cleanupExamples: (n: number) => `有 ${n} 个模板示例文件可以清理`,
     cleanupExamplesButton: '一键清理',
     cleanupExamplesDone: '示例文件已清理',
+  },
+  echoSpotlight: {
+    title: '回响',
+    dailyLine: '今日一行',
+    placeholder: '写下今天的一行想法…',
+    invite: '记录今天的一行想法',
+    inviteDesc: '一行就够。回响会沉淀你的思维模式。',
+    goToEcho: '打开回响',
+    savedLocally: '保存在本设备',
+  },
+  suggestion: {
+    title: '你可能想',
+    staleFiles: (n: number) => `${n} 个文件超过 30 天未更新`,
+    reviewStale: '查看',
+    dismiss: '忽略',
   },
   pulse: {
     title: '知识脉搏',

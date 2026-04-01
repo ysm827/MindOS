@@ -21,5 +21,17 @@ export async function register() {
     } catch {
       // Sync not configured or failed to start — silently skip
     }
+
+    // Cold-start index prewarming: build file tree cache + search index
+    // in the background so the first search doesn't block.
+    process.nextTick(async () => {
+      try {
+        const { getFileTree, startFileWatcher } = await import('@/lib/fs');
+        getFileTree();       // Builds file tree cache + starts file watcher
+        startFileWatcher();  // Ensure watcher is running
+      } catch {
+        // mindRoot not configured yet — skip prewarming
+      }
+    });
   }
 }

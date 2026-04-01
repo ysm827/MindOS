@@ -60,7 +60,7 @@
 - [x] **磁盘持久化搜索索引** — ✅ 已实现。`persist()` 序列化到 `~/.mindos/search-index.json`，`load()` 启动时恢复（含 mtime 采样校验）。写操作后 5s debounce 自动持久化
 
 ### P2 — 启动预热
-- [ ] **冷启动索引预热** — 第一次搜索会卡顿（需要建索引）。应在 `mindos start` 时异步预构建
+- [x] **冷启动索引预热** — ✅ 已实现。`instrumentation.ts` 的 `register()` 中 `process.nextTick` 异步预建文件树缓存 + 启动 file watcher，首次搜索不卡顿
   - 方案：`process.nextTick(() => buildSearchIndex())`
 
 ---

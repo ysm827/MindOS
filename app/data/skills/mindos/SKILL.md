@@ -11,7 +11,7 @@ description: >
 
 # MindOS Skill
 
-<!-- version: 1.3.0 -->
+<!-- version: 1.3.1 -->
 
 **Before every task, internalize these 5 rules:**
 
@@ -66,41 +66,14 @@ User request
   ├─ Only asks to look up / summarize / quote?
   │   └─ YES → [Read-only path]: search + read + cite sources. No writes. Skip hooks.
   │
-  ├─ Asks to save / record / update / organize specific content?
-  │   ├─ Single file target? → [Single-file edit]: startup → read → minimal edit → verify
-  │   └─ Multiple files or unclear target? → [Multi-file routing]: parse → plan → confirm → edit
-  │
-  ├─ Structural change (rename / move / delete / reorganize)?
-  │   └─ [Structural path]: get_backlinks → impact report → confirm → execute → update refs → sync READMEs
-  │
-  ├─ Procedural / repeatable task?
-  │   └─ [SOP path]: search for matching SOP (keywords + tree scan) → read → execute stepwise → propose SOP update if diverged
-  │
-  ├─ Retrospective / distill / handoff?
-  │   └─ [Retrospective path]: confirm scope → extract artifacts → route → summarize changes
-  │
-  └─ Ambiguous or too broad?
-      └─ ASK for clarification. Propose 2-3 specific options based on KB state. Do NOT start editing.
+  └─ Any write / organize / SOP / structural intent?
+      └─ YES → Read references/write-supplement.md FIRST, then proceed.
+               (covers: startup protocol, write tools, all write execution patterns)
 ```
 
 ---
 
-## Startup protocol (write tasks only)
-
-Skip for [read-only path](#task-routing-decision-tree). For all writes:
-
-1. **Bootstrap** — `mindos_bootstrap` (preferred) or manually read root `INSTRUCTION.md` + `README.md`.
-2. **Discover structure** — `mindos_list_spaces` (top-level zones + README blurbs) and/or `mindos_list_files` + targeted `mindos_search_notes`. Never assume top-level names.
-3. **Load local governance** — Read `README.md` / `INSTRUCTION.md` near the target path. Local conventions override global assumptions.
-4. **Match existing SOP** — If the task is procedural: scan tree for a procedure-holding directory (names like `Workflows/`, `SOPs/`, `流程/` are hints — don't assume). Search by keywords + `<!-- keywords: -->` metadata. If found, read and follow. If execution diverges, propose updating the SOP after.
-5. **Pre-write checks** — Confirm: target path exists or should be created; location is under a subdirectory (not root); current content is read; edit scope is minimal; backlink impact assessed for path changes.
-6. **Execute edits.**
-
-If context is missing, continue with best effort and state assumptions.
-
----
-
-## Tool selection
+## Tool selection — discovery & read
 
 | Intent | Best tool | Avoid |
 |--------|-----------|-------|
@@ -108,56 +81,17 @@ If context is missing, continue with best effort and state assumptions.
 | List top-level Mind Spaces | `mindos_list_spaces` | Full `mindos_list_files` when you only need zone names and README blurbs |
 | Find files | `mindos_search_notes` (2-4 parallel keyword variants) | Single-keyword search |
 | Read content | `mindos_read_file` or `mindos_read_lines` (for large files) | Reading entire large file when you need 10 lines |
-| Small text edit | `mindos_update_section` / `mindos_update_lines` / `mindos_insert_after_heading` | `mindos_write_file` for small changes |
-| Append to end | `mindos_append_to_file` | Rewriting entire file to add a line |
-| Full file replacement | `mindos_write_file` | Using this when a section edit suffices |
-| New file | `mindos_create_file` | Creates parent dirs but does NOT scaffold Space files |
-| New Mind Space (zone + README + INSTRUCTION) | `mindos_create_space` | The only way to create a Space. `create_file` creates plain folders |
-| Rename a Space directory | `mindos_rename_space` | `rename_file` (files only; does not rename folders) |
-| Add CSV row | `mindos_append_csv` (validates header) | Manual string append without header check |
-| Check impact before rename | `mindos_get_backlinks` | Renaming without checking references |
-| Inspect recent changes | `mindos_get_recent` | Guessing what changed recently |
-| Recover old version | `mindos_get_file_at_version` | Asking user to recall what was there |
 
 ### Fallbacks
 
 - `mindos_bootstrap` unavailable → manual reads of root `INSTRUCTION.md` + `README.md`.
-- Line/section tools unavailable → read + constrained `mindos_write_file` (simulate minimal edit).
 - Search returns empty → don't give up: (1) scan tree in context, (2) read candidate files directly, (3) `mindos_list_files` on specific subdirectories, (4) try synonym/alternate-language keywords.
 
 ---
 
-## Execution patterns
+## Execution pattern — read-only Q&A
 
-### Single-file edit
-Search → read target + local conventions → minimal edit → verify style match → summarize.
-
-### Context-aware Q&A (read-only)
 Tree reasoning → search → read → answer with file citations → state gaps explicitly.
-
-### Multi-file routing
-Parse unstructured input into semantic units → search candidates per unit → **present routing table** (what → file → position) → confirm → edit → summarize all changes.
-
-### Conversation retrospective
-Confirm scope → extract decisions, rationale, pitfalls, next actions → route to best existing files → trace note of what changed.
-
-### SOP execution
-Read SOP fully → execute step by step → update only stale sections → if diverged, propose SOP update.
-**When creating a new SOP** → read [references/sop-template.md](./references/sop-template.md) first.
-
-### Structural changes
-`get_backlinks` → report impact → confirm → execute → update all refs → sync READMEs.
-
-### Quick reference patterns
-
-| Pattern | Key steps |
-|---------|-----------|
-| CSV append | Read header → validate fields → `mindos_append_csv` |
-| TODO management | Find list → read format → minimal edit preserving conventions |
-| Cross-agent handoff | Read task state + decisions → continue without re-discovery → write back progress |
-| Knowledge conflict | Multi-keyword search → list affected files → present change plan → confirm → update |
-| Periodic review | `get_recent` / `get_history` → read changed files → structured summary |
-| Handoff doc | Read sources → synthesize (background, decisions, status, open items) → place in project dir |
 
 ---
 

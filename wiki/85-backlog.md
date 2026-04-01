@@ -62,6 +62,8 @@
 
 ### 🔴 高优先（下一批做）
 
+- [x] **Agent 重试/重连机制完善** — 修复后端 retry 两大缺陷：(1) ACP agent 路径零重试保护 → 补全 3 次指数退避循环 + session cleanup; (2) sleep() 未传 req.signal → 客户端断开时不再浪费 LLM 配额。3 个测试文件 (64 cases) 覆盖 isTransientError / isRetryableError / retryDelay / sleep / stream-consumer status 事件
+
 - [x] **Inline AI Organize** — 上传文件选择「AI Organize」后不再弹出 ChatBot，改为在 ImportModal 内原地展示处理进度和结果，支持 review 和撤销。[spec](./specs/spec-inline-ai-organize.md)
 - [x] **Inline AI Organize — error 标题修复** — AI Organize 失败时 Modal 标题从"整理完成"改为"整理失败"，消除 title/body 状态矛盾
 - [x] **Save to KB — progressive disclosure 冲突策略** — 新增 `check_conflicts` API；无冲突时隐藏冲突选项；有冲突时琥珀色提示+可展开；路径预览用 SVG 图标替换 emoji；Cancel 按钮降权

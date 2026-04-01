@@ -2,7 +2,6 @@
 
 import Link from 'next/link';
 import { FileText, Table, Clock, Sparkles, ArrowRight, FilePlus, Search, ChevronDown, Folder, Brain, Plus, Trash2, Check, Loader2, X, FolderInput, History, Star } from 'lucide-react';
-import type { LucideIcon } from 'lucide-react';
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useLocale } from '@/lib/LocaleContext';
 import { encodePath, relativeTime, extractEmoji, stripEmoji } from '@/lib/utils';
@@ -10,6 +9,8 @@ import { usePinnedFiles } from '@/lib/hooks/usePinnedFiles';
 import OnboardingView from './OnboardingView';
 import GuideCard from './GuideCard';
 import SystemPulse from './SystemPulse';
+import EchoSpotlight from './EchoSpotlight';
+import QuickSuggestion from './QuickSuggestion';
 import { scanExampleFilesAction, cleanupExamplesAction } from '@/lib/actions';
 import type { SpaceInfo } from '@/app/page';
 
@@ -139,83 +140,13 @@ function FileRow({ filePath, mtime, formatTime, subPath }: {
   );
 }
 
-/** Compact chip for extension renderers */
-function FeatureChip({ id, icon, name, entryPath, active, inactiveTitle }: {
-  id: string;
-  icon: string;
-  name: string;
-  entryPath?: string;
-  active: boolean;
-  inactiveTitle?: string;
-}) {
-  const cls = active
-    ? 'inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-border text-xs transition-all duration-150 hover:border-[var(--amber)]/30 hover:bg-muted/60'
-    : 'inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-dashed border-border text-xs text-muted-foreground opacity-70';
-
-  const inner = (
-    <>
-      <span className="text-sm leading-none" suppressHydrationWarning>{icon}</span>
-      <span className={`font-medium ${active ? 'text-foreground' : ''}`}>{name}</span>
-    </>
-  );
-
-  if (active && entryPath) {
-    return <Link key={id} href={`/view/${encodePath(entryPath)}`} className={cls}>{inner}</Link>;
-  }
-  return <span key={id} className={cls} title={inactiveTitle}>{inner}</span>;
-}
-
-const TOOL_ICONS: Record<string, LucideIcon> = {
-  'agent-inspector': Search,
-  'config-panel': SlidersHorizontal,
-  'todo': ListTodo,
-  'workflow-yaml': Zap,
-};
-
-/** Mini-card for built-in tools — visually distinct from plugin chips */
-function ToolCard({ id, name, description, entryPath, active, inactiveTitle }: {
-  id: string;
-  name: string;
-  description: string;
-  entryPath?: string;
-  active: boolean;
-  inactiveTitle?: string;
-}) {
-  const Icon = TOOL_ICONS[id] ?? Zap;
-  const inner = (
-    <div
-      className={`flex items-start gap-3 px-3.5 py-3 rounded-xl border transition-all duration-150 ${
-        active
-          ? 'border-border hover:border-[var(--amber)]/30 hover:shadow-sm'
-          : 'border-dashed border-border/50 opacity-60'
-      }`}
-      title={active ? undefined : inactiveTitle}
-    >
-      <span className="shrink-0 mt-0.5 text-[var(--amber)]">
-        <Icon size={16} />
-      </span>
-      <div className="min-w-0 flex-1">
-        <span className="text-sm font-medium block text-foreground">{name}</span>
-        <span className="text-xs text-muted-foreground line-clamp-2 mt-0.5">{description}</span>
-      </div>
-    </div>
-  );
-
-  if (active && entryPath) {
-    return <Link key={id} href={`/view/${encodePath(entryPath)}`}>{inner}</Link>;
-  }
-  return <div key={id}>{inner}</div>;
-}
-
 const FILES_PER_GROUP = 3;
 const SPACES_PER_ROW = 6;
-const PLUGINS_INITIAL = 4;
 
 export default function HomeContent({ recent, existingFiles, spaces }: { recent: RecentFile[]; existingFiles?: string[]; spaces?: SpaceInfo[] }) {
   const { t } = useLocale();
   const [showAll, setShowAll] = useState(false);
   const [showAllSpaces, setShowAllSpaces] = useState(false);
-  const [showAllPlugins, setShowAllPlugins] = useState(false);
   const [suggestionIdx, setSuggestionIdx] = useState(0);
 
   const suggestions = t.ask?.suggestions ?? [
@@ -232,7 +163,6 @@ export default function HomeContent({ recent, existingFiles, spaces }: { recent:
     return () => clearInterval(interval);
   }, [suggestions.length]);
 
-  const existingSet = new Set(existingFiles ?? []);
   const spaceList = spaces ?? [];
   const { groups, rootFiles } = useMemo(() => groupBySpace(recent, spaceList), [recent, spaceList]);
 
@@ -241,9 +171,6 @@ export default function HomeContent({ recent, existingFiles, spaces }: { recent:
   }
 
   const formatTime = (mtime: number) => relativeTime(mtime, t.home.relativeTime);
-
-  const availablePlugins = getPluginRenderers().filter(r => r.entryPath && existingSet.has(r.entryPath));
-  const builtinFeatures = getAllRenderers().filter((r) => r.appBuiltinFeature && r.id !== 'csv');
 
   const lastFile = recent[0];
 
@@ -319,6 +246,12 @@ export default function HomeContent({ recent, existingFiles, spaces }: { recent:
 
       {/* ══════════ Knowledge Pulse ══════════ */}
       <SystemPulse />
+
+      {/* ══════════ Echo Spotlight ══════════ */}
+      <EchoSpotlight />
+
+      {/* ══════════ Quick Suggestion ══════════ */}
+      <QuickSuggestion recent={recent} />
 
       {/* ══════════ Pinned Files ══════════ */}
       <PinnedFilesSection formatTime={formatTime} />
