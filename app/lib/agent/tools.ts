@@ -12,20 +12,14 @@ import { callMcporterTool, createMcporterAgentTools, listMcporterServers, listMc
 import { a2aTools } from '@/lib/a2a/a2a-tools';
 import { acpTools } from '@/lib/acp/acp-tools';
 import { buildLineDiff, collapseDiffContext } from '@/components/changes/line-diff';
+import { extractRelevantContent } from '@/lib/agent/paragraph-extract';
 
 // Max chars per file to avoid token overflow (~100k chars ≈ ~25k tokens)
 const MAX_FILE_CHARS = 20_000;
 
-export function truncate(content: string): string {
-  if (content.length <= MAX_FILE_CHARS) return content;
-  
-  // Smart truncation: try to truncate at a natural boundary (newline)
-  let cutoff = content.lastIndexOf('\n', MAX_FILE_CHARS);
-  if (cutoff === -1) cutoff = MAX_FILE_CHARS;
-  
-  const totalLines = content.split('\n').length;
-  
-  return content.slice(0, cutoff) + `\n\n[...truncated — file is ${content.length} chars (${totalLines} lines), showing first ~${cutoff} chars]\n[Use the read_file_chunk tool to read the rest of the file by specifying start_line and end_line]`;
+export function truncate(content: string, query?: string): string {
+  const { result } = extractRelevantContent(content, MAX_FILE_CHARS, query);
+  return result;
 }
 
 // ─── Helper: format tool error consistently ────────────────────────────────
