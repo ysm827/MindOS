@@ -1,6 +1,7 @@
 **/node_modules/
 **/dist/
 app/.next
+_standalone/
 app/.vscode
 app/data
 !app/data/skills

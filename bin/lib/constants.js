@@ -13,3 +13,5 @@ export const CLI_PATH    = resolve(__dirname, '..', 'cli.js');
 export const NODE_BIN    = process.execPath;
 export const UPDATE_CHECK_PATH = resolve(MINDOS_DIR, 'update-check.json');
 export const DEPS_STAMP  = resolve(MINDOS_DIR, 'deps-hash');
+export const STANDALONE_SERVER = resolve(ROOT, '_standalone', 'server.js');
+export const STANDALONE_STAMP  = resolve(ROOT, '_standalone', '.mindos-build-version');
