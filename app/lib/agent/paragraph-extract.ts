@@ -8,8 +8,6 @@
  * 3. Return top-K paragraphs in original order, within budget
  */
 
-import { countCjkChars } from '@/lib/core/cjk';
-
 /** Split text into paragraphs at blank lines or markdown headings */
 export function splitParagraphs(text: string): string[] {
   // Split on double newlines or before headings (# at line start)
@@ -33,11 +31,6 @@ function scoreParagraph(paragraph: string, queryTerms: string[]): number {
   // Bonus for headings (structural importance)
   if (/^#{1,3}\s/.test(paragraph)) score += 2;
   return score;
-}
-
-/** Estimate character budget from token limit */
-function charBudget(maxChars: number): number {
-  return maxChars;
 }
 
 /**
@@ -76,13 +69,12 @@ export function extractRelevantContent(
     score: scoreParagraph(p, queryTerms),
   }));
 
-  // Always include first paragraph (file title / context)
-  const budget = charBudget(maxChars);
+  // Always include first paragraph (file title / context), but cap to budget
   const selected: typeof scored = [];
   let usedChars = 0;
 
-  // First: include paragraph 0 (title/intro)
-  if (scored.length > 0) {
+  // First: include paragraph 0 (title/intro) if it fits in budget
+  if (scored.length > 0 && scored[0].paragraph.length <= maxChars) {
     selected.push(scored[0]);
     usedChars += scored[0].paragraph.length;
   }
@@ -90,7 +82,7 @@ export function extractRelevantContent(
   // Then: add highest-scoring paragraphs that fit in budget
   const ranked = [...scored.slice(1)].sort((a, b) => b.score - a.score);
   for (const item of ranked) {
-    if (usedChars + item.paragraph.length + 2 > budget) continue;
+    if (usedChars + item.paragraph.length + 2 > maxChars) continue;
     selected.push(item);
     usedChars += item.paragraph.length + 2; // +2 for \n\n separator
   }

@@ -177,6 +177,8 @@ let _watchDebounce: ReturnType<typeof setTimeout> | null = null;
 /**
  * Start watching mindRoot for file changes. Idempotent — safe to call multiple times.
  * Uses Node.js built-in fs.watch (recursive) with 500ms debounce to batch rapid changes.
+ * NOTE: { recursive: true } is supported on macOS and Windows only. On Linux, only
+ * top-level changes are detected. For full Linux support, chokidar would be needed.
  */
 export function startFileWatcher(): void {
   if (_watcher) return; // already watching
