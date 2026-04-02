@@ -543,7 +543,7 @@ export const knowledgeBaseTools: AgentTool<any>[] = [
         
         // Decode common HTML entities
         text = text.replace(/&nbsp;/g, ' ')
-                   .replace(/&amp;/g, ' ')
+                   .replace(/&amp;/g, '&')
                    .replace(/&lt;/g, '<')
                    .replace(/&gt;/g, '>')
                    .replace(/&quot;/g, '"')
