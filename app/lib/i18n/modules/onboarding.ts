@@ -15,7 +15,7 @@ export const onboardingEn = {
     dismiss: 'Dismiss',
   },
   setup: {
-    stepTitles: ['Knowledge Base', 'AI Provider', 'Ports', 'Security', 'Agent Tools', 'Review'],
+    stepTitles: ['Knowledge Base', 'AI Configuration', 'Agent Tools', 'Confirm'],
     // Step 1
     kbPath: 'Knowledge base path',
     kbPathHint: 'Absolute path to your notes directory.',
@@ -56,8 +56,12 @@ export const onboardingEn = {
     generateToken: 'Generate',
     copyToken: 'Copy',
     copiedToken: 'Copied!',
-    webPassword: 'Web UI Password',
-    webPasswordHint: 'Optional. Protect browser access with a password.',
+    webPassword: 'Web Password',
+    webPasswordHint: 'Protect your knowledge base from unauthorized browser access.',
+    webPasswordRequired: 'Password is required to protect your data.',
+    advancedPorts: 'Advanced Settings',
+    tokenSectionTitle: 'MCP Auth Token (auto-generated)',
+    tokenSectionHint: 'Used by AI agents to connect to your MindOS server.',
     // Step 5 — Agent Tools
     agentToolsTitle: 'Agent Tools',
     agentToolsHint: 'Select AI agents to configure with MindOS MCP. Agents marked "not installed" can be configured now — they will work once you install the app.',
@@ -210,7 +214,7 @@ export const onboardingZh = {
     dismiss: '关闭',
   },
   setup: {
-    stepTitles: ['知识库', 'AI 服务商', '端口', '安全', 'Agent 工具', '确认'],
+    stepTitles: ['知识库', 'AI 配置', 'Agent 工具', '确认'],
     // Step 1
     kbPath: '知识库路径',
     kbPathHint: '笔记目录的绝对路径。',
@@ -251,8 +255,12 @@ export const onboardingZh = {
     generateToken: '生成',
     copyToken: '复制',
     copiedToken: '已复制！',
-    webPassword: '网页访问密码',
-    webPasswordHint: '可选。设置后浏览器访问需要登录。',
+    webPassword: '访问密码',
+    webPasswordHint: '保护你的知识库，防止未授权的浏览器访问。',
+    webPasswordRequired: '密码是必填项，用于保护你的数据。',
+    advancedPorts: '高级设置',
+    tokenSectionTitle: 'MCP 认证令牌（已自动生成）',
+    tokenSectionHint: 'AI Agent 连接你的 MindOS 服务器时使用。',
     // Step 5 — Agent Tools
     agentToolsTitle: 'Agent 工具',
     agentToolsHint: '选择要与 MindOS MCP 配置的 AI Agent。标注「未安装」的 agent 可以先行配置，安装应用后即可生效。',

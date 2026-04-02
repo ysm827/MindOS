@@ -6,11 +6,9 @@ import { useLocale } from '@/lib/LocaleContext';
 import { copyToClipboard } from '@/lib/clipboard';
 import { toast } from '@/lib/toast';
 import type { SetupState, PortStatus, AgentEntry, AgentInstallStatus } from './types';
-import { TOTAL_STEPS, STEP_KB, STEP_PORTS, STEP_AGENTS } from './constants';
+import { TOTAL_STEPS, STEP_KB, STEP_AI, STEP_AGENTS, STEP_REVIEW } from './constants';
 import StepKB from './StepKB';
 import StepAI from './StepAI';
-import StepPorts from './StepPorts';
-import StepSecurity from './StepSecurity';
 import StepAgents from './StepAgents';
 import StepReview from './StepReview';
 import { RestartButton } from './StepReview';
@@ -184,16 +182,16 @@ export default function SetupWizard() {
       });
   }, []);
 
-  // Auto-check ports when entering Step 3
+  // Auto-check ports when entering AI step (ports are in Advanced section)
   useEffect(() => {
-    if (step === STEP_PORTS) {
+    if (step === STEP_AI) {
       checkPort(state.webPort, 'web');
       checkPort(state.mcpPort, 'mcp');
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step]);
 
-  // Load agents when entering Step 5
+  // Load agents when entering Agents step
   useEffect(() => {
     if (step === STEP_AGENTS && !agentsLoaded && !agentsLoading) {
       setAgentsLoading(true);
@@ -256,15 +254,17 @@ export default function SetupWizard() {
   const portConflict = state.webPort === state.mcpPort;
 
   const canNext = () => {
-    if (step === STEP_KB) return state.mindRoot.trim().length > 0;
-    if (step === STEP_PORTS) {
+    if (step === STEP_KB) {
+      // KB path required + password required
+      return state.mindRoot.trim().length > 0 && state.webPassword.trim().length > 0;
+    }
+    if (step === STEP_AI) {
+      // Ports validation (only when Advanced is open and ports were modified)
       if (portConflict) return false;
       if (webPortStatus.checking || mcpPortStatus.checking) return false;
-      if (webPortStatus.available !== true || mcpPortStatus.available !== true) return false;
-      return (
-        state.webPort >= 1024 && state.webPort <= 65535 &&
-        state.mcpPort >= 1024 && state.mcpPort <= 65535
-      );
+      // Allow next if ports haven't been checked yet (user didn't open Advanced)
+      if (webPortStatus.available === false || mcpPortStatus.available === false) return false;
+      return true;
     }
     return true;
   };
@@ -359,32 +359,22 @@ export default function SetupWizard() {
         </div>
 
         <div className="flex justify-center">
-          <StepDots step={step} setStep={setStep} stepTitles={s.stepTitles} disabled={submitting || completed} />
+          <StepDots step={step} setStep={setStep} stepTitles={s.stepTitles} disabled={submitting || completed} numberedSteps={STEP_REVIEW} />
         </div>
 
         <h2 className="text-lg font-semibold mb-5" style={{ color: 'var(--foreground)' }}>
-          {s.stepTitles[step]}
+          {step === STEP_REVIEW ? `✓ ${s.stepTitles[step]}` : s.stepTitles[step]}
         </h2>
 
         {step === 0 && <StepKB state={state} update={update} t={t} homeDir={homeDir} />}
-        {step === 1 && <StepAI state={state} update={update} s={s} />}
-        {step === 2 && (
-          <StepPorts
-            state={state} update={update}
+        {step === 1 && (
+          <StepAI state={state} update={update} s={s} onCopyToken={copyToken}
             webPortStatus={webPortStatus} mcpPortStatus={mcpPortStatus}
             setWebPortStatus={setWebPortStatus} setMcpPortStatus={setMcpPortStatus}
-            checkPort={checkPort} portConflict={portConflict} s={s}
+            checkPort={checkPort} portConflict={portConflict}
           />
         )}
-        {step === 3 && (
-          <StepSecurity
-            authToken={state.authToken}
-            onCopy={copyToken} onGenerate={generateToken}
-            webPassword={state.webPassword} onPasswordChange={v => update('webPassword', v)}
-            s={s}
-          />
-        )}
-        {step === 4 && (
+        {step === 2 && (
           <StepAgents
             agents={agents} agentsLoading={agentsLoading}
             selectedAgents={selectedAgents} setSelectedAgents={setSelectedAgents}
@@ -394,7 +384,7 @@ export default function SetupWizard() {
             template={state.template}
           />
         )}
-        {step === 5 && (
+        {step === 3 && (
           <StepReview
             state={state} selectedAgents={selectedAgents}
             agentStatuses={agentStatuses} onRetryAgent={retryAgent}

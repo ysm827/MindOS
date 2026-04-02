@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import { AlertCircle } from 'lucide-react';
 import { Field } from '@/components/settings/Primitives';
 import type { Messages } from '@/lib/i18n';
 import type { SetupState } from './types';
@@ -26,6 +27,7 @@ export interface StepKBProps {
 
 export default function StepKB({ state, update, t, homeDir }: StepKBProps) {
   const s = t.setup;
+  const [passwordTouched, setPasswordTouched] = useState(false);
   // Build platform-aware placeholder, e.g. /Users/alice/MindOS/mind or C:\Users\alice\MindOS\mind
   // Windows homedir always contains \, e.g. C:\Users\Alice — safe to detect by separator
   const sep = homeDir.includes('\\') ? '\\' : '/';
@@ -232,6 +234,30 @@ export default function StepKB({ state, update, t, homeDir }: StepKBProps) {
         </div>
       </div>
       )}
+
+      {/* ── Security ── */}
+      <div className="pt-2 mt-2" style={{ borderTop: '1px solid var(--border)' }}>
+        <Field label={<>{s.webPassword} <span style={{ color: 'var(--error)' }}>*</span></>} hint={s.webPasswordHint}>
+          <input
+            type="password"
+            value={state.webPassword}
+            onChange={e => { update('webPassword', e.target.value); setPasswordTouched(true); }}
+            onBlur={() => setPasswordTouched(true)}
+            placeholder="••••••••"
+            className="w-full px-3 py-2 text-sm rounded-lg border outline-none transition-colors focus-visible:ring-1 focus-visible:ring-ring"
+            style={{
+              background: 'var(--input, var(--card))',
+              borderColor: passwordTouched && !state.webPassword.trim() ? 'var(--error)' : 'var(--border)',
+              color: 'var(--foreground)',
+            }}
+          />
+          {passwordTouched && !state.webPassword.trim() && (
+            <p className="text-xs flex items-center gap-1 mt-1" style={{ color: 'var(--error)' }}>
+              <AlertCircle size={11} /> {s.webPasswordRequired}
+            </p>
+          )}
+        </Field>
+      </div>
     </div>
   );
 }

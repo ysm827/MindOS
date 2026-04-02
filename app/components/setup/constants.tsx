@@ -7,7 +7,8 @@ export const TEMPLATES: Array<{ id: Template; icon: React.ReactNode; dirs: strin
   { id: 'empty', icon: <FileText size={18} />, dirs: ['README.md', 'CONFIG.json', 'INSTRUCTION.md'] },
 ];
 
-export const TOTAL_STEPS = 6;
+export const TOTAL_STEPS = 4;
 export const STEP_KB = 0;
-export const STEP_PORTS = 2;
-export const STEP_AGENTS = 4;
+export const STEP_AI = 1;
+export const STEP_AGENTS = 2;
+export const STEP_REVIEW = 3;

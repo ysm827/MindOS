@@ -1,16 +1,35 @@
 'use client';
 
-import { Brain, Zap, SkipForward, CheckCircle2 } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Brain, Zap, SkipForward, CheckCircle2, ChevronDown, ChevronRight, Copy } from 'lucide-react';
 import { Field, Input, ApiKeyInput } from '@/components/settings/Primitives';
-import type { SetupState, SetupMessages } from './types';
+import type { SetupState, SetupMessages, PortStatus } from './types';
+import StepPorts from './StepPorts';
 
 export interface StepAIProps {
   state: SetupState;
   update: <K extends keyof SetupState>(key: K, val: SetupState[K]) => void;
   s: SetupMessages;
+  onCopyToken: () => void;
+  // Port props (embedded in Advanced section)
+  webPortStatus: PortStatus;
+  mcpPortStatus: PortStatus;
+  setWebPortStatus: (s: PortStatus) => void;
+  setMcpPortStatus: (s: PortStatus) => void;
+  checkPort: (port: number, which: 'web' | 'mcp') => void;
+  portConflict: boolean;
 }
 
-export default function StepAI({ state, update, s }: StepAIProps) {
+export default function StepAI({ state, update, s, onCopyToken, webPortStatus, mcpPortStatus, setWebPortStatus, setMcpPortStatus, checkPort, portConflict }: StepAIProps) {
+  const [portsOpen, setPortsOpen] = useState(false);
+
+  // Auto-expand Advanced section if port check finds a problem
+  useEffect(() => {
+    if (!portsOpen && (webPortStatus.available === false || mcpPortStatus.available === false || portConflict)) {
+      setPortsOpen(true);
+    }
+  }, [webPortStatus.available, mcpPortStatus.available, portConflict, portsOpen]);
+
   const providers = [
     { id: 'anthropic' as const, icon: <Brain size={18} />, label: 'Anthropic', desc: 'Claude — claude-sonnet-4-6' },
     { id: 'openai' as const, icon: <Zap size={18} />, label: 'OpenAI', desc: 'GPT or any OpenAI-compatible API' },
@@ -70,6 +89,50 @@ export default function StepAI({ state, update, s }: StepAIProps) {
           )}
         </div>
       )}
+
+      {/* Advanced: Port Settings (collapsed) */}
+      <div className="pt-3 mt-1" style={{ borderTop: '1px solid var(--border)' }}>
+        <button
+          type="button"
+          onClick={() => setPortsOpen(!portsOpen)}
+          className="flex items-center gap-1.5 text-xs font-medium"
+          style={{ color: 'var(--muted-foreground)' }}>
+          {portsOpen ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+          {s.advancedPorts}
+        </button>
+        {portsOpen && (
+          <div className="mt-3 space-y-5">
+            {/* MCP Auth Token (read-only) */}
+            <div className="space-y-1.5">
+              <p className="text-xs font-medium" style={{ color: 'var(--foreground)' }}>
+                🔑 {s.tokenSectionTitle}
+              </p>
+              <div className="flex items-center gap-2">
+                <code className="flex-1 truncate text-xs font-mono px-3 py-2 rounded-lg"
+                  style={{ background: 'var(--muted)', color: 'var(--foreground)' }}>
+                  {state.authToken}
+                </code>
+                <button type="button" onClick={onCopyToken}
+                  className="flex items-center gap-1 px-2.5 py-2 text-xs rounded-lg border transition-colors hover:bg-muted shrink-0"
+                  style={{ borderColor: 'var(--border)', color: 'var(--foreground)' }}>
+                  <Copy size={12} /> {s.copyToken}
+                </button>
+              </div>
+              <p className="text-xs" style={{ color: 'var(--muted-foreground)' }}>
+                {s.tokenSectionHint}
+              </p>
+            </div>
+
+            {/* Port Settings */}
+            <StepPorts
+              state={state} update={update}
+              webPortStatus={webPortStatus} mcpPortStatus={mcpPortStatus}
+              setWebPortStatus={setWebPortStatus} setMcpPortStatus={setMcpPortStatus}
+              checkPort={checkPort} portConflict={portConflict} s={s}
+            />
+          </div>
+        )}
+      </div>
     </div>
   );
 }
