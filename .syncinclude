@@ -10,7 +10,6 @@
 # Only these top-level directories are copied to public repo.
 # New directories are PRIVATE until explicitly added here.
 directories:
-  - .github
   - app
   - mcp
   - desktop
