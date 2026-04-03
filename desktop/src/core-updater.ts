@@ -102,26 +102,30 @@ async function fetchWithFallback(urls: string[], timeoutMs: number, signal?: Abo
 
 /** Download a file with progress reporting. Tries URLs in order. */
 function downloadFile(
-  urls: string[],
+  urls: readonly string[],
   destPath: string,
   expectedSize: number,
   signal: AbortSignal,
   onProgress: (p: CoreUpdateProgress) => void,
 ): Promise<void> {
+  // Work on a copy to avoid mutating the caller's array (redirect insertions)
+  const urlQueue = [...urls];
   return new Promise((resolve, reject) => {
     let urlIdx = 0;
+    let settled = false;
 
     const tryNext = () => {
-      if (urlIdx >= urls.length) return reject(new Error('All download URLs failed'));
-      if (signal.aborted) return reject(new Error('aborted'));
+      if (settled) return;
+      if (urlIdx >= urlQueue.length) { settled = true; return reject(new Error('All download URLs failed')); }
+      if (signal.aborted) { settled = true; return reject(new Error('aborted')); }
 
-      const url = urls[urlIdx++];
+      const url = urlQueue[urlIdx++];
       const transport = url.startsWith('https') ? https : http;
 
       const req = transport.get(url, { timeout: URL_TIMEOUT }, (res) => {
         if (res.statusCode && res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
-          // Follow redirect — insert at current position
-          urls.splice(urlIdx - 1, 0, res.headers.location);
+          // Follow redirect — insert into queue
+          urlQueue.splice(urlIdx, 0, res.headers.location);
           res.resume();
           tryNext();
           return;
@@ -147,9 +151,9 @@ function downloadFile(
         });
 
         res.pipe(file);
-        file.on('finish', () => { file.close(); resolve(); });
-        file.on('error', (err) => { file.close(); reject(err); });
-        res.on('error', (err) => { file.close(); reject(err); });
+        file.on('finish', () => { file.close(); if (!settled) { settled = true; resolve(); } });
+        file.on('error', (err) => { file.close(); if (!settled) { settled = true; reject(err); } });
+        res.on('error', (err) => { file.close(); if (!settled) { settled = true; reject(err); } });
       });
 
       req.on('error', (err) => {
@@ -162,10 +166,8 @@ function downloadFile(
         tryNext();
       });
 
-      if (signal) {
-        const onAbort = () => { req.destroy(); reject(new Error('aborted')); };
-        signal.addEventListener('abort', onAbort, { once: true });
-      }
+      const onAbort = () => { req.destroy(); if (!settled) { settled = true; reject(new Error('aborted')); } };
+      signal.addEventListener('abort', onAbort, { once: true });
     };
 
     tryNext();

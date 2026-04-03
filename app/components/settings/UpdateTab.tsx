@@ -91,7 +91,7 @@ function DesktopCoreCard() {
   const u = t.settings.update;
   const bridge = getDesktopBridge()!;
 
-  type CoreState = 'idle' | 'checking' | 'available' | 'downloading' | 'ready' | 'applying' | 'error' | 'desktopTooOld';
+  type CoreState = 'idle' | 'checking' | 'available' | 'downloading' | 'cancelling' | 'ready' | 'applying' | 'error' | 'desktopTooOld';
   const [state, setState] = useState<CoreState>('idle');
   const [currentVersion, setCurrentVersion] = useState('');
   const [latestVersion, setLatestVersion] = useState('');
@@ -103,16 +103,28 @@ function DesktopCoreCard() {
   const [minDesktopVersion, setMinDesktopVersion] = useState('');
 
   useEffect(() => {
-    // Check for pending download (from previous session)
-    bridge.getCoreUpdatePending?.().then((r) => {
-      if (r?.version) {
-        setLatestVersion(r.version);
-        setState('ready');
-        return;
-      }
-      // Otherwise check remote
+    // Always fetch current version first
+    const init = async () => {
+      // Get current Core version via a check call (also probes for updates)
+      try {
+        const info = await bridge.checkCoreUpdate?.();
+        if (info) setCurrentVersion(info.currentVersion);
+      } catch { /* ignore */ }
+
+      // Check for pending download (from previous session)
+      try {
+        const r = await bridge.getCoreUpdatePending?.();
+        if (r?.version) {
+          setLatestVersion(r.version);
+          setState('ready');
+          return;
+        }
+      } catch { /* ignore */ }
+
+      // Otherwise do a full remote check
       handleCheck();
-    }).catch(() => handleCheck());
+    };
+    init();
 
     const cleanups: Array<() => void> = [];
     if (bridge.onCoreUpdateProgress) {
@@ -160,14 +172,23 @@ function DesktopCoreCard() {
       await bridge.downloadCoreUpdate(updateInfo.urls, latestVersion, updateInfo.size, updateInfo.sha256);
       setState('ready');
     } catch (err) {
-      setState('error');
-      setErrorMsg(err instanceof Error ? err.message : 'Download failed');
+      const msg = err instanceof Error ? err.message : String(err);
+      if (msg.includes('aborted')) {
+        // User cancelled — go back to available
+        setState('available');
+      } else {
+        setState('error');
+        setErrorMsg(msg || 'Download failed');
+      }
     }
   };
 
   const handleCancel = () => {
     bridge.cancelCoreDownload?.();
-    setState('available');
+    // Don't immediately go to 'available' — the download IPC will reject with 'aborted',
+    // and the catch in handleDownload will set state to 'error'. We set 'cancelling' to
+    // block re-entry, and handleDownload's catch will detect the abort and go to 'available'.
+    setState('cancelling');
   };
 
   const handleApply = async () => {
@@ -215,16 +236,20 @@ function DesktopCoreCard() {
         </div>
       )}
 
-      {state === 'downloading' && (
+      {(state === 'downloading' || state === 'cancelling') && (
         <div className="space-y-2">
           <div className="flex items-center justify-between text-xs">
             <div className="flex items-center gap-2 text-foreground">
               <Loader2 size={13} className="animate-spin text-[var(--amber)]" />
-              {u?.coreDownloading ?? 'Downloading...'} v{latestVersion}
+              {state === 'cancelling'
+                ? (u?.coreCancel ?? 'Cancelling...')
+                : <>{ u?.coreDownloading ?? 'Downloading...'} v{latestVersion}</>}
             </div>
-            <button onClick={handleCancel} className="text-muted-foreground hover:text-foreground transition-colors">
-              {u?.coreCancel ?? 'Cancel'}
-            </button>
+            {state === 'downloading' && (
+              <button onClick={handleCancel} className="text-muted-foreground hover:text-foreground transition-colors">
+                {u?.coreCancel ?? 'Cancel'}
+              </button>
+            )}
           </div>
           <div className="h-1 rounded-full bg-muted overflow-hidden">
             <div className="h-full rounded-full bg-[var(--amber)] transition-all duration-300"
