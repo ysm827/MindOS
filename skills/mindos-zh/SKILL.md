@@ -6,11 +6,15 @@ description: >
   update notes, search knowledge base, organize, SOP, retrospective, CSV, handoff, route notes, distill experience.
   仅 mindRoot 知识库内任务。不用于：改代码仓库/项目文档/KB 外路径。
   核心概念：空间、指令(INSTRUCTION.md)、技能(SKILL.md)；笔记可承载指令与技能。
+  当用户说"帮我记下来"、"搜一下我的笔记"、"更新知识库"、"整理文件"、"执行工作流"、
+  "记录这次会议的决策"、"追加到表格"、"交接给下一个 Agent" 时触发。
+  也适用于：save/record a note, search KB, update/edit files, run SOP, capture decisions,
+  append CSV rows, cross-agent handoff — 所有 mindRoot 知识库内的读写操作。
 ---
 
 # MindOS Skill
 
-<!-- version: 1.3.1 -->
+<!-- version: 1.3.2 -->
 
 **每次任务前，内化这 5 条规则：**
 
@@ -82,8 +86,7 @@ description: >
       └─ 先问清楚。基于 KB 状态提出 2-3 个具体选项。不要开始编辑。
 ```
 
-**以上任何写入 / SOP / 结构路径 → 先读 [references/write-supplement.md](./references/write-supplement.md)。**
-包含：启动协议、写工具选型、各路径详细执行步骤。
+**以上任何写入 / SOP / 结构路径 → 写入补充已加载到上下文（见下方或下一个上下文块中的 `## 写入与工作流补充` 章节）。**
 
 ---
 
@@ -96,7 +99,7 @@ description: >
 | 找文件 | `mindos_search_notes`（2-4 条并行关键词变体）| 单关键词搜索 |
 | 读内容 | `mindos_read_file` 或 `mindos_read_lines`（大文件） | 只需 10 行却读整文件 |
 
-写入、结构变更、历史工具 → [references/write-supplement.md](./references/write-supplement.md)。
+写入、结构变更、历史工具 → 见写入与工作流补充（已加载到下方或下一个上下文块）。
 
 ### 回退
 
@@ -111,15 +114,27 @@ description: >
 |------|----------|----------|
 | **只读问答** | 查找 / 总结 / 引用 | 目录树推断 → 搜索 → 读取 → 标注来源 → 明确说信息缺口 |
 
-写入模式详细执行步骤 → [references/write-supplement.md](./references/write-supplement.md)。
+写入模式详细执行步骤 → 见写入与工作流补充（已加载到下方或下一个上下文块）。
 
 ---
 
-## 交互规则
+## 判断启发式规则
 
-- **模糊请求？** 先问。基于 KB 现状提出 2-3 个选项。不要在没理解范围前开始编辑。
-- **标注来源。** KB 中的事实附带文件路径，便于验证。
-- **简洁优先。** 展示最可能的匹配，不列全部。
+**保存意图 — 读写边界识别**
+- "帮我记下来" / "记录一下" / "保存这个" = 写入
+- "搜一下有没有关于 X 的笔记" / "总结上周的工作" = 只读
+- 模糊边界（"整理一下这些内容"）→ 先问：是读取展示，还是写回 KB？
+
+**文件位置不确定时**
+- 扫目录树 5 秒内定不下来 → 不要自创新目录；放语义最近的已有目录，告知用户
+- 用户说"随便放个地方" → 放 inbox 或最顶层通用目录，任务后提议归类（触发 Structure classification hook）
+
+**范围蔓延信号**
+- 单条输入导致路由表 > 5 个文件 → 暂停，先确认范围；用户鲜少意图批量重写
+- "把这些都更新一下" + 内容跨越多个主题 → 拆成批次确认，不一次性执行
+
+**引用纪律**
+- KB 中引用的事实必须附带文件路径，便于用户核查
 
 ---
 

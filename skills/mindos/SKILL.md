@@ -7,11 +7,15 @@ description: >
   Use when the task targets files inside the user's MindOS KB (mindRoot).
   NOT for editing app source, project docs, or paths outside the KB.
   Core concepts: Space, Instruction (INSTRUCTION.md), Skill (SKILL.md); notes can embody both.
+  Trigger when user asks to: save or record a note, search their knowledge base, update or edit
+  a file, organize notes, run a workflow or SOP, capture decisions from a session, append rows
+  to a table or CSV, hand off context to another agent — or says "帮我记下来" / "搜一下我的笔记" /
+  "更新知识库" / "整理文件" / "执行工作流".
 ---
 
 # MindOS Skill
 
-<!-- version: 1.3.1 -->
+<!-- version: 1.3.2 -->
 
 **Before every task, internalize these 5 rules:**
 
@@ -83,8 +87,7 @@ User request
       └─ ASK for clarification. Propose 2-3 specific options based on KB state. Do NOT start editing.
 ```
 
-**For any write/SOP/structural path above → read [references/write-supplement.md](./references/write-supplement.md) first.**
-It covers: startup protocol, write tool selection, and step-by-step execution details for each path.
+**For any write/SOP/structural path above → the write supplement is already loaded in context (see `## Write & Workflow Supplement` section below or in the next context block).**
 
 ---
 
@@ -97,7 +100,7 @@ It covers: startup protocol, write tool selection, and step-by-step execution de
 | Find files | `mindos_search_notes` (2-4 parallel keyword variants) | Single-keyword search |
 | Read content | `mindos_read_file` or `mindos_read_lines` (for large files) | Reading entire large file when you need 10 lines |
 
-Write, structural, and history tools → [references/write-supplement.md](./references/write-supplement.md).
+Write, structural, and history tools → see Write & Workflow Supplement (loaded below or in next context block).
 
 ### Fallbacks
 
@@ -112,15 +115,27 @@ Write, structural, and history tools → [references/write-supplement.md](./refe
 |---------|------|-----------|
 | **Read-only Q&A** | Lookup / summarize / quote | Tree reasoning → search → read → answer with citations → state gaps |
 
-For write, SOP, structural, and handoff patterns → [references/write-supplement.md](./references/write-supplement.md).
+For write, SOP, structural, and handoff patterns → see Write & Workflow Supplement (loaded below or in next context block).
 
 ---
 
-## Interaction rules
+## Judgment heuristics
 
-- **Ambiguous request?** Ask first. Propose 2-3 options based on KB state (recent changes, directory structure). Never start reorganizing without understanding scope.
-- **Cite sources.** Every fact from the KB gets a file path so the user can verify.
-- **Brevity first.** Show the most likely match, not an exhaustive list.
+**Save intent — read vs. write boundary**
+- "帮我记下来" / "记录一下" / "保存这个" = write
+- "搜一下有没有关于 X 的笔记" / "总结上周的工作" = read-only
+- Ambiguous boundary ("整理一下这些内容") → ask first: display only, or write back to KB?
+
+**File location uncertainty**
+- 扫目录树 5 秒内定不下来 → don't invent a new directory; use the nearest semantically-fit existing one and inform the user
+- User says "just put it somewhere" → place in inbox or top-level general directory, propose classification after (triggers Structure classification hook)
+
+**Scope creep signals**
+- Single input routes to >5 files → pause, confirm scope; users rarely intend bulk rewrites
+- "Update all of these" + content spans multiple topics → split into batches, confirm each, don't execute all at once
+
+**Citation discipline**
+- KB-cited facts must include the file path so the user can verify
 
 ---
 

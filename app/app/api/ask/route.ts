@@ -383,7 +383,11 @@ export async function POST(req: NextRequest) {
       ? path.join(process.env.MINDOS_PROJECT_ROOT, 'app')
       : process.cwd();
     const skillPath = path.join(appDir, `data/skills/${skillDirName}/SKILL.md`);
+    const skillWritePath = path.join(appDir, `data/skills/${skillDirName}/references/write-supplement.md`);
     const skill = readAbsoluteFile(skillPath);
+    const skillWrite = readAbsoluteFile(skillWritePath);
+
+    console.log(`[ask] SKILL skill=${skill.ok}, write-supplement=${skillWrite.ok}`);
 
     const userSkillRules = readKnowledgeFile('user-skill-rules.md');
 
@@ -423,11 +427,12 @@ export async function POST(req: NextRequest) {
       if (tm.ok && tm.content.trim().length > MIN_USEFUL_CONTENT_LENGTH) bootstrap.target_config_md = tm;
     }
 
-    // Only report failures + truncation warnings for loaded files
     const initFailures: string[] = [];
     const truncationWarnings: string[] = [];
     if (!skill.ok) initFailures.push(`skill.mindos: failed (${skill.error})`);
     if (skill.ok && skill.truncated) truncationWarnings.push('skill.mindos was truncated');
+    if (!skillWrite.ok) initFailures.push(`skill.mindos-write-supplement: failed (${skillWrite.error})`);
+    if (skillWrite.ok && skillWrite.truncated) truncationWarnings.push('skill.mindos-write-supplement was truncated');
     if (userSkillRules.ok && userSkillRules.truncated) truncationWarnings.push('user-skill-rules.md was truncated');
     if (!bootstrap.instruction.ok) initFailures.push(`bootstrap.instruction: failed (${bootstrap.instruction.error})`);
     if (bootstrap.instruction.ok && bootstrap.instruction.truncated) truncationWarnings.push('bootstrap.instruction was truncated');
@@ -445,7 +450,12 @@ export async function POST(req: NextRequest) {
       : `Initialization issues:\n${initFailures.join('\n')}\nmind_root=${getMindRoot()}${targetDir ? `, target_dir=${targetDir}` : ''}${truncationWarnings.length > 0 ? `\n⚠️ Warnings:\n${truncationWarnings.join('\n')}` : ''}`;
 
     const initContextBlocks: string[] = [];
-    if (skill.ok) initContextBlocks.push(`## mindos_skill_md\n\n${skill.content}`);
+    const skillParts: string[] = [];
+    if (skill.ok) skillParts.push(skill.content);
+    if (skillWrite.ok) skillParts.push(skillWrite.content);
+    if (skillParts.length > 0) {
+      initContextBlocks.push(`## mindos_skill_md\n\n${skillParts.join('\n\n---\n\n')}`);
+    }
     if (userSkillRules.ok && !userSkillRules.truncated && userSkillRules.content.trim()) {
       initContextBlocks.push(`## user_skill_rules\n\nUser personalization rules (user-skill-rules.md):\n\n${userSkillRules.content}`);
     }
