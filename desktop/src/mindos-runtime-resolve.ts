@@ -1,8 +1,10 @@
 /**
  * Orchestrates MindOS root resolution for Desktop local mode.
- * Spec: wiki/specs/spec-desktop-bundled-mindos.md
+ * Spec: wiki/specs/spec-desktop-bundled-mindos.md, spec-desktop-core-hot-update.md
  */
 import { existsSync } from 'fs';
+import path from 'path';
+import { app } from 'electron';
 import { getMindosInstallPath } from './node-detect';
 import { analyzeMindOsLayout } from './mindos-runtime-layout';
 import { pickMindOsRuntime, type MindOsRuntimePickResult, type MindOsRuntimePolicy } from './mindos-runtime-pick';
@@ -79,6 +81,11 @@ export async function resolveLocalMindOsProjectRoot(
   const bundledExists = !!bundledDir && existsSync(bundledDir);
   const bundledAnalysis = bundledExists && bundledDir ? analyzeMindOsLayout(bundledDir) : { version: null, runnable: false };
 
+  // Cached runtime: downloaded by Core Hot Update to ~/.mindos/runtime/
+  const cachedDir = path.join(app.getPath('home'), '.mindos', 'runtime');
+  const cachedExists = existsSync(cachedDir);
+  const cachedAnalysis = cachedExists ? analyzeMindOsLayout(cachedDir) : { version: null, runnable: false };
+
   const userCandidatePath = await getMindosInstallPath(nodePath);
   const userAnalysis = userCandidatePath ? analyzeMindOsLayout(userCandidatePath) : { version: null, runnable: false };
 
@@ -86,6 +93,9 @@ export async function resolveLocalMindOsProjectRoot(
     policy,
     overrideRoot,
     overrideVersion,
+    cachedRoot: cachedAnalysis.runnable ? cachedDir : null,
+    cachedVersion: cachedAnalysis.version,
+    cachedRunnable: cachedAnalysis.runnable,
     bundledRoot: bundledExists && bundledDir ? bundledDir : null,
     bundledVersion: bundledAnalysis.version,
     bundledRunnable: bundledAnalysis.runnable,

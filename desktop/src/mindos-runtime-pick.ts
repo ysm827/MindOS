@@ -1,17 +1,21 @@
 /**
- * Pure selection of MindOS project root: override vs bundled vs user global install.
- * Spec: wiki/specs/spec-desktop-bundled-mindos.md
+ * Pure selection of MindOS project root: override vs cached vs user vs bundled.
+ * Spec: wiki/specs/spec-desktop-bundled-mindos.md, spec-desktop-core-hot-update.md
  */
 import semver from 'semver';
 
 export type MindOsRuntimePolicy = 'prefer-newer' | 'bundled-only' | 'user-only';
-export type MindOsRuntimeSource = 'override' | 'user' | 'bundled' | 'none';
+export type MindOsRuntimeSource = 'override' | 'cached' | 'user' | 'bundled' | 'none';
 
 export interface MindOsRuntimePickInput {
   policy: MindOsRuntimePolicy;
   /** Highest priority: validated runnable root from MINDOS_RUNTIME_ROOT or config.mindosRuntimeRoot */
   overrideRoot: string | null;
   overrideVersion: string | null;
+  /** Downloaded Core runtime at ~/.mindos/runtime/ (Core Hot Update) */
+  cachedRoot: string | null;
+  cachedVersion: string | null;
+  cachedRunnable: boolean;
   bundledRoot: string | null;
   bundledVersion: string | null;
   bundledRunnable: boolean;
@@ -88,29 +92,36 @@ export function pickMindOsRuntime(input: MindOsRuntimePickInput): MindOsRuntimeP
   }
 
   // prefer-newer (default)
-  // userAdoptionAllowed already validated userVersion with semver.valid
+  // Collect all runnable candidates with valid semver, then pick the newest.
+  // Priority when versions are equal: cached > user > bundled
+  const candidates: Array<{ root: string; version: string; source: MindOsRuntimeSource }> = [];
+
+  // Cached runtime (downloaded by Core Hot Update)
+  if (input.cachedRunnable && input.cachedRoot && input.cachedVersion && semver.valid(input.cachedVersion)) {
+    candidates.push({ root: input.cachedRoot, version: input.cachedVersion, source: 'cached' });
+  }
+
+  // User global install (validated by userAdoptionAllowed)
+  if (userOk.ok && input.userRoot && input.userVersion && semver.valid(input.userVersion)) {
+    candidates.push({ root: input.userRoot, version: input.userVersion, source: 'user' });
+  }
+
+  // Bundled runtime
   const bundledOk = input.bundledRunnable && !!input.bundledRoot;
-  const uV = userOk.ok ? input.userVersion : null;
-  const bV = input.bundledVersion && semver.valid(input.bundledVersion) ? input.bundledVersion : null;
-
-  if (userOk.ok && uV && bundledOk && bV) {
-    if (semver.gt(uV, bV)) {
-      return { projectRoot: input.userRoot, source: 'user', version: uV };
-    }
-    if (semver.lt(uV, bV)) {
-      return { projectRoot: input.bundledRoot, source: 'bundled', version: bV };
-    }
-    // equal semver → prefer user tree (spec: local patch / parity with published)
-    return { projectRoot: input.userRoot, source: 'user', version: uV };
+  if (bundledOk && input.bundledRoot && input.bundledVersion && semver.valid(input.bundledVersion)) {
+    candidates.push({ root: input.bundledRoot, version: input.bundledVersion, source: 'bundled' });
   }
 
-  if (userOk.ok && input.userRoot) {
-    return { projectRoot: input.userRoot, source: 'user', version: input.userVersion };
+  if (candidates.length === 0) {
+    return { projectRoot: null, source: 'none', version: null, reason: 'no-runnable-runtime' };
   }
 
-  if (bundledOk && input.bundledRoot) {
-    return { projectRoot: input.bundledRoot, source: 'bundled', version: input.bundledVersion };
-  }
+  // Sort: highest version first; equal versions keep array order (cached > user > bundled)
+  candidates.sort((a, b) => {
+    const cmp = semver.compare(b.version, a.version);
+    return cmp; // stable sort preserves insertion order for equal versions
+  });
 
-  return { projectRoot: null, source: 'none', version: null, reason: 'no-runnable-runtime' };
+  const winner = candidates[0];
+  return { projectRoot: winner.root, source: winner.source, version: winner.version };
 }

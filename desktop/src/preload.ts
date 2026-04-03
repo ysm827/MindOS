@@ -34,9 +34,17 @@ contextBridge.exposeInMainWorld('mindos', {
   // Mode switching
   switchMode: () => ipcRenderer.invoke('switch-mode'),
 
-  // Updates
+  // Updates (Desktop shell — electron-updater)
   checkUpdate: () => ipcRenderer.invoke('check-update'),
   installUpdate: () => ipcRenderer.invoke('install-update'),
+
+  // Core Hot Update (MindOS Core runtime — independent from shell)
+  checkCoreUpdate: () => ipcRenderer.invoke('check-core-update'),
+  downloadCoreUpdate: (urls: string[], version: string, size: number, sha256: string) =>
+    ipcRenderer.invoke('download-core-update', urls, version, size, sha256),
+  cancelCoreDownload: () => ipcRenderer.invoke('cancel-core-download'),
+  applyCoreUpdate: () => ipcRenderer.invoke('apply-core-update'),
+  getCoreUpdatePending: () => ipcRenderer.invoke('get-core-update-pending'),
 
   // Uninstall (Desktop self-deletion)
   uninstallApp: () => ipcRenderer.invoke('uninstall-app'),
@@ -46,6 +54,8 @@ contextBridge.exposeInMainWorld('mindos', {
   onUpdateProgress: (cb: (progress: unknown) => void): CleanupFn => onChannel('update-progress', cb),
   onUpdateReady: (cb: () => void): CleanupFn => onChannel('update-ready', cb),
   onUpdateError: (cb: (info: unknown) => void): CleanupFn => onChannel('update-error', cb),
+  onCoreUpdateProgress: (cb: (progress: unknown) => void): CleanupFn => onChannel('core-update-progress', cb),
+  onCoreUpdateAvailable: (cb: (info: unknown) => void): CleanupFn => onChannel('core-update-available', cb),
   onServerStatus: (cb: (status: string) => void): CleanupFn => onChannel('server-status', cb as (...args: unknown[]) => void),
   onConnectionLost: (cb: () => void): CleanupFn => onChannel('connection-lost', cb),
   onConnectionRestored: (cb: () => void): CleanupFn => onChannel('connection-restored', cb),

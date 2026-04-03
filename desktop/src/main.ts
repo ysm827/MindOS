@@ -40,6 +40,7 @@ import { ensureMindosCliShim, refreshMindosCliAndNotify } from './install-cli-sh
 import { verifyMindOsWebListening } from './mindos-web-health';
 import { resolvePreferUnpacked } from './resolve-packaged-asset';
 import { registerMindosConnectSchemePrivileged, registerMindosConnectProtocol } from './mindos-connect-protocol';
+import { CoreUpdater } from './core-updater';
 
 registerMindosConnectSchemePrivileged();
 
@@ -69,6 +70,8 @@ let currentWebPort: number | undefined;
 let currentMcpPort: number | undefined;
 let currentRemoteAddress: string | undefined;
 let cachedConfig: MindOSConfig | null = null;
+const coreUpdater = new CoreUpdater();
+let currentCoreVersion: string | null = null;
 
 // ── Config ──
 interface MindOSConfig {
@@ -312,7 +315,16 @@ async function startLocalMode(): Promise<string | null> {
     }
   }
 
-  // 2. MindOS root — bundled vs global vs override (spec-desktop-bundled-mindos)
+  // 2. MindOS root — bundled vs cached vs global vs override
+  // Clean up stale cached runtimes before resolution
+  try {
+    const { getDefaultBundledMindOsDirectory } = await import('./mindos-runtime-path');
+    const { analyzeMindOsLayout } = await import('./mindos-runtime-layout');
+    const bundledDir = getDefaultBundledMindOsDirectory();
+    const bundledVer = bundledDir && existsSync(bundledDir) ? analyzeMindOsLayout(bundledDir).version : null;
+    coreUpdater.cleanupOnBoot(bundledVer);
+  } catch (e) { console.warn('[MindOS] cleanupOnBoot failed:', e); }
+
   const runtimeRes = await resolveLocalMindOsProjectRoot(loadConfig(), nodePath);
   if (!runtimeRes.ok) {
     splashStatus({
@@ -327,6 +339,7 @@ async function startLocalMode(): Promise<string | null> {
   }
 
   const { pick: runtimePick } = runtimeRes;
+  currentCoreVersion = runtimePick.version;
   console.info(
     `[MindOS] runtime pick source=${runtimePick.source} root=${runtimePick.projectRoot ?? '—'} version=${runtimePick.version ?? '—'}${runtimePick.reason ? ` reason=${runtimePick.reason}` : ''}`,
   );
@@ -1087,6 +1100,91 @@ function setupIPC(): void {
   ipcMain.handle('restart-services', () => handleRestartServices());
   ipcMain.handle('switch-server', () => handleSwitchServer());
 
+  // ── Core Hot Update IPC ──
+
+  ipcMain.handle('check-core-update', async () => {
+    if (currentMode !== 'local' || !currentCoreVersion) {
+      return { available: false, currentVersion: currentCoreVersion || '', latestVersion: '' };
+    }
+    return coreUpdater.check(currentCoreVersion);
+  });
+
+  ipcMain.handle('download-core-update', async (_e: unknown, urls: string[], version: string, size: number, sha256: string) => {
+    // Forward progress events to renderer
+    const onProgress = (p: { percent: number; transferred: number; total: number }) => {
+      const wins = BrowserWindow.getAllWindows();
+      for (const win of wins) {
+        if (!win.isDestroyed()) win.webContents.send('core-update-progress', p);
+      }
+    };
+    coreUpdater.on('progress', onProgress);
+    try {
+      await coreUpdater.download(urls, version, size, sha256);
+    } finally {
+      coreUpdater.removeListener('progress', onProgress);
+    }
+  });
+
+  ipcMain.handle('cancel-core-download', () => {
+    coreUpdater.cancelDownload();
+  });
+
+  ipcMain.handle('get-core-update-pending', () => {
+    return { version: coreUpdater.getPendingVersion() };
+  });
+
+  ipcMain.handle('apply-core-update', async () => {
+    if (isQuitting || isUpdating) throw new Error('App is shutting down');
+    const zh = navigator_lang() === 'zh';
+
+    // Inject overlay before stopping services
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      await injectOverlay('mindos-core-update-overlay', `
+        <div style="position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,0.7);display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:system-ui;backdrop-filter:blur(8px)">
+          <div style="width:28px;height:28px;border:3px solid rgba(212,149,74,0.3);border-top-color:#d4954a;border-radius:50%;animation:spin 1s linear infinite;margin-bottom:14px"></div>
+          <div style="color:#e8e4dc;font-size:18px;font-weight:600">${zh ? '正在更新 MindOS...' : 'Updating MindOS...'}</div>
+          <div style="color:#8a8275;font-size:13px;margin-top:6px">${zh ? '服务重启后将自动刷新' : 'Will auto-reload when ready'}</div>
+          <style>@keyframes spin{to{transform:rotate(360deg)}}</style>
+        </div>
+      `);
+    }
+
+    try {
+      // 1. Stop processes (release file locks for Windows)
+      if (processManager) {
+        await processManager.stop();
+        processManager = null;
+      }
+
+      // 2. Atomic file replacement
+      coreUpdater.apply();
+
+      // 3. Restart with new runtime (startLocalMode re-resolves → picks cached)
+      invalidateConfig();
+      const url = await startLocalMode();
+      if (url && mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.loadURL(resolveLocalMindOsBrowseUrl(url));
+        refreshTray('running');
+      }
+      return { ok: true, version: currentCoreVersion };
+    } catch (err) {
+      // Recovery: try to restart with whatever runtime is available
+      console.error('[MindOS] Core update apply failed, recovering:', err);
+      try {
+        invalidateConfig();
+        const url = await startLocalMode();
+        if (url && mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.loadURL(resolveLocalMindOsBrowseUrl(url));
+        }
+      } catch (recoverErr) {
+        console.error('[MindOS] Recovery also failed:', recoverErr);
+        await removeOverlay('mindos-core-update-overlay');
+        refreshTray('error');
+      }
+      throw err;
+    }
+  });
+
   // Uninstall: move the Desktop .app bundle to Trash, then quit.
   // Server-side cleanup (stop services, remove config) is handled by /api/uninstall
   // before this IPC is called.
@@ -1269,6 +1367,32 @@ async function bootApp(): Promise<void> {
     }
     registerShortcuts(mainWindow);
     cleanupUpdater = setupUpdater({ onBeforeQuitAndInstall: () => { isUpdating = true; } });
+
+    // Core Hot Update: silent check 30s after startup
+    setTimeout(async () => {
+      if (currentMode !== 'local' || !currentCoreVersion) return;
+      try {
+        // Check for pending download first (user downloaded but didn't apply last session)
+        const pending = coreUpdater.getPendingVersion();
+        if (pending && mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.webContents.send('core-update-available', {
+            current: currentCoreVersion,
+            latest: pending,
+            ready: true,
+          });
+          return;
+        }
+        // Otherwise check remote
+        const info = await coreUpdater.check(currentCoreVersion);
+        if (info.available && !info.desktopTooOld && mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.webContents.send('core-update-available', {
+            current: info.currentVersion,
+            latest: info.latestVersion,
+            ready: false,
+          });
+        }
+      } catch { /* silent check — don't bother user */ }
+    }, 30_000);
   }
 
   refreshTray('running');
