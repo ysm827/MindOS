@@ -30,7 +30,8 @@ import { testConnection } from './connection-sdk';
 import { getNodePath, getMindosInstallPath, getNpxPath, getEnrichedEnv } from './node-detect';
 import { downloadNode, installMindosWithPrivateNode } from './node-bootstrap';
 import { resolveLocalMindOsProjectRoot } from './mindos-runtime-resolve';
-import { isNextBuildValid, isNextBuildCurrent, BUILD_VERSION_FILE } from './mindos-runtime-layout';
+import { isNextBuildValid, isNextBuildCurrent, BUILD_VERSION_FILE, analyzeMindOsLayout } from './mindos-runtime-layout';
+import { getDefaultBundledMindOsDirectory } from './mindos-runtime-path';
 import {
   getEffectiveMindRootFromConfig,
   localBrowseNeedsSetupWizard,
@@ -318,8 +319,6 @@ async function startLocalMode(): Promise<string | null> {
   // 2. MindOS root — bundled vs cached vs global vs override
   // Clean up stale cached runtimes before resolution
   try {
-    const { getDefaultBundledMindOsDirectory } = await import('./mindos-runtime-path');
-    const { analyzeMindOsLayout } = await import('./mindos-runtime-layout');
     const bundledDir = getDefaultBundledMindOsDirectory();
     const bundledVer = bundledDir && existsSync(bundledDir) ? analyzeMindOsLayout(bundledDir).version : null;
     coreUpdater.cleanupOnBoot(bundledVer);
