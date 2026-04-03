@@ -10,7 +10,7 @@ import { app } from 'electron';
 import path from 'path';
 import {
   existsSync, mkdirSync, renameSync, rmSync,
-  createWriteStream, readFileSync, statSync, unlinkSync,
+  createWriteStream, readFileSync, unlinkSync,
 } from 'fs';
 import { createHash } from 'crypto';
 import { execFile } from 'child_process';

@@ -1,4 +1,3 @@
-# Publish MindOS Core runtime to CDN
 name: Publish Runtime
 
 on:
