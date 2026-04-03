@@ -21,9 +21,11 @@ import { analyzeMindOsLayout } from './mindos-runtime-layout';
 
 // ── Constants ──
 
+// Manifest sources: a dedicated "runtime-latest" GitHub Release + CDN fallback.
+// The "runtime-latest" release is updated by CI on every npm publish.
 const MANIFEST_URLS = [
+  'https://github.com/GeminiLight/MindOS/releases/download/runtime-latest/latest.json',
   'https://releases.mindos.com/runtime/latest.json',
-  'https://mindos-releases.oss-cn-shanghai.aliyuncs.com/runtime/latest.json',
 ];
 const CONFIG_DIR = path.join(app.getPath('home'), '.mindos');
 const RUNTIME_DIR = path.join(CONFIG_DIR, 'runtime');
