@@ -26,7 +26,9 @@ MindOS 是你思考的地方，也是 AI Agent 行动的起点——一个你和
 
 <p align="center">
   <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="assets/images/demo-flow-zh-dark.webp" type="image/webp" />
     <source media="(prefers-color-scheme: dark)" srcset="assets/images/demo-flow-zh-dark.png" />
+    <source media="(prefers-color-scheme: light)" srcset="assets/images/demo-flow-zh-light.webp" type="image/webp" />
     <source media="(prefers-color-scheme: light)" srcset="assets/images/demo-flow-zh-light.png" />
     <img src="assets/images/demo-flow-zh-light.png" alt="MindOS：从灵感到执行到复盘" width="960" />
   </picture>
@@ -34,16 +36,36 @@ MindOS 是你思考的地方，也是 AI Agent 行动的起点——一个你和
 
 <table>
   <tr>
-    <td width="50%"><img src="assets/images/mindos-home.png" alt="MindOS 首页" /></td>
-    <td width="50%"><img src="assets/images/mindos-chat.png" alt="MindOS AI 对话" /></td>
+    <td width="50%">
+      <picture>
+        <source srcset="assets/images/mindos-home.webp" type="image/webp" />
+        <img src="assets/images/mindos-home.png" alt="MindOS 首页" />
+      </picture>
+    </td>
+    <td width="50%">
+      <picture>
+        <source srcset="assets/images/mindos-chat.webp" type="image/webp" />
+        <img src="assets/images/mindos-chat.png" alt="MindOS AI 对话" />
+      </picture>
+    </td>
   </tr>
   <tr>
     <td align="center"><em>首页 — 知识库概览</em></td>
     <td align="center"><em>AI 对话 — 在上下文中与知识库对话</em></td>
   </tr>
   <tr>
-    <td width="50%"><img src="assets/images/mindos-dashboard.png" alt="MindOS Agent 工作台" /></td>
-    <td width="50%"><img src="assets/images/mindos-echo.png" alt="MindOS Echo" /></td>
+    <td width="50%">
+      <picture>
+        <source srcset="assets/images/mindos-dashboard.webp" type="image/webp" />
+        <img src="assets/images/mindos-dashboard.png" alt="MindOS Agent 工作台" />
+      </picture>
+    </td>
+    <td width="50%">
+      <picture>
+        <source srcset="assets/images/mindos-echo.webp" type="image/webp" />
+        <img src="assets/images/mindos-echo.png" alt="MindOS Echo" />
+      </picture>
+    </td>
   </tr>
   <tr>
     <td align="center"><em>Agent 工作台 — 管理所有已连接的 AI Agent</em></td>

@@ -26,7 +26,9 @@ MindOS is where you think, and where your AI agents act — a local-first knowle
 
 <p align="center">
   <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="assets/images/demo-flow-dark.webp" type="image/webp" />
     <source media="(prefers-color-scheme: dark)" srcset="assets/images/demo-flow-dark.png" />
+    <source media="(prefers-color-scheme: light)" srcset="assets/images/demo-flow-light.webp" type="image/webp" />
     <source media="(prefers-color-scheme: light)" srcset="assets/images/demo-flow-light.png" />
     <img src="assets/images/demo-flow-light.png" alt="MindOS: From Idea to Execution to Review" width="960" />
   </picture>
@@ -34,16 +36,36 @@ MindOS is where you think, and where your AI agents act — a local-first knowle
 
 <table>
   <tr>
-    <td width="50%"><img src="assets/images/mindos-home.png" alt="MindOS Home" /></td>
-    <td width="50%"><img src="assets/images/mindos-chat.png" alt="MindOS AI Chat" /></td>
+    <td width="50%">
+      <picture>
+        <source srcset="assets/images/mindos-home.webp" type="image/webp" />
+        <img src="assets/images/mindos-home.png" alt="MindOS Home" />
+      </picture>
+    </td>
+    <td width="50%">
+      <picture>
+        <source srcset="assets/images/mindos-chat.webp" type="image/webp" />
+        <img src="assets/images/mindos-chat.png" alt="MindOS AI Chat" />
+      </picture>
+    </td>
   </tr>
   <tr>
     <td align="center"><em>Home — Knowledge base overview</em></td>
     <td align="center"><em>AI Chat — Converse with your knowledge in context</em></td>
   </tr>
   <tr>
-    <td width="50%"><img src="assets/images/mindos-dashboard.png" alt="MindOS Agents Dashboard" /></td>
-    <td width="50%"><img src="assets/images/mindos-echo.png" alt="MindOS Echo" /></td>
+    <td width="50%">
+      <picture>
+        <source srcset="assets/images/mindos-dashboard.webp" type="image/webp" />
+        <img src="assets/images/mindos-dashboard.png" alt="MindOS Agents Dashboard" />
+      </picture>
+    </td>
+    <td width="50%">
+      <picture>
+        <source srcset="assets/images/mindos-echo.webp" type="image/webp" />
+        <img src="assets/images/mindos-echo.png" alt="MindOS Echo" />
+      </picture>
+    </td>
   </tr>
   <tr>
     <td align="center"><em>Agents — Manage all connected AI agents</em></td>
