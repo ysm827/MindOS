@@ -385,6 +385,19 @@
 - **规则：** 自定义 OpenAI 代理默认走最保守兼容配置，但 `maxTokensField` 由 pi-ai 框架自动检测，禁止手动覆盖
 - **文件：** `app/lib/agent/model.ts`
 
+### API Key 测试通过但聊天失败（test-key / chat 代码路径分叉）
+- **现象：** Settings 页 Test Key 显示 ✅ 成功，但实际发消息时返回 "AI 未返回响应"
+- **原因：** `test-key` API 曾用独立的 `fetch()` 实现（直接调 provider HTTP API），而聊天走 `pi-ai.complete()` + `getModelConfig()`。两条路径的 model 构造、compat flags、base URL 解析、认证方式全部不同。测试时用对了参数不代表聊天也对
+- **解决：** `test-key/route.ts` 完全重写为使用 `pi-ai.complete()` + `getModelConfig(overrides)`，与聊天路径 100% 共享 model 构造逻辑。新增 `ModelConfigOverrides` 接口允许临时传入未保存的 apiKey/model/baseUrl
+- **规则：** API 连通性测试必须与实际功能调用走同一代码路径。测试接口不能自建 HTTP 调用
+- **文件：** `app/app/api/settings/test-key/route.ts`、`app/lib/agent/model.ts`
+
+### Multi-Provider 配置：新增 Provider 必须注册到 PROVIDER_PRESETS
+- **现象：** 新增 AI Provider 后 UI 不显示、测试/聊天不工作
+- **原因：** 所有 Provider 元数据（defaultModel、apiKeyEnvVar、piProvider、signupUrl、supportsThinking 等）集中在 `PROVIDER_PRESETS`，遗漏注册会导致运行时找不到配置
+- **规则：** 新增 Provider 步骤：(1) `providers.ts` 添加 `ProviderId` union + `PROVIDER_PRESETS` entry (2) 确认 `piProvider` 和 `piApiDefault` 与 pi-ai registry 对应 (3) 设置正确的 `category`（primary/secondary/advanced）
+- **文件：** `app/lib/agent/providers.ts`
+
 ### gpt-5.4 等新模型拒绝 max_tokens 参数（禁止重复造轮子）
 - **现象：** gpt-5.4 配合中转站使用时，连接测试返回"测试失败"，聊天也无法工作
 - **原因：** gpt-5.4/o1/o3 系列模型要求使用 `max_completion_tokens` 而非 `max_tokens`。我们曾在 `model.ts` 中强制覆盖 `maxTokensField: 'max_tokens'`，但 pi-ai 框架已内置基于 URL 的自动检测逻辑（默认 `max_completion_tokens`），我们的覆盖反而破坏了它。同时还曾为此构建了非流式回退路径（~150 行），但实际上所有现代代理都支持流式
