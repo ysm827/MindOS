@@ -144,6 +144,26 @@ export default function AgentsOverviewSection({
         </div>
       </section>
 
+      {/* ═══════════ QUICK NAVIGATION ═══════════ */}
+      <nav className="grid grid-cols-1 md:grid-cols-2 gap-3" aria-label="Quick navigation">
+        <QuickNavCard
+          href="/agents?tab=mcp"
+          icon={<Server size={18} aria-hidden="true" />}
+          title="MCP"
+          stat={mcpRunning ? copy.toolsUnit(mcpToolCount) : copy.mcpOffline}
+          statTone={mcpRunning ? 'ok' : 'warn'}
+          description={copy.nextActionHint as string}
+        />
+        <QuickNavCard
+          href="/agents?tab=skills"
+          icon={<Zap size={18} aria-hidden="true" />}
+          title="Skills"
+          stat={copy.enabledUnit(enabledSkillCount)}
+          statTone="ok"
+          description={`${pulseCopy.enabledSkills}: ${enabledSkillCount}`}
+        />
+      </nav>
+
       {/* ═══════════ RISK CAPSULE ═══════════ */}
       {riskQueue.length > 0 && (
         <div>
@@ -206,26 +226,6 @@ export default function AgentsOverviewSection({
           </div>
         </div>
       )}
-
-      {/* ═══════════ QUICK NAVIGATION ═══════════ */}
-      <nav className="grid grid-cols-1 md:grid-cols-2 gap-3" aria-label="Quick navigation">
-        <QuickNavCard
-          href="/agents?tab=mcp"
-          icon={<Server size={18} aria-hidden="true" />}
-          title="MCP"
-          stat={mcpRunning ? copy.toolsUnit(mcpToolCount) : copy.mcpOffline}
-          statTone={mcpRunning ? 'ok' : 'warn'}
-          description={copy.nextActionHint as string}
-        />
-        <QuickNavCard
-          href="/agents?tab=skills"
-          icon={<Zap size={18} aria-hidden="true" />}
-          title="Skills"
-          stat={copy.enabledUnit(enabledSkillCount)}
-          statTone="ok"
-          description={`${pulseCopy.enabledSkills}: ${enabledSkillCount}`}
-        />
-      </nav>
 
       {/* ═══════════ RECENT ACTIVITY ═══════════ */}
       <RecentActivityFeed />
