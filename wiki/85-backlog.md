@@ -124,6 +124,8 @@
 - [x] **Tier 1：Export / 导出** — 单文件 MD/HTML + 目录 ZIP 导出。`/api/export` 路由 + `ExportModal` 组件（格式选择/进度/完成/错误状态）。Core: `lib/core/export.ts`。
 - [x] **Tier 1：Undo Toast + i18n 全面治理** — toast.ts 扩展 action button 支持（`toast.undo` API）；删除文件/目录/空间后 5s undo toast → `restoreFromTrash`；修复 22 处 hardcoded 英文字符串（TrashPageClient/ExportModal/FileTree/ViewPageClient/Toaster）；新增 `trash.cancel`/`justNow`/`minutesAgo` 等 14 个 i18n 键（EN+ZH）；focus-visible ring 合规。
 
+- [x] **Chat/Agent 模式切换** — Ask 面板新增 Chat/Agent 模式切换。Chat 模式使用精简 system prompt (~250 tokens) + 8 个只读工具（list_files/read_file/read_file_chunk/search/get_recent/get_backlinks/web_search/web_fetch），跳过 SKILL.md/bootstrap INSTRUCTION/CONFIG，step 上限降至 8。Agent 模式保持不变。省 ~81% token overhead。ModeCapsule 组件 + localStorage 持久化。25 个新测试。[spec](./specs/spec-chat-agent-mode-toggle.md)
+
 ### 🟡 中优先
 
 - [x] **减少 `as any` 类型断言** — ask/route.ts 定义 5 个 AgentEvent 子类型接口（消除 14 处 as any）；context.ts 提取 `asMsg()` 辅助函数（消除 12 处）
@@ -155,6 +157,7 @@
 - [x] **P2：通知横幅持续显示** — 10s 后自动消失 + 新变更到达时重新显示
 - [x] **P2：浮动按钮无 tooltip** — i18n title + aria-label（EN/ZH）
 - [x] **P3：代理未找到页面空旷** — 增加排查提示 + 已连接代理建议列表
+- [x] **Agent Inspector 身份追踪** — 审计日志记录操作来源 Agent（Claude Code / Cursor / Windsurf / MindOS Ask）。MCP clientInfo 端到端传递 + UI 徽标展示
 - [ ] **P3：帮助页面缺悬浮目录** — `/help` 长内容需添加浮动 TOC 或锚点跳转
 - [ ] **P3：Echo 侧边栏利用不足** — 5 项占 ~200px，添加最近活动或快捷统计
 - [x] **P3：用例卡片截断不一致** — 验证已有 `line-clamp-2`，截断一致，无需修改
