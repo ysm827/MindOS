@@ -360,6 +360,36 @@ export function KnowledgeTab({ data, setData, t }: KnowledgeTabProps) {
   );
 }
 
+/* ── Labs Toggle ── */
+function LabsToggle({ label, description, checked, onChange }: {
+  label: string;
+  description: string;
+  checked: boolean;
+  onChange: (v: boolean) => void;
+}) {
+  return (
+    <label className="flex items-center gap-3 cursor-pointer group">
+      <div className="flex-1 min-w-0">
+        <span className="text-sm font-medium text-foreground block">{label}</span>
+        <span className="text-xs text-muted-foreground">{description}</span>
+      </div>
+      <button
+        type="button"
+        role="switch"
+        aria-checked={checked}
+        onClick={() => onChange(!checked)}
+        className={`relative w-9 h-5 rounded-full transition-colors shrink-0 ${
+          checked ? 'bg-[var(--amber)]' : 'bg-muted-foreground/20'
+        }`}
+      >
+        <span className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow-sm transition-transform ${
+          checked ? 'translate-x-4' : 'translate-x-0'
+        }`} />
+      </button>
+    </label>
+  );
+}
+
 /* ── Inline Monitoring Section ── */
 
 interface MonitoringData {
