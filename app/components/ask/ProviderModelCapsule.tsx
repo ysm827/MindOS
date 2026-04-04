@@ -87,11 +87,16 @@ export default function ProviderModelCapsule({
 
   useEffect(() => {
     let cancelled = false;
-    fetch('/api/settings', { cache: 'no-store' })
-      .then(r => r.json())
-      .then((d: SettingsData) => { if (!cancelled) setSettingsData(d); })
-      .catch(() => {});
-    return () => { cancelled = true; };
+    const doFetch = () => {
+      fetch('/api/settings', { cache: 'no-store' })
+        .then(r => r.json())
+        .then((d: SettingsData) => { if (!cancelled) setSettingsData(d); })
+        .catch(() => {});
+    };
+    doFetch();
+    const onVisible = () => { if (document.visibilityState === 'visible') doFetch(); };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => { cancelled = true; document.removeEventListener('visibilitychange', onVisible); };
   }, []);
 
   const defaultProvider = (settingsData?.ai?.provider && isProviderId(settingsData.ai.provider))

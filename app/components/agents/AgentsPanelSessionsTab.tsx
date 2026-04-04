@@ -33,7 +33,12 @@ export default function AgentsPanelSessionsTab() {
     }
   }, []);
 
-  useEffect(() => { fetchSessions(); }, [fetchSessions]);
+  useEffect(() => {
+    fetchSessions();
+    const onVisible = () => { if (document.visibilityState === 'visible') fetchSessions(); };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => { document.removeEventListener('visibilitychange', onVisible); };
+  }, [fetchSessions]);
 
   const handleClose = useCallback(async (sessionId: string) => {
     try {

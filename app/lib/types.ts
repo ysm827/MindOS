@@ -7,6 +7,10 @@ export const SYSTEM_FILES = new Set([
   'README.md',
   'CONFIG.json',
   'CHANGELOG.md',
+]);
+
+/** Root-level files that users can see but cannot delete */
+export const UNDELETABLE_FILES = new Set([
   'TODO.md',
 ]);
 

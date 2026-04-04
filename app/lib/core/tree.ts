@@ -5,7 +5,7 @@ import type { FileNode } from './types';
 
 const DEFAULT_IGNORED_DIRS = new Set(['.git', 'node_modules', 'app', '.next', '.DS_Store', 'mcp']);
 const DEFAULT_ALLOWED_EXTENSIONS = new Set(['.md', '.csv']);
-const SYSTEM_FILES = new Set(['INSTRUCTION.md', 'README.md', 'CONFIG.json', 'CHANGELOG.md', 'TODO.md']);
+const SYSTEM_FILES = new Set(['INSTRUCTION.md', 'README.md', 'CONFIG.json', 'CHANGELOG.md']);
 
 export interface TreeOptions {
   ignoredDirs?: Set<string>;

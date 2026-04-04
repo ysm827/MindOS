@@ -7,6 +7,7 @@ import { moveToTrash, restoreFromTrash, restoreAsCopy, permanentlyDelete, listTr
 import { createSpaceFilesystem, generateReadmeTemplate } from '@/lib/core/create-space';
 import { INSTRUCTION_TEMPLATE, cleanDirName } from '@/lib/core/space-scaffold';
 import { revalidatePath } from 'next/cache';
+import { UNDELETABLE_FILES } from '@/lib/types';
 
 export async function createFileAction(dirPath: string, fileName: string): Promise<{ success: boolean; filePath?: string; error?: string }> {
   try {
@@ -26,6 +27,10 @@ export async function createFileAction(dirPath: string, fileName: string): Promi
 
 export async function deleteFileAction(filePath: string): Promise<{ success: boolean; trashId?: string; error?: string }> {
   try {
+    const basename = path.posix.basename(filePath);
+    if (!filePath.includes('/') && UNDELETABLE_FILES.has(basename)) {
+      return { success: false, error: `"${basename}" is protected and cannot be deleted` };
+    }
     const meta = moveToTrash(getMindRoot(), filePath);
     invalidateCache();
     revalidatePath('/', 'layout');

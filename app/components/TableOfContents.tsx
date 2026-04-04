@@ -51,10 +51,16 @@ export default function TableOfContents({ content }: TableOfContentsProps) {
   const [activeId, setActiveId] = useState<string>('');
   const [collapsed, setCollapsed] = useState(false);
 
-  // Broadcast TOC width to content area via CSS variable
+  // Broadcast TOC width to content area via CSS variables
   useEffect(() => {
-    document.documentElement.style.setProperty('--toc-width', collapsed ? '0px' : `${NAV_W}px`);
-    return () => { document.documentElement.style.removeProperty('--toc-width'); };
+    const root = document.documentElement.style;
+    root.setProperty('--toc-width', collapsed ? '0px' : `${NAV_W}px`);
+    if (collapsed) {
+      root.removeProperty('--toc-margin');
+    } else {
+      root.setProperty('--toc-margin', `${NAV_W + 8}px`);
+    }
+    return () => { root.removeProperty('--toc-width'); root.removeProperty('--toc-margin'); };
   }, [collapsed]);
   const observerRef = useRef<IntersectionObserver | null>(null);
   const navRef = useRef<HTMLElement | null>(null);

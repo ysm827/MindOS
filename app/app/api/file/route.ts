@@ -6,7 +6,7 @@ import { revalidatePath } from 'next/cache';
 import { resolveSafe } from '@/lib/core/security';
 import { sanitizeFileName, convertToMarkdown } from '@/lib/core/file-convert';
 import { effectiveSopRoot } from '@/lib/settings';
-import { SYSTEM_FILES } from '@/lib/types';
+import { SYSTEM_FILES, UNDELETABLE_FILES } from '@/lib/types';
 import {
   getFileContent,
   saveFileContent,
@@ -37,8 +37,13 @@ function err(msg: string, status = 400) {
 /** Returns true if the path targets a root-level system file (INSTRUCTION.md, CONFIG.json, etc.). */
 function isSystemFile(filePath: string): boolean {
   const basename = path.posix.basename(filePath);
-  // Only root-level: no directory separators allowed
   return !filePath.includes('/') && SYSTEM_FILES.has(basename);
+}
+
+/** Root-level files visible to users but protected from deletion (e.g. TODO.md). */
+function isUndeletable(filePath: string): boolean {
+  const basename = path.posix.basename(filePath);
+  return !filePath.includes('/') && UNDELETABLE_FILES.has(basename);
 }
 
 function safeRead(filePath: string): string {
@@ -265,6 +270,9 @@ export async function POST(req: NextRequest) {
       }
 
       case 'delete_file': {
+        if (isUndeletable(filePath)) {
+          return err(`"${filePath}" is a protected file and cannot be deleted`, 403);
+        }
         const before = safeRead(filePath);
         const trashMeta = moveToTrashFile(filePath);
         changeEvent = {
