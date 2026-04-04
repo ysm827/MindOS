@@ -86,7 +86,7 @@ export const knowledgeEn = {
     dismiss: 'Dismiss',
   },
   inbox: {
-    title: 'Inbox',
+    title: 'Capture',
     count: (n: number) => `${n}`,
     emptyTitle: 'Quick capture, organize later',
     emptyDesc: 'Drag files onto MindOS to save them here instantly.',
@@ -95,17 +95,22 @@ export const knowledgeEn = {
     viewAll: 'View all',
     more: (n: number) => `${n} more`,
     agingHint: '7+ days',
-    savedToast: (n: number) => `${n} file${n === 1 ? '' : 's'} saved to Inbox`,
+    savedToast: (n: number) => `${n} file${n === 1 ? '' : 's'} saved to Capture`,
     savedWithSkipped: (saved: number, skipped: number) =>
       saved > 0
         ? `${saved} saved, ${skipped} skipped (unsupported format)`
         : `${skipped} file${skipped === 1 ? '' : 's'} skipped — unsupported format`,
+    tooLarge: (n: number) =>
+      `${n} file${n === 1 ? '' : 's'} too large (max 10 MB)`,
+    savedWithOversized: (saved: number, oversized: number) =>
+      `${saved} saved, ${oversized} skipped (too large)`,
     organizePrompt: (fileNames: string[]) =>
       `Please organize these files from Inbox into appropriate locations in my knowledge base. Analyze each file's content and move it to the most fitting Space or directory. Create new directories if needed. Here are the files:\n\n${fileNames.map(n => `- Inbox/${n}`).join('\n')}`,
-    dropOverlay: 'Drop to save to Inbox',
+    dropOverlay: 'Drop to save to Capture',
     dropOverlayFormats: 'md · txt · pdf · csv · json',
     noMindRoot: 'Please configure your knowledge base first',
     saveFailed: 'Failed to save files',
+    organizeFailed: 'Could not read files for organizing',
   },
   pulse: {
     title: 'Your Agents',
@@ -428,26 +433,31 @@ export const knowledgeZh = {
     dismiss: '忽略',
   },
   inbox: {
-    title: '收件箱',
+    title: '暂存台',
     count: (n: number) => `${n}`,
     emptyTitle: '快速捕获，稍后整理',
-    emptyDesc: '拖拽文件到 MindOS 窗口，即刻保存到收件箱。',
+    emptyDesc: '拖拽文件到 MindOS 窗口，即刻保存到暂存台。',
     organizeButton: 'AI 整理',
     organizing: '整理中...',
     viewAll: '查看全部',
     more: (n: number) => `还有 ${n} 个`,
     agingHint: '7天+',
-    savedToast: (n: number) => `${n} 个文件已保存到收件箱`,
+    savedToast: (n: number) => `${n} 个文件已保存到暂存台`,
     savedWithSkipped: (saved: number, skipped: number) =>
       saved > 0
         ? `已保存 ${saved} 个，跳过 ${skipped} 个（格式不支持）`
         : `${skipped} 个文件被跳过（格式不支持）`,
+    tooLarge: (n: number) =>
+      `${n} 个文件过大（上限 10 MB）`,
+    savedWithOversized: (saved: number, oversized: number) =>
+      `已保存 ${saved} 个，${oversized} 个过大被跳过`,
     organizePrompt: (fileNames: string[]) =>
-      `请将收件箱中的这些文件整理到知识库的合适位置。分析每个文件的内容，将其移动到最匹配的空间或目录。需要的话可以创建新目录。以下是待整理的文件：\n\n${fileNames.map(n => `- Inbox/${n}`).join('\n')}`,
-    dropOverlay: '拖放到收件箱快速保存',
+      `请将暂存台中的这些文件整理到知识库的合适位置。分析每个文件的内容，将其移动到最匹配的空间或目录。需要的话可以创建新目录。以下是待整理的文件：\n\n${fileNames.map(n => `- Inbox/${n}`).join('\n')}`,
+    dropOverlay: '拖放到暂存台快速保存',
     dropOverlayFormats: 'md · txt · pdf · csv · json',
     noMindRoot: '请先配置知识库路径',
     saveFailed: '保存文件失败',
+    organizeFailed: '无法读取文件进行整理',
   },
   pulse: {
     title: '你的 Agent',

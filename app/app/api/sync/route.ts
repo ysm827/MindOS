@@ -64,9 +64,30 @@ export async function GET() {
     return NextResponse.json({ enabled: false });
   }
 
-  const remote = mindRoot && isGitRepo(mindRoot) ? getRemoteUrl(mindRoot) : null;
-  const branch = mindRoot && isGitRepo(mindRoot) ? getBranch(mindRoot) : null;
-  const unpushed = mindRoot && isGitRepo(mindRoot) ? getUnpushedCount(mindRoot) : '?';
+  // Detect broken state: config says enabled but no git repo or no remote
+  const hasRepo = mindRoot && isGitRepo(mindRoot);
+  const remote = hasRepo ? getRemoteUrl(mindRoot) : null;
+  if (!hasRepo || !remote) {
+    return NextResponse.json({
+      enabled: true,
+      needsSetup: true,
+      provider: syncConfig.provider || 'git',
+      remote: remote || '(not configured)',
+      branch: 'main',
+      lastSync: null,
+      lastPull: null,
+      unpushed: '?',
+      conflicts: [],
+      lastError: !hasRepo
+        ? 'Git repository not found in knowledge base directory. Please re-configure sync.'
+        : 'Remote not configured. Please re-configure sync.',
+      autoCommitInterval: syncConfig.autoCommitInterval || 30,
+      autoPullInterval: syncConfig.autoPullInterval || 300,
+    });
+  }
+
+  const branch = getBranch(mindRoot);
+  const unpushed = getUnpushedCount(mindRoot);
 
   return NextResponse.json({
     enabled: true,
@@ -151,6 +172,15 @@ export async function POST(req: NextRequest) {
         if (!config.sync) config.sync = {};
         config.sync.enabled = false;
         saveConfig(config);
+        return NextResponse.json({ ok: true, enabled: false });
+      }
+
+      case 'reset': {
+        // Clear sync config so user can re-configure from scratch
+        delete config.sync;
+        saveConfig(config);
+        // Clear sync state
+        try { writeFileSync(SYNC_STATE_PATH, '{}', 'utf-8'); } catch {}
         return NextResponse.json({ ok: true, enabled: false });
       }
 
