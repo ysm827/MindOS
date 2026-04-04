@@ -106,7 +106,7 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json() as { action: string; remote?: string; branch?: string; token?: string; content?: string };
+    const body = await req.json() as { action: string; remote?: string; branch?: string; token?: string; content?: string; autoCommitInterval?: number; autoPullInterval?: number };
     const config = loadConfig();
     const mindRoot = config.mindRoot;
 
@@ -239,6 +239,29 @@ export async function POST(req: NextRequest) {
         const local = existsSync(localPath) ? readFileSync(localPath, 'utf-8') : '';
         const remote = existsSync(remotePath) ? readFileSync(remotePath, 'utf-8') : '';
         return NextResponse.json({ local, remote });
+      }
+
+      case 'update-intervals': {
+        const commitInterval = typeof body.autoCommitInterval === 'number' ? body.autoCommitInterval : undefined;
+        const pullInterval = typeof body.autoPullInterval === 'number' ? body.autoPullInterval : undefined;
+        if (commitInterval === undefined && pullInterval === undefined) {
+          return NextResponse.json({ error: 'At least one interval must be provided' }, { status: 400 });
+        }
+        if (commitInterval !== undefined && (commitInterval < 10 || commitInterval > 300)) {
+          return NextResponse.json({ error: 'autoCommitInterval must be between 10 and 300 seconds' }, { status: 400 });
+        }
+        if (pullInterval !== undefined && (pullInterval < 60 || pullInterval > 3600)) {
+          return NextResponse.json({ error: 'autoPullInterval must be between 60 and 3600 seconds' }, { status: 400 });
+        }
+        const fullConfig = loadConfig();
+        if (!fullConfig.sync) fullConfig.sync = {};
+        if (commitInterval !== undefined) fullConfig.sync.autoCommitInterval = commitInterval;
+        if (pullInterval !== undefined) fullConfig.sync.autoPullInterval = pullInterval;
+        writeFileSync(CONFIG_PATH, JSON.stringify(fullConfig, null, 2) + '\n', 'utf-8');
+        return NextResponse.json({
+          autoCommitInterval: fullConfig.sync.autoCommitInterval || 30,
+          autoPullInterval: fullConfig.sync.autoPullInterval || 300,
+        });
       }
 
       default:
