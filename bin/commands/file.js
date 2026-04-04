@@ -22,9 +22,12 @@ function getMindRoot() {
 }
 
 function resolvePath(root, filePath) {
-  // Accept both relative (to mind root) and absolute paths
-  if (filePath.startsWith('/')) return filePath;
-  return resolve(root, filePath);
+  const resolved = resolve(root, filePath);
+  if (resolved !== root && !resolved.startsWith(root + '/')) {
+    console.error(red(`Access denied: path outside knowledge base`));
+    process.exit(EXIT.ERROR);
+  }
+  return resolved;
 }
 
 export const meta = {
@@ -128,7 +131,7 @@ function walkFiles(dir, root, opts = {}) {
 
 function fileList(root, _args, flags) {
   const files = walkFiles(root, root, {
-    recursive: flags.recursive || flags.r || true,
+    recursive: flags.recursive ?? flags.r ?? true,
     space: flags.space || null,
   });
 
