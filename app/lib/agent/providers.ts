@@ -17,7 +17,8 @@ export type ProviderId =
   | 'anthropic' | 'openai' | 'google' | 'groq'
   | 'xai' | 'openrouter' | 'mistral' | 'deepseek'
   | 'zai' | 'kimi-coding'
-  | 'cerebras' | 'minimax' | 'huggingface';
+  | 'cerebras' | 'minimax' | 'huggingface'
+  | 'ollama';
 
 /**
  * UI/UX metadata for each provider.
@@ -32,8 +33,10 @@ export interface ProviderPreset {
   defaultModel: string;
   /** If ProviderId differs from pi-ai's KnownProvider (e.g. deepseek → openai) */
   piProviderOverride?: KnownProvider;
-  /** DeepSeek needs a fixed baseUrl since it's not a native pi-ai provider */
+  /** DeepSeek/Ollama need a fixed baseUrl since they're not native pi-ai providers */
   fixedBaseUrl?: string;
+  /** Dummy API key for providers that don't require auth (e.g. local Ollama) */
+  apiKeyFallback?: string;
   supportsBaseUrl: boolean;
   supportsThinking: boolean;
   supportsListModels: boolean;

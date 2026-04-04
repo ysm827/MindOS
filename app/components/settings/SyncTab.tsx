@@ -135,9 +135,9 @@ function SyncEmptyState({ t, onInitComplete }: { t: Messages; onInitComplete: ()
             className={`font-mono ${remoteUrl.trim() && !isValid ? 'border-destructive' : ''}`}
           />
           {!remoteUrl.trim() && (
-            <div className="text-xs text-muted-foreground mt-1.5 space-y-0.5">
-              <p><span className="font-medium text-foreground/70">SSH</span> git@github.com:user/repo.git — {syncT?.sshBrief ?? 'recommended, one-time key setup'}</p>
-              <p><span className="font-medium text-foreground/70">HTTPS</span> https://github.com/user/repo.git — {syncT?.httpsBrief ?? 'requires access token for private repos'}</p>
+            <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground mt-1.5">
+              <span><code className="text-foreground/60 bg-muted/60 px-1 py-0.5 rounded text-2xs">SSH</code> {syncT?.sshBrief ?? 'one-time key setup, no token needed'}</span>
+              <span><code className="text-foreground/60 bg-muted/60 px-1 py-0.5 rounded text-2xs">HTTPS</code> {syncT?.httpsBrief ?? 'works anywhere, token recommended'}</span>
             </div>
           )}
           {remoteUrl.trim() && !isValid && (

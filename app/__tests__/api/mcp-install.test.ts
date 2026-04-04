@@ -176,7 +176,7 @@ describe('POST /api/mcp/install', () => {
     expect(content).toContain('[mcp_servers.mindos]');
   });
 
-  it('installs vscode agent with correct nested key for global scope', async () => {
+  it('installs github-copilot agent with servers key for global scope', async () => {
     const { POST } = await importInstallRoute();
     const req = new NextRequest('http://localhost/api/mcp/install', {
       method: 'POST',
@@ -194,14 +194,13 @@ describe('POST /api/mcp/install', () => {
     const absPath = configPath.replace('~', tempHome);
     expect(fs.existsSync(absPath)).toBe(true);
     const config = JSON.parse(fs.readFileSync(absPath, 'utf-8'));
-    // VS Code global config must nest under mcp.servers, not just servers
-    expect(config.mcp).toBeDefined();
-    expect(config.mcp.servers).toBeDefined();
-    expect(config.mcp.servers.mindos).toBeDefined();
-    expect(config.mcp.servers.mindos.type).toBe('stdio');
+    // GitHub Copilot global uses standalone mcp.json with top-level 'servers'
+    expect(config.servers).toBeDefined();
+    expect(config.servers.mindos).toBeDefined();
+    expect(config.servers.mindos.type).toBe('stdio');
   });
 
-  it('installs vscode project scope with flat key', async () => {
+  it('installs github-copilot project scope with servers key', async () => {
     // Create the .vscode directory first
     fs.mkdirSync(path.join(process.cwd(), '.vscode'), { recursive: true });
 
