@@ -36,7 +36,9 @@ export async function apiFetch<T>(url: string, opts: ApiFetchOptions = {}): Prom
   }
 
   if (timeout > 0 && controller) {
-    timeoutId = setTimeout(() => controller.abort(), timeout);
+    timeoutId = setTimeout(() => {
+      controller.abort(new Error(`Request timed out after ${Math.round(timeout / 1000)}s`));
+    }, timeout);
   }
 
   // Bridge caller-provided AbortSignal so both timeout and external cancel work.

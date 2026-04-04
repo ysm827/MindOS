@@ -53,10 +53,15 @@ function SyncEmptyState({ t, onInitComplete }: { t: Messages; onInitComplete: ()
           token: token.trim() || undefined,
           branch: branch.trim() || 'main',
         }),
+        timeout: 120_000, // git init + clone can take 60s+
       });
       onInitComplete();
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Connection failed';
+      let msg = err instanceof Error ? err.message : 'Connection failed';
+      // Make timeout errors actionable for users
+      if (msg.includes('timed out')) {
+        msg = syncT?.timeoutError ?? 'Connection timed out. The remote repository may be large or the network is slow. Please try again.';
+      }
       setError(msg);
     } finally {
       setConnecting(false);
@@ -216,6 +221,7 @@ export function SyncTab({ t }: SyncTabProps) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'now' }),
+        timeout: 120_000, // sync can take 60s+ for large repos
       });
       setMessage({ type: 'success', text: 'Sync complete' });
       await fetchStatus();

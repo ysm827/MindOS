@@ -118,7 +118,7 @@ export async function POST(req: NextRequest) {
         try {
           const args = ['sync', 'init', '--non-interactive', '--remote', remote, '--branch', branch];
           if (body.token) args.push('--token', body.token);
-          await runCli(args, 30000);
+          await runCli(args, 120000); // git init + remote setup can take 60s+
           return NextResponse.json({ success: true, message: 'Sync initialized' });
         } catch (err: unknown) {
           const errMsg = err instanceof Error ? err.message : String(err);
@@ -132,7 +132,7 @@ export async function POST(req: NextRequest) {
         }
         // Delegate to CLI for unified conflict handling
         try {
-          await runCli(['sync', 'now'], 60000);
+          await runCli(['sync', 'now'], 120000); // pull + push can take 60s+
           return NextResponse.json({ ok: true });
         } catch (err: unknown) {
           const errMsg = err instanceof Error ? err.message : String(err);
