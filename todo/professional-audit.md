@@ -25,12 +25,12 @@
 ## P3 低优先 — 长期改善
 
 - [x] ~~robots.txt / sitemap~~ — 不需要，本地应用
-- [ ] Settings 多标签页竞态 — 低频，暂不处理
-- [ ] MCP 缺分页 — 等大知识库用户反馈
-- [ ] appendFileSync 无锁 — 多 Agent 并发极罕见
-- [ ] SearchPanel ARIA listbox — 归入无障碍改善批次
+- [x] ~~Settings 多标签页竞态~~ — 单用户本地应用，实际触发概率近乎零，不值得加 file lock
+- [x] ~~MCP 缺分页~~ — 当前设计合理，Agent 需要完整树。等大知识库用户反馈再加 path 子树查询
+- [x] ~~appendFileSync 无锁~~ — POSIX 保证 <4KB append 原子性，知识库 append 通常远小于此
+- [x] SearchPanel ARIA — 已添加 `aria-label`、`role="listbox"`、`role="option"` + `aria-selected`
 
-## 已修复总计：14 项
+## 已修复总计：15 项
 
 | 批次 | 数量 | 内容 |
 |------|------|------|
@@ -38,3 +38,4 @@
 | 第一轮中优 | 6 | as any(-29)、输入校验、CI lint、CONTRIBUTING.md、JSDoc(26)、i18n 类型 |
 | 第二轮 P0 | 2 | prepack 安全、wiki 更新 |
 | 第二轮 P2 | 2 | createFile TOCTOU、tsx devDep |
+| 第二轮 P3 | 1 | SearchPanel ARIA |
