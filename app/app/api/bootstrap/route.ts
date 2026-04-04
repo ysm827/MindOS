@@ -20,7 +20,7 @@ export async function GET(req: NextRequest) {
       instruction: tryRead('INSTRUCTION.md'),
       index: tryRead('README.md'),
       config_json: tryRead('CONFIG.json'),
-      user_skill_rules: tryRead('user-skill-rules.md'),
+      user_skill_rules: tryRead('.mindos/user-rules.md'),
     };
 
     if (targetDir) {

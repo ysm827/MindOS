@@ -466,7 +466,7 @@ export async function POST(req: NextRequest) {
 
     console.log(`[ask] SKILL skill=${skill.ok}, write-supplement=${skillWrite.ok}`);
 
-    const userSkillRules = readKnowledgeFile('user-skill-rules.md');
+    const userSkillRules = readKnowledgeFile('.mindos/user-rules.md');
 
     const targetDir = dirnameOf(currentFile);
     const bootstrap = {
@@ -503,7 +503,7 @@ export async function POST(req: NextRequest) {
     if (skill.ok && skill.truncated) truncationWarnings.push('skill.mindos was truncated');
     if (!skillWrite.ok) initFailures.push(`skill.mindos-write-supplement: failed (${skillWrite.error})`);
     if (skillWrite.ok && skillWrite.truncated) truncationWarnings.push('skill.mindos-write-supplement was truncated');
-    if (userSkillRules.ok && userSkillRules.truncated) truncationWarnings.push('user-skill-rules.md was truncated');
+    if (userSkillRules.ok && userSkillRules.truncated) truncationWarnings.push('.mindos/user-rules.md was truncated');
     if (!bootstrap.instruction.ok) initFailures.push(`bootstrap.instruction: failed (${bootstrap.instruction.error})`);
     if (bootstrap.instruction.ok && bootstrap.instruction.truncated) truncationWarnings.push('bootstrap.instruction was truncated');
     if (bootstrap.index?.ok && bootstrap.index.truncated) truncationWarnings.push('bootstrap.index was truncated');
@@ -525,7 +525,7 @@ export async function POST(req: NextRequest) {
       initContextBlocks.push(`## mindos_skill_md\n\n${skillParts.join('\n\n---\n\n')}`);
     }
     if (userSkillRules.ok && !userSkillRules.truncated && userSkillRules.content.trim()) {
-      initContextBlocks.push(`## user_skill_rules\n\nUser personalization rules (user-skill-rules.md):\n\n${userSkillRules.content}`);
+      initContextBlocks.push(`## user_skill_rules\n\nUser personalization rules (.mindos/user-rules.md):\n\n${userSkillRules.content}`);
     }
     if (bootstrap.instruction.ok) initContextBlocks.push(`## bootstrap_instruction\n\n${bootstrap.instruction.content}`);
     if (bootstrap.index?.ok) initContextBlocks.push(`## bootstrap_index\n\n${bootstrap.index.content}`);

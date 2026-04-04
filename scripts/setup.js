@@ -1228,7 +1228,7 @@ async function main() {
   console.log(`\n${c.green(t('cfgSaved'))}: ${c.dim(CONFIG_PATH)}`);
 
   // ── Skill rules are now built into SKILL.md — no install needed ──────────
-  // user-skill-rules.md will be created on first preference capture or via `mindos init-skills`.
+  // .mindos/user-rules.md will be created on first preference capture or via `mindos init-skills`.
 
   // ── Step 7: MCP Agent Install ──────────────────────────────────────────────
   write('\n');

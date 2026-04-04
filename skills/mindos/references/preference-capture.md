@@ -1,4 +1,4 @@
-# Preference capture (`user-skill-rules.md`)
+# Preference capture (`user-rules.md`)
 
 ## When to capture
 
@@ -7,14 +7,14 @@ The user expresses a preference correction (e.g. "don't do X", "next time rememb
 ## Confirm-then-write flow
 
 1. **First occurrence of a new preference**: propose the rule and target file before writing.
-   - "Record this preference to `user-skill-rules.md`? Rule: _{summary}_"
+   - "Record this preference to `user-rules.md`? Rule: _{summary}_"
    - Write only after user confirms.
-2. **Repeated confirmation on similar category**: after the user confirms the same category of preference 3+ times, auto-write future rules in that category without asking. Add an `auto-confirm: true` flag to the category header in `user-skill-rules.md`.
+2. **Repeated confirmation on similar category**: after the user confirms the same category of preference 3+ times, auto-write future rules in that category without asking. Add an `auto-confirm: true` flag to the category header in `user-rules.md`.
 3. **User explicitly grants blanket permission** (e.g. "just record preferences directly"): set a top-level `auto-confirm-all: true` flag and skip confirmation for all future captures.
 
 ## File location
 
-- Target: `user-skill-rules.md` in the knowledge base root (read by `mindos_bootstrap` when present).
+- Target: `.mindos/user-rules.md` in the knowledge base (read by `mindos_bootstrap` when present).
 - If the file does not exist, create it with the template below on first confirmed write.
 
 ## File template

@@ -344,7 +344,7 @@ export default function SetupWizard() {
     }
 
     // Phase 3: Skill is now built into SKILL.md — no install needed.
-    // user-skill-rules.md will be created on first preference capture.
+    // .mindos/user-rules.md will be created on first preference capture.
 
     setSubmitting(false);
     setCompleted(true);

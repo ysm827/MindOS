@@ -94,7 +94,7 @@
 
 ## 任务后 Hooks
 
-**写入任务**完成后（简单单文件修改或只读查阅跳过），扫描下表。命中则发起一句话提议，最多 1 条，选优先级最高项。先查 `user-skill-rules.md` 的抑制区；用户要求安静模式时全部跳过。
+**写入任务**完成后（简单单文件修改或只读查阅跳过），扫描下表。命中则发起一句话提议，最多 1 条，选优先级最高项。先查 `.mindos/user-rules.md` 的抑制区；用户要求安静模式时全部跳过。
 
 | Hook | 优先级 | 触发条件 |
 |------|--------|---------|
@@ -110,7 +110,7 @@
 
 ## 偏好捕获
 
-用户表达要长期记住的偏好（「以后不要…」「这个该放在…」）时，读 [references/preference-capture.md](./references/preference-capture.md) 并按确认后写入流程存入 `user-skill-rules.md`。
+用户表达要长期记住的偏好（「以后不要…」「这个该放在…」）时，读 [references/preference-capture.md](./references/preference-capture.md) 并按确认后写入流程存入 `.mindos/user-rules.md`。
 **不要读** preference-capture 除非用户真的表达了要持久化的偏好。
 
 ## SOP 编写

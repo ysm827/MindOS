@@ -20,7 +20,7 @@ description: >
 
 1. **bootstrap 目录树是首要索引** — 先从目录名和层级推断，再搜索。大多数定位不需要工具调用。
 2. **默认只读。** 只有用户明确要求保存、记录、整理、修改时才调写入工具。查阅/总结/引用 = 不写。
-3. **规则优先级**（越上越优先）：用户当轮指令 → `user-skill-rules.md` → 就近目录 `INSTRUCTION.md` → 根 `INSTRUCTION.md` → 本 SKILL 默认。
+3. **规则优先级**（越上越优先）：用户当轮指令 → `.mindos/user-rules.md` → 就近目录 `INSTRUCTION.md` → 根 `INSTRUCTION.md` → 本 SKILL 默认。
 4. **多文件编辑必须先出计划。** 展示完整变更清单，确认后再执行。
 5. 增删/移动/重命名后 → **自动同步受影响 README**。
 
@@ -140,7 +140,7 @@ description: >
 
 ## 任务后 Hooks
 
-**写入任务**完成后（简单单文件修改或只读查阅跳过），扫描下表。命中则发起一句话提议，最多 1 条，选优先级最高项。先查 `user-skill-rules.md` 的抑制区；用户要求安静模式时全部跳过。
+**写入任务**完成后（简单单文件修改或只读查阅跳过），扫描下表。命中则发起一句话提议，最多 1 条，选优先级最高项。先查 `.mindos/user-rules.md` 的抑制区；用户要求安静模式时全部跳过。
 
 | Hook | 优先级 | 触发条件 |
 |------|--------|---------|
@@ -156,7 +156,7 @@ description: >
 
 ## 偏好捕获
 
-用户表达要长期记住的偏好（「以后不要…」「这个该放在…」）时，读 [references/preference-capture.md](./references/preference-capture.md) 并按确认后写入流程存入 `user-skill-rules.md`。
+用户表达要长期记住的偏好（「以后不要…」「这个该放在…」）时，读 [references/preference-capture.md](./references/preference-capture.md) 并按确认后写入流程存入 `.mindos/user-rules.md`。
 **不要读** preference-capture 除非用户真的表达了要持久化的偏好。
 
 ## SOP 编写
