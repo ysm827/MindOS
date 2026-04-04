@@ -142,9 +142,14 @@ body {
 :root { --content-width: 780px; --toc-width: 0px; }
 .content-width { max-width: var(--content-width-override, var(--content-width)); margin-left: auto; margin-right: auto; }
 
-/* TOC margin — only on xl screens where TOC is visible */
+/* TOC offset — only on xl screens where TOC is visible.
+   --toc-width is set by TableOfContents.tsx (212px when expanded, 0px when collapsed).
+   Applied as padding-right on #main-content so content-width's margin:auto
+   centers within the remaining space (not overlapping the fixed TOC).
+   Note: SidebarLayout also sets padding-right via inline style with !important
+   for Ask panel; the TOC offset is added via --toc-extra-right there. */
 @media (min-width: 1280px) {
-  .toc-aware { margin-right: calc(var(--toc-width, 0px) + 8px); transition: margin-right 200ms ease-in-out; }
+  :root { --toc-extra-right: var(--toc-width, 0px); }
 }
 
 ::-webkit-scrollbar { width: 5px; height: 5px; }

@@ -634,8 +634,52 @@ export function SyncTab({ t }: SyncTabProps) {
           </div>
           <div className="flex items-center justify-between">
             <span className="text-muted-foreground">{syncT?.labelAutoSync ?? 'Auto-sync'}</span>
-            <span className="text-xs">
-              commit {status.autoCommitInterval}s · pull {Math.floor((status.autoPullInterval || 300) / 60)}min
+            <span className="flex items-center gap-1 text-xs">
+              commit{' '}
+              <select
+                className="bg-muted rounded px-1.5 py-0.5 text-xs border border-border cursor-pointer"
+                value={status.autoCommitInterval}
+                onChange={async (e) => {
+                  const val = parseInt(e.target.value, 10);
+                  try {
+                    const res = await fetch('/api/sync', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ action: 'update-intervals', autoCommitInterval: val }),
+                    });
+                    if (res.ok) fetchStatus();
+                  } catch {}
+                }}
+              >
+                <option value={10}>10s</option>
+                <option value={15}>15s</option>
+                <option value={30}>30s</option>
+                <option value={60}>60s</option>
+                <option value={120}>120s</option>
+              </select>
+              {' · pull '}
+              <select
+                className="bg-muted rounded px-1.5 py-0.5 text-xs border border-border cursor-pointer"
+                value={status.autoPullInterval}
+                onChange={async (e) => {
+                  const val = parseInt(e.target.value, 10);
+                  try {
+                    const res = await fetch('/api/sync', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ action: 'update-intervals', autoPullInterval: val }),
+                    });
+                    if (res.ok) fetchStatus();
+                  } catch {}
+                }}
+              >
+                <option value={60}>1min</option>
+                <option value={120}>2min</option>
+                <option value={300}>5min</option>
+                <option value={600}>10min</option>
+                <option value={1800}>30min</option>
+                <option value={3600}>60min</option>
+              </select>
             </span>
           </div>
         </div>

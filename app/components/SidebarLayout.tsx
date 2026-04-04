@@ -569,7 +569,7 @@ export default function SidebarLayout({ fileTree, children }: SidebarLayoutProps
           }
         }}
       >
-        <div className="min-h-screen bg-background overflow-x-hidden">
+        <div className="min-h-screen bg-background" style={{ overflowX: 'clip' }}>
           <ChangesBanner />
           {children}
         </div>
@@ -615,7 +615,7 @@ export default function SidebarLayout({ fileTree, children }: SidebarLayoutProps
           }
           #main-content {
             padding-left: ${lp.panelOpen && lp.panelMaximized ? '100vw' : `${lp.panelOpen ? lp.railWidth + lp.effectivePanelWidth : lp.railWidth}px`} !important;
-            padding-right: calc(var(--right-panel-width) + var(--right-agent-detail-width)) !important;
+            padding-right: calc(var(--right-panel-width) + var(--right-agent-detail-width) + var(--toc-extra-right, 0px)) !important;
             padding-top: 0;
           }
         }
