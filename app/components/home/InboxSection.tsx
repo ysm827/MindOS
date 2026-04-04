@@ -10,9 +10,11 @@ import {
   AlertCircle,
   Loader2,
   ChevronRight,
+  Upload,
 } from 'lucide-react';
 import { useLocale } from '@/lib/stores/locale-store';
 import { encodePath } from '@/lib/utils';
+import { quickDropToInbox } from '@/lib/inbox-upload';
 
 interface InboxFile {
   name: string;
@@ -34,6 +36,9 @@ export function InboxSection({ isOrganizing: externalOrganizing = false }: Inbox
   const [loading, setLoading] = useState(true);
   const [showAll, setShowAll] = useState(false);
   const [organizing, setOrganizing] = useState(false);
+  const [isDragOver, setIsDragOver] = useState(false);
+  const dragCounterRef = useRef(0);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const isOrganizing = externalOrganizing || organizing;
 
   const handleOrganize = useCallback(() => {
@@ -43,6 +48,12 @@ export function InboxSection({ isOrganizing: externalOrganizing = false }: Inbox
       new CustomEvent('mindos:inbox-organize', { detail: { files } }),
     );
   }, [files, isOrganizing]);
+
+  const handleUpload = useCallback((selected: FileList | null) => {
+    if (!selected || selected.length === 0) return;
+    quickDropToInbox(Array.from(selected), t);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  }, [t]);
 
   const fetchInbox = useCallback(async () => {
     try {
@@ -113,7 +124,14 @@ export function InboxSection({ isOrganizing: externalOrganizing = false }: Inbox
           </span>
         )}
         {files.length > 0 && (
-          <div className="ml-auto">
+          <div className="ml-auto flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground cursor-pointer font-display"
+            >
+              <Upload size={12} />
+            </button>
             <button
               onClick={handleOrganize}
               disabled={isOrganizing}
@@ -131,9 +149,48 @@ export function InboxSection({ isOrganizing: externalOrganizing = false }: Inbox
         )}
       </div>
 
+      {/* Hidden file input for upload button */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        multiple
+        accept=".md,.txt,.csv,.json,.pdf"
+        className="hidden"
+        onChange={(e) => handleUpload(e.target.files)}
+      />
+
       {/* Content */}
       {files.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-border/50 px-4 py-6 text-center">
+        <div
+          className={`rounded-xl border-2 border-dashed px-4 py-8 text-center transition-colors duration-150 ${
+            isDragOver
+              ? 'border-[var(--amber)] bg-[var(--amber-dim)]'
+              : 'border-border hover:border-border/80'
+          }`}
+          onDragEnter={(e) => {
+            if (!e.dataTransfer.types.includes('Files')) return;
+            e.preventDefault();
+            dragCounterRef.current++;
+            if (dragCounterRef.current === 1) setIsDragOver(true);
+          }}
+          onDragOver={(e) => {
+            if (!e.dataTransfer.types.includes('Files')) return;
+            e.preventDefault();
+          }}
+          onDragLeave={() => {
+            dragCounterRef.current = Math.max(0, dragCounterRef.current - 1);
+            if (dragCounterRef.current === 0) setIsDragOver(false);
+          }}
+          onDrop={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            dragCounterRef.current = 0;
+            setIsDragOver(false);
+            if (e.dataTransfer.files.length > 0) {
+              quickDropToInbox(Array.from(e.dataTransfer.files), t);
+            }
+          }}
+        >
           <Inbox size={24} className="mx-auto mb-2 text-muted-foreground/30" />
           <p className="text-sm text-muted-foreground/70 font-display">
             {t.inbox.emptyTitle}
@@ -141,6 +198,14 @@ export function InboxSection({ isOrganizing: externalOrganizing = false }: Inbox
           <p className="text-xs text-muted-foreground/40 mt-1">
             {t.inbox.emptyDesc}
           </p>
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            className="mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg transition-colors bg-muted text-muted-foreground hover:text-foreground hover:bg-muted/80"
+          >
+            <Upload size={12} />
+            {t.inbox.uploadButton}
+          </button>
         </div>
       ) : (
         <>

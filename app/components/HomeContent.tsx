@@ -252,6 +252,9 @@ export default function HomeContent({ recent, existingFiles, spaces }: { recent:
         <RecentActivityFeed />
       </div>
 
+      {/* ══════════ Inbox ══════════ */}
+      <InboxSection />
+
       {/* ══════════ Spaces ══════════ */}
       {(spaceList.length > 0 || true) && (
         <section className="mb-10">
@@ -317,9 +320,6 @@ export default function HomeContent({ recent, existingFiles, spaces }: { recent:
 
       {/* ══════════ Pinned Files ══════════ */}
       <PinnedFilesSection formatTime={formatTime} />
-
-      {/* ══════════ Inbox ══════════ */}
-      <InboxSection />
 
       {/* ══════════ Recently Edited ══════════ */}
       {recent.length > 0 && (
