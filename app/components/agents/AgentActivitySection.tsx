@@ -11,7 +11,7 @@ import { Terminal, ChevronDown, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { useLocale } from '@/lib/LocaleContext';
 import {
   type AgentOp, type OpKind,
-  opKind, KIND_STYLE, OpIcon, KindBadge, formatTs, relativeTs, getFilePath,
+  opKind, KIND_STYLE, KIND_LABEL, OpIcon, KindBadge, formatTs, relativeTs, getFilePath,
 } from './agent-activity-shared';
 
 // ─── Helpers ───────────────────────────────────────────────────────────────────
@@ -130,7 +130,7 @@ const KINDS: Array<OpKind | 'all'> = ['all', 'write', 'create', 'delete', 'read'
 // ─── Main section ──────────────────────────────────────────────────────────────
 
 export default function AgentActivitySection() {
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
   const [ops, setOps] = useState<AgentOp[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<OpKind | 'all'>('all');
@@ -205,7 +205,7 @@ export default function AgentActivitySection() {
               }}
             >
               {k !== 'all' && <OpIcon kind={k} size={10} />}
-              {k} <span style={{ opacity: 0.6 }}>({cnt})</span>
+              {k === 'all' ? (locale?.startsWith('zh') ? '全部' : 'All') : KIND_LABEL[locale?.startsWith('zh') ? 'zh' : 'en'][k]} <span style={{ opacity: 0.6 }}>({cnt})</span>
             </button>
           );
         })}

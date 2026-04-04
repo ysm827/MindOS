@@ -7,13 +7,13 @@ import { encodePath } from '@/lib/utils';
 import { useLocale } from '@/lib/LocaleContext';
 import {
   type AgentOp,
-  opKind, KIND_COLOR, OpIcon, relativeTs, getFilePath,
+  opKind, KindBadge, relativeTs, getFilePath,
 } from './agent-activity-shared';
 
 const VISIBLE_OPS = 5;
 
 export default function RecentActivityFeed() {
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
   const [ops, setOps] = useState<AgentOp[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAll, setShowAll] = useState(false);
@@ -62,7 +62,6 @@ export default function RecentActivityFeed() {
         {visible.map((op, i) => {
           const kind = opKind(op.tool);
           const filePath = getFilePath(op.params);
-          const toolShort = op.tool.replace(/^mindos_/, '');
 
           return (
             <div
@@ -71,11 +70,7 @@ export default function RecentActivityFeed() {
                 i > 0 ? 'border-t border-border/30' : ''
               } hover:bg-muted/30 transition-colors`}
             >
-              <OpIcon kind={kind} size={12} />
-
-              <span className="text-xs font-medium text-foreground font-display shrink-0">
-                {toolShort}
-              </span>
+              <KindBadge kind={kind} locale={locale} size="sm" />
 
               {filePath ? (
                 <Link
