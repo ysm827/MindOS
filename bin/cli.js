@@ -371,31 +371,40 @@ const commands = {
       killByPort(Number(startupCfg.setupPort));
     }
 
-    // ── Auto-migrate user-rules.md → .mindos/user-rules.md ────────────────
+    // ── Auto-migrate user preferences → .mindos/user-preferences.md ────────
     try {
       const mr = startupCfg.mindRoot;
       if (mr && existsSync(mr)) {
         const mindosDir = resolve(mr, '.mindos');
-        const newPath = resolve(mindosDir, 'user-rules.md');
+        const newPath = resolve(mindosDir, 'user-preferences.md');
 
         if (!existsSync(newPath)) {
           // Ensure .mindos/ directory exists
           if (!existsSync(mindosDir)) mkdirSync(mindosDir, { recursive: true });
 
-          // Try migrate from previous root location (user-skill-rules.md)
-          const prevRoot = resolve(mr, 'user-skill-rules.md');
-          if (existsSync(prevRoot)) {
-            cpSync(prevRoot, newPath);
-            unlinkSync(prevRoot);
-            console.log(`  ${green('✓')} ${dim('Migrated user-skill-rules.md → .mindos/user-rules.md')}`);
-          } else {
-            // Try migrate from legacy location (.agents/skills/{name}/user-rules.md)
+          // Try migrate from previous locations (newest → oldest)
+          const prevPaths = [
+            resolve(mindosDir, 'user-rules.md'),                    // v0.6.x interim
+            resolve(mr, 'user-skill-rules.md'),                     // v0.5.x root
+          ];
+          let migrated = false;
+          for (const prev of prevPaths) {
+            if (existsSync(prev)) {
+              cpSync(prev, newPath);
+              unlinkSync(prev);
+              console.log(`  ${green('✓')} ${dim(`Migrated ${prev.split('/').pop()} → .mindos/user-preferences.md`)}`);
+              migrated = true;
+              break;
+            }
+          }
+          if (!migrated) {
+            // Try legacy location (.agents/skills/{name}/user-rules.md)
             const isZh = startupCfg.disabledSkills?.includes('mindos');
             const sName = isZh ? 'mindos-zh' : 'mindos';
             const oldPath = resolve(mr, '.agents', 'skills', sName, 'user-rules.md');
             if (existsSync(oldPath)) {
               cpSync(oldPath, newPath);
-              console.log(`  ${green('✓')} ${dim('Migrated .agents/skills/ user-rules.md → .mindos/user-rules.md')}`);
+              console.log(`  ${green('✓')} ${dim('Migrated .agents/skills/ user-rules.md → .mindos/user-preferences.md')}`);
             }
           }
         }
@@ -578,11 +587,11 @@ ${dim('Shortcut: mindos start --daemon  →  install + start in one step')}
     }
 
     // Skill operating rules are now built into SKILL.md (shipped with the app).
-    // This command only initializes .mindos/user-rules.md for personalization.
+    // This command only initializes .mindos/user-preferences.md for personalization.
     const mindosDir = resolve(mindRoot, '.mindos');
-    const dest = resolve(mindosDir, 'user-rules.md');
+    const dest = resolve(mindosDir, 'user-preferences.md');
     if (existsSync(dest)) {
-      console.log(`  ${dim('skip')}  .mindos/user-rules.md (already exists)\n`);
+      console.log(`  ${dim('skip')}  .mindos/user-preferences.md (already exists)\n`);
     } else {
       if (!existsSync(mindosDir)) mkdirSync(mindosDir, { recursive: true });
       const isZh = config.disabledSkills?.includes('mindos');
@@ -590,9 +599,9 @@ ${dim('Shortcut: mindos start --daemon  →  install + start in one step')}
       const src = resolve(ROOT, 'templates', 'skill-rules', lang, 'user-rules.md');
       if (existsSync(src)) {
         cpSync(src, dest);
-        console.log(`  ${green('✓')}  .mindos/user-rules.md created at ${dim(mindosDir)}\n`);
+        console.log(`  ${green('✓')}  .mindos/user-preferences.md created at ${dim(mindosDir)}\n`);
       } else {
-        console.log(`  ${dim('skip')}  Template not found, create .mindos/user-rules.md manually if needed.\n`);
+        console.log(`  ${dim('skip')}  Template not found, create .mindos/user-preferences.md manually if needed.\n`);
       }
     }
     console.log(`  ${dim('Note: Operating rules are now built into the app. No install needed.')}\n`);

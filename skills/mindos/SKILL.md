@@ -21,7 +21,7 @@ description: >
 
 1. The **bootstrap directory tree is the primary index** — reason from names and hierarchy before calling search. Most questions can be answered by reading what's already in context.
 2. **Default to read-only.** Only invoke write tools when the user explicitly asks to save, record, organize, or edit. Lookup / summarize / quote = no writes.
-3. **Rule precedence** (highest wins): user's current-turn instruction → `.mindos/user-rules.md` → nearest directory `INSTRUCTION.md` → root `INSTRUCTION.md` → this SKILL's defaults.
+3. **Rule precedence** (highest wins): user's current-turn instruction → `.mindos/user-preferences.md` → nearest directory `INSTRUCTION.md` → root `INSTRUCTION.md` → this SKILL's defaults.
 4. **Multi-file edits require a plan first.** Present the full change list; execute only after approval.
 5. After create/delete/move/rename → **sync affected READMEs** automatically.
 
@@ -141,7 +141,7 @@ For write, SOP, structural, and handoff patterns → see Write & Workflow Supple
 
 ## Post-task hooks
 
-After **write tasks** (not simple single-file edits or read-only), scan this table. If a condition matches, make a one-line proposal. At most 1 proposal; pick highest priority. Check `.mindos/user-rules.md` suppression section first. Skip all if user asked for quiet mode.
+After **write tasks** (not simple single-file edits or read-only), scan this table. If a condition matches, make a one-line proposal. At most 1 proposal; pick highest priority. Check `.mindos/user-preferences.md` suppression section first. Skip all if user asked for quiet mode.
 
 | Hook | Priority | Condition |
 |------|----------|-----------|
@@ -157,7 +157,7 @@ If a hook triggers → read [references/post-task-hooks.md](./references/post-ta
 
 ## Preference capture
 
-When the user expresses a standing preference ("don't do X", "always put Y in Z"), read [references/preference-capture.md](./references/preference-capture.md) and follow the confirm-then-write flow to `.mindos/user-rules.md`.
+When the user expresses a standing preference ("don't do X", "always put Y in Z"), read [references/preference-capture.md](./references/preference-capture.md) and follow the confirm-then-write flow to `.mindos/user-preferences.md`.
 **Do NOT read** preference-capture unless the user actually expressed a preference to persist.
 
 ## SOP authoring
