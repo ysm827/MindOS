@@ -237,7 +237,7 @@ export const panelsEn = {
     title: 'Agents',
     subtitle: 'Connections, skills, and status at a glance.',
     workspacePulse: {
-      title: 'Workspace Pulse',
+      title: 'Your Agents',
       connected: 'Connected',
       detected: 'Detected',
       notFound: 'Not found',
@@ -839,7 +839,7 @@ export const panelsZh = {
     title: 'Agents',
     subtitle: '连接、技能与状态，一目了然。',
     workspacePulse: {
-      title: '工作区脉搏',
+      title: '你的 Agent',
       connected: '已连接',
       detected: '已检测',
       notFound: '未找到',
