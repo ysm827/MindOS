@@ -40,6 +40,9 @@ jobs:
             arch: x64
 
     runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
 
     steps:
       - uses: actions/checkout@v4
@@ -120,7 +123,6 @@ jobs:
         run: |
           VERSION=$(cd desktop && node -p "require('./package.json').version")
           echo "version=$VERSION" >> $GITHUB_OUTPUT
-        shell: bash
 
       # Package for the target platform.
       # When publishing: electron-builder --publish always uploads to a GitHub Release
@@ -162,7 +164,6 @@ jobs:
           else
             cd desktop && npx electron-builder --${{ matrix.platform }} --${{ matrix.arch }} --publish never
           fi
-        shell: bash
 
       # macOS: verify DMGs are valid before notarization
       # electron-builder can swallow hdiutil errors and produce corrupted DMGs
@@ -175,7 +176,6 @@ jobs:
             hdiutil verify "$file"
             echo "  OK: $(basename "$file")"
           done
-        shell: bash
 
       # macOS: notarize DMG files with retry logic
       - name: Notarize macOS builds
@@ -228,7 +228,6 @@ jobs:
             notarize_file "$file" || FAILED=1
           done
           [ $FAILED -eq 0 ] || exit 1
-        shell: bash
 
       # macOS: staple notarization tickets to DMG files
       - name: Staple notarization tickets
@@ -240,7 +239,6 @@ jobs:
             xcrun stapler staple "$file"
             echo "  ✅ Stapled: $(basename "$file")"
           done
-        shell: bash
 
       # macOS: replace pre-notarization DMGs on GitHub Release with notarized+stapled versions
       - name: Re-upload notarized DMGs to release
@@ -257,7 +255,6 @@ jobs:
             gh release delete-asset "$RELEASE_TAG" "$BASENAME" --yes 2>/dev/null || true
             gh release upload "$RELEASE_TAG" "$file"
           done
-        shell: bash
 
       # Upload artifacts (always, even if not publishing)
       - name: Upload artifacts
