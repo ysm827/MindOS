@@ -31,7 +31,7 @@ export function PluginsTab({ pluginStates, setPluginStates, t }: PluginsTabProps
                         <span className="text-sm font-medium text-foreground">{renderer.name}</span>
                         {isCore && (
                           <span className="text-2xs px-1.5 py-0.5 rounded bg-[var(--amber-subtle)] text-[var(--amber-text)] font-mono">
-                            core
+                            {t.settings.plugins.coreBadge ?? 'core'}
                           </span>
                         )}
                         {renderer.builtin && !isCore && (
