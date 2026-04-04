@@ -844,12 +844,17 @@ function KnowledgeInteractionSection() {
 
   useEffect(() => {
     let cancelled = false;
-    fetch('/api/agent-activity?limit=50')
-      .then(r => r.json())
-      .then(data => { if (!cancelled) setEvents(data.events ?? []); })
-      .catch(() => {})
-      .finally(() => { if (!cancelled) setLoading(false); });
-    return () => { cancelled = true; };
+    const doFetch = () => {
+      fetch('/api/agent-activity?limit=50')
+        .then(r => r.json())
+        .then(data => { if (!cancelled) setEvents(data.events ?? []); })
+        .catch(() => {})
+        .finally(() => { if (!cancelled) setLoading(false); });
+    };
+    doFetch();
+    const onVisible = () => { if (document.visibilityState === 'visible') doFetch(); };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => { cancelled = true; document.removeEventListener('visibilitychange', onVisible); };
   }, []);
 
   const stats = useMemo(() => {

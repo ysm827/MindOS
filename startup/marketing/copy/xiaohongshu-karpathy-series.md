@@ -36,44 +36,43 @@
 
 ## 第 1 篇：引流爆款
 
-**标题：** Karpathy的知识库方法，我一个工具全实现了
+**标题：** Karpathy的AI知识库，开源搞定了!（17字）
 
 **正文：**
 
-Karpathy 上周的帖子火了——用 LLM 编译个人知识库，不需要 RAG，纯 Markdown，本地存储。
+AI 大神 Karpathy 的知识管理不靠自己整理——全交给 AI。
 
-1000 万人看了他的方法论。但有个问题：**他的方案需要你自己搭。**
+他让 LLM 自动编译个人知识库，不需要 RAG，纯 Markdown，本地存储。每次提问答案都回流 wiki，知识越用越多，持续复利积累。
 
-手动建 `raw/` 目录，手动丢文件进去，手动触发 LLM 编译，手动用 Obsidian 看。
+但有个问题：**Karpathy 的方案需要你自己搭。**
 
-我做了一个开源工具，把 Karpathy 的每一步都产品化了：
+手动建 raw/ 目录，手动丢文件，手动触发 LLM 编译，还得学 Obsidian。
 
-| Karpathy 手动做 | MindOS 自动做 |
-|----------------|--------------|
-| 建 raw 目录 | 一键导入已有笔记 |
-| LLM 编译 wiki | Agent 对话自动沉淀规则 |
-| Obsidian 浏览 | 内置 GUI + 11 种渲染器 |
-| 健康检查 | 自动矛盾检测 |
-| 单个 LLM 用 | 所有 AI 通过 MCP 共享 |
+我花了大半年，做了个开源软件把 Karpathy 的思路产品化了：
 
-而且多了 Karpathy 方案里没有的杀手功能：
+❌ 手建目录 → ✅ 一键导入已有笔记
+❌ 手动编译 → ✅ 和 AI 聊天自动记住你的偏好
+❌ 学 Obsidian → ✅ 内置界面，打开就用
+❌ 手动检查 → ✅ 自动矛盾检测
+❌ 单个 LLM → ✅ 所有 AI 共享同一个知识库
 
-**你的知识库不是只给一个 AI 用——Claude、Cursor、ChatGPT、Gemini 都能通过 MCP 协议直接读写。**
+最后一条是 Karpathy 方案里没有的杀手功能 👆
 
-你纠正了 Claude 一个错误，Cursor 也记住了。
+Karpathy 只让一个 LLM 读写 wiki。但你每天用 3-5 个 AI——Claude、Cursor、ChatGPT、Gemini。**这个软件让所有 AI 连同一个知识库，你纠正了 Claude 一个错误，Cursor 也记住了。**
 
-5 分钟安装：`npx @geminilight/mindos`
-开源免费，数据全在本地。
+我现在 3 个 Agent 连着用，纠正过一次代码风格之后就再也没出过同样的问题。
 
-你试过 Karpathy 的方法吗？搭起来顺利吗？评论区聊聊 👇
+开源免费，5 分钟上手，数据全在本地。软件叫 MindOS，GitHub 搜 GeminiLight/MindOS 就能找到，主页也有下载链接。
 
-**标签：** #Karpathy #AI知识库 #LLM #个人知识管理 #Obsidian #MCP #开源工具 #AI效率 #开发者工具 #第二大脑
+你试过 Karpathy 的方法吗？搭起来顺利吗？你最常用哪个 AI？评论区聊聊 👇
+
+**标签：** #Karpathy #AI知识库 #LLM #个人知识管理 #开源软件 #AI效率 #程序员 #Claude #Cursor #第二大脑
 
 **配图建议：**
-1. 封面：Karpathy 头像/推文截图 + "他手动做的，我自动化了" 文字
-2. 对比表格截图（Karpathy 手动 vs MindOS 自动）
-3. MindOS GUI 界面截图
-4. MCP 多 Agent 连接示意图
+1. 封面（9:16）：Karpathy 推文截图 + "Karpathy 的方法，开源搞定了!" 文字
+2. ❌✅ 对比表截图（Karpathy 手动 vs 自动）
+3. 软件界面截图（强调"打开就能用"）
+4. 多 Agent 连接示意图（知识库居中，Claude/Cursor/Gemini 围绕）
 
 ---
 

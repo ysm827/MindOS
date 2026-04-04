@@ -20,12 +20,17 @@ export default function RecentActivityFeed() {
 
   useEffect(() => {
     let cancelled = false;
-    fetch('/api/agent-activity?limit=20')
-      .then(r => r.json())
-      .then(data => { if (!cancelled) setOps(data.events ?? []); })
-      .catch(() => {})
-      .finally(() => { if (!cancelled) setLoading(false); });
-    return () => { cancelled = true; };
+    const doFetch = () => {
+      fetch('/api/agent-activity?limit=20')
+        .then(r => r.json())
+        .then(data => { if (!cancelled) setOps(data.events ?? []); })
+        .catch(() => {})
+        .finally(() => { if (!cancelled) setLoading(false); });
+    };
+    doFetch();
+    const onVisible = () => { if (document.visibilityState === 'visible') doFetch(); };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => { cancelled = true; document.removeEventListener('visibilitychange', onVisible); };
   }, []);
 
   // Filter out read-only noise, show writes/creates/deletes first

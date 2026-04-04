@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useRef, useTransition, useEffect, useSyncExternalStore } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-import { FileNode, SYSTEM_FILES } from '@/lib/types';
+import { FileNode, SYSTEM_FILES, UNDELETABLE_FILES } from '@/lib/types';
 import { encodePath } from '@/lib/utils';
 import {
   ChevronDown, FileText, Table, Folder, FolderOpen, Plus, Loader2,
@@ -578,6 +578,7 @@ function FileNodeItem({ node, depth, currentPath, onNavigate }: {
   const { t } = useLocale();
   const { isPinned, togglePin } = usePinnedFiles();
   const pinned = isPinned(node.path);
+  const isProtected = !node.path.includes('/') && UNDELETABLE_FILES.has(node.name);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
 
@@ -650,7 +651,7 @@ function FileNodeItem({ node, depth, currentPath, onNavigate }: {
     <div className="relative group/file">
       <button
         onClick={handleClick}
-        onDoubleClick={startRename}
+        onDoubleClick={isProtected ? undefined : startRename}
         onContextMenu={handleContextMenu}
         draggable
         onDragStart={handleDragStart}
@@ -697,13 +698,17 @@ function FileNodeItem({ node, depth, currentPath, onNavigate }: {
             <Star size={14} className={`shrink-0 ${pinned ? 'fill-[var(--amber)] text-[var(--amber)]' : ''}`} />
             {pinned ? t.fileTree.removeFromFavorites : t.fileTree.pinToFavorites}
           </button>
-          <button className={MENU_ITEM} onClick={(e) => { setContextMenu(null); startRename(e); }}>
-            <Pencil size={14} className="shrink-0" /> {t.fileTree.rename}
-          </button>
-          <div className={MENU_DIVIDER} />
-          <button className={MENU_DANGER} onClick={(e) => { setContextMenu(null); handleDelete(e); }}>
-            <Trash2 size={14} className="shrink-0" /> {t.fileTree.delete}
-          </button>
+          {!isProtected && (
+            <button className={MENU_ITEM} onClick={(e) => { setContextMenu(null); startRename(e); }}>
+              <Pencil size={14} className="shrink-0" /> {t.fileTree.rename}
+            </button>
+          )}
+          {!isProtected && <>
+            <div className={MENU_DIVIDER} />
+            <button className={MENU_DANGER} onClick={(e) => { setContextMenu(null); handleDelete(e); }}>
+              <Trash2 size={14} className="shrink-0" /> {t.fileTree.delete}
+            </button>
+          </>}
         </ContextMenuShell>
       )}
       <ConfirmDialog

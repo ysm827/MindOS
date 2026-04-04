@@ -94,7 +94,7 @@ Read the handoff document or last agent's progress notes → identify: current s
 
 ## Post-task hooks
 
-After **write tasks** (not simple single-file edits or read-only), scan this table. If a condition matches, make a one-line proposal. At most 1 proposal; pick highest priority. Check `.mindos/user-rules.md` suppression section first. Skip all if user asked for quiet mode.
+After **write tasks** (not simple single-file edits or read-only), scan this table. If a condition matches, make a one-line proposal. At most 1 proposal; pick highest priority. Check `.mindos/user-preferences.md` suppression section first. Skip all if user asked for quiet mode.
 
 | Hook | Priority | Condition |
 |------|----------|-----------|
@@ -110,7 +110,7 @@ If a hook triggers → read [references/post-task-hooks.md](./references/post-ta
 
 ## Preference capture
 
-When the user expresses a standing preference ("don't do X", "always put Y in Z"), read [references/preference-capture.md](./references/preference-capture.md) and follow the confirm-then-write flow to `.mindos/user-rules.md`.
+When the user expresses a standing preference ("don't do X", "always put Y in Z"), read [references/preference-capture.md](./references/preference-capture.md) and follow the confirm-then-write flow to `.mindos/user-preferences.md`.
 **Do NOT read** preference-capture unless the user actually expressed a preference to persist.
 
 ## SOP authoring

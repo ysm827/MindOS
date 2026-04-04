@@ -1004,6 +1004,15 @@
 
 ## UI / 前端交互
 
+### TOC 展开时内容和目录之间出现大片空白（2026-04-05）
+
+- **症状：** 宽屏（≥1280px）下查看有 TOC 的 Markdown 文件，内容区和右侧 TOC 之间出现 200-300px 空白，内容明显偏左
+- **根因：** `.content-width`（`max-width: 780px` + `margin: auto` 居中）上叠加了 `.toc-aware`（`margin-right: 220px`）。`margin-right` 被固定为 220px 后，`margin-left: auto` 吃掉所有剩余空间，内容被推到最左边，中间形成大空白
+- **本质：** 在 `margin: auto` 居中的元素上直接加 `margin-right` 固定值会破坏居中——`auto` 只剩一侧生效
+- **解决：** 将 TOC 偏移从内容元素的 `margin-right` 移到 `#main-content` 的 `padding-right`（通过 CSS 变量 `--toc-extra-right`）。`padding` 缩窄容器可用宽度后，内层 `.content-width` 的 `margin: auto` 仍在缩窄后的空间里正确居中
+- **文件：** `globals.css`（CSS 变量定义）、`SidebarLayout.tsx`（inline style 加入 `--toc-extra-right`）、`ViewPageClient.tsx`（移除 `toc-aware` class）
+- **规则：** 需要给 `margin: auto` 居中的元素避让 fixed 面板时，偏移加在**父容器的 padding** 上，不要加在元素自身的 margin 上
+
 ### 按钮/链接：可视点击区域 ≠ 实际点击目标
 
 - **现象：** 用户看到一个有背景色、圆角、padding 的按钮（视觉上是一个清晰的盒子），但只有当鼠标移到文字或图标上时才能点击，背景区域无反应

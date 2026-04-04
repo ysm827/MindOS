@@ -137,12 +137,17 @@ export default function AgentActivitySection() {
 
   useEffect(() => {
     let cancelled = false;
-    fetch('/api/agent-activity?limit=200')
-      .then(r => r.json())
-      .then(data => { if (!cancelled) setOps(data.events ?? []); })
-      .catch(() => {})
-      .finally(() => { if (!cancelled) setLoading(false); });
-    return () => { cancelled = true; };
+    const doFetch = () => {
+      fetch('/api/agent-activity?limit=200')
+        .then(r => r.json())
+        .then(data => { if (!cancelled) setOps(data.events ?? []); })
+        .catch(() => {})
+        .finally(() => { if (!cancelled) setLoading(false); });
+    };
+    doFetch();
+    const onVisible = () => { if (document.visibilityState === 'visible') doFetch(); };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => { cancelled = true; document.removeEventListener('visibilitychange', onVisible); };
   }, []);
 
   const filtered = useMemo(() =>
