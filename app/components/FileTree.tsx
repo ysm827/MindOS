@@ -413,12 +413,6 @@ function DirectoryNode({ node, depth, currentPath, onNavigate, maxOpenDepth, onI
       <div
         className="relative group/dir flex items-center"
         onContextMenu={handleContextMenu}
-        draggable
-        onDragStart={(e) => {
-          e.dataTransfer.setData('text/mindos-path', node.path);
-          e.dataTransfer.setData('text/mindos-type', 'directory');
-          e.dataTransfer.effectAllowed = 'copy';
-        }}
       >
         <button
           onClick={toggle}
@@ -434,6 +428,12 @@ function DirectoryNode({ node, depth, currentPath, onNavigate, maxOpenDepth, onI
           type="button"
           onClick={handleSingleClick}
           onDoubleClick={handleDoubleClick}
+          draggable
+          onDragStart={(e) => {
+            e.dataTransfer.setData('text/mindos-path', node.path);
+            e.dataTransfer.setData('text/mindos-type', 'directory');
+            e.dataTransfer.effectAllowed = 'copy';
+          }}
           className={`
             flex-1 flex items-center gap-1.5 px-1 py-1 rounded text-left min-w-0 pr-16
             text-sm transition-colors duration-100

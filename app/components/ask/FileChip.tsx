@@ -84,7 +84,7 @@ export default function FileChip({ path, onRemove, variant = 'kb', imageData, im
         onMouseLeave={() => setShowPreview(false)}
       >
         <Icon size={11} className={`${iconClass} shrink-0`} />
-        <span className="truncate" title={path}>{name}</span>
+        <span className="truncate" title={isDir ? cleanPath : path}>{name}</span>
         <button
           type="button"
           onClick={onRemove}
