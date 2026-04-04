@@ -394,8 +394,8 @@
 
 ### Multi-Provider 配置：新增 Provider 必须注册到 PROVIDER_PRESETS
 - **现象：** 新增 AI Provider 后 UI 不显示、测试/聊天不工作
-- **原因：** 所有 Provider 元数据（defaultModel、apiKeyEnvVar、piProvider、signupUrl、supportsThinking 等）集中在 `PROVIDER_PRESETS`，遗漏注册会导致运行时找不到配置
-- **规则：** 新增 Provider 步骤：(1) `providers.ts` 添加 `ProviderId` union + `PROVIDER_PRESETS` entry (2) 确认 `piProvider` 和 `piApiDefault` 与 pi-ai registry 对应 (3) 设置正确的 `category`（primary/secondary/advanced）
+- **原因：** 所有 Provider 的 UI/UX 元数据（name、defaultModel、signupUrl、supportsThinking、category 等）集中在 `PROVIDER_PRESETS`。技术细节（baseUrl、API 协议、env 变量映射、compat flags）则委托给 pi-ai 框架
+- **规则：** 新增 Provider 步骤：(1) `providers.ts` 添加 `ProviderId` union + `PROVIDER_PRESETS` entry（仅 UI 元数据） (2) 确认该 provider 在 pi-ai 的 `getModels()` 注册表中存在（若不存在，如 DeepSeek，需设 `piProviderOverride` + `fixedBaseUrl`） (3) 设置正确的 `category`（primary/secondary/advanced） (4) 若 pi-ai 的 `getEnvApiKey()` 不覆盖该 provider，在 `EXTRA_ENV_KEYS` 中补充
 - **文件：** `app/lib/agent/providers.ts`
 
 ### gpt-5.4 等新模型拒绝 max_tokens 参数（禁止重复造轮子）

@@ -5,7 +5,7 @@ import { ChevronDown, ChevronRight, Copy, ExternalLink } from 'lucide-react';
 import { Field, Input, ApiKeyInput } from '@/components/settings/Primitives';
 import type { SetupState, SetupMessages, PortStatus, ProviderSetupConfig } from './types';
 import type { ProviderId } from '@/lib/agent/providers';
-import { PROVIDER_PRESETS, isProviderId } from '@/lib/agent/providers';
+import { PROVIDER_PRESETS, isProviderId, getApiKeyEnvVar, getDefaultBaseUrl } from '@/lib/agent/providers';
 import ProviderSelect from '@/components/shared/ProviderSelect';
 import StepPorts from './StepPorts';
 import { useLocale } from '@/lib/LocaleContext';
@@ -68,7 +68,7 @@ export default function StepAI({ state, update, s, onCopyToken, webPortStatus, m
             <ApiKeyInput
               value={currentConfig.apiKey}
               onChange={v => patchConfig({ apiKey: v })}
-              placeholder={currentConfig.apiKeyMask || `${currentPreset.apiKeyEnvVar ?? 'API Key'}...`}
+              placeholder={currentConfig.apiKeyMask || `${getApiKeyEnvVar(currentProvider as ProviderId) ?? 'API Key'}...`}
             />
             {currentConfig.apiKeyMask && !currentConfig.apiKey && (
               <p className="text-xs mt-1" style={{ color: 'var(--muted-foreground)' }}>
@@ -104,7 +104,7 @@ export default function StepAI({ state, update, s, onCopyToken, webPortStatus, m
               <Input
                 value={currentConfig.baseUrl ?? ''}
                 onChange={e => patchConfig({ baseUrl: e.target.value })}
-                placeholder={currentPreset.defaultBaseUrl || 'https://api.openai.com/v1'}
+                placeholder={currentPreset.fixedBaseUrl || getDefaultBaseUrl(currentProvider as ProviderId) || 'https://api.openai.com/v1'}
               />
             </Field>
           )}

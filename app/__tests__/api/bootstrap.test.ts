@@ -9,7 +9,6 @@ describe('GET /api/bootstrap', () => {
     seedFile('INSTRUCTION.md', '# Instructions');
     seedFile('README.md', '# Index');
     seedFile('CONFIG.json', '{"key": "val"}');
-    seedFile('CONFIG.md', '# Config');
     invalidateCache();
 
     const req = new NextRequest('http://localhost/api/bootstrap');
@@ -19,7 +18,6 @@ describe('GET /api/bootstrap', () => {
     expect(body.instruction).toBe('# Instructions');
     expect(body.index).toBe('# Index');
     expect(body.config_json).toBe('{"key": "val"}');
-    expect(body.config_md).toBe('# Config');
   });
 
   it('returns undefined for missing root files', async () => {

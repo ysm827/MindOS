@@ -2,7 +2,7 @@ export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server';
 import { readSettings, writeSettings, ServerSettings } from '@/lib/settings';
 import { invalidateCache } from '@/lib/fs';
-import { PROVIDER_PRESETS, ALL_PROVIDER_IDS } from '@/lib/agent/providers';
+import { PROVIDER_PRESETS, ALL_PROVIDER_IDS, getApiKeyEnvVar, getApiKeyFromEnv } from '@/lib/agent/providers';
 
 function maskToken(token: string | undefined): string {
   if (!token) return '';
@@ -26,18 +26,11 @@ export async function GET() {
     MIND_ROOT:   process.env.MIND_ROOT || '',
   };
 
-  for (const preset of Object.values(PROVIDER_PRESETS)) {
-    if (preset.apiKeyEnvVar) {
-      envOverrides[preset.apiKeyEnvVar] = !!process.env[preset.apiKeyEnvVar];
-      envValues[preset.apiKeyEnvVar] = process.env[preset.apiKeyEnvVar] ? '***set***' : '';
-    }
-    if (preset.modelEnvVar) {
-      envOverrides[preset.modelEnvVar] = !!process.env[preset.modelEnvVar];
-      envValues[preset.modelEnvVar] = process.env[preset.modelEnvVar] || '';
-    }
-    if (preset.baseUrlEnvVar) {
-      envOverrides[preset.baseUrlEnvVar] = !!process.env[preset.baseUrlEnvVar];
-      envValues[preset.baseUrlEnvVar] = process.env[preset.baseUrlEnvVar] || '';
+  for (const id of ALL_PROVIDER_IDS) {
+    const envKey = getApiKeyEnvVar(id);
+    if (envKey) {
+      envOverrides[envKey] = !!getApiKeyFromEnv(id);
+      envValues[envKey] = getApiKeyFromEnv(id) ? '***set***' : '';
     }
   }
 

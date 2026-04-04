@@ -9,6 +9,7 @@ import { usePinnedFiles } from '@/lib/hooks/usePinnedFiles';
 import OnboardingView from './OnboardingView';
 import GuideCard from './GuideCard';
 import SystemPulse from './SystemPulse';
+import { InboxSection } from './home/InboxSection';
 import { scanExampleFilesAction, cleanupExamplesAction } from '@/lib/actions';
 import type { SpaceInfo } from '@/app/page';
 import RecentActivityFeed from '@/components/agents/RecentActivityFeed';
@@ -251,6 +252,9 @@ export default function HomeContent({ recent, existingFiles, spaces }: { recent:
 
       {/* ══════════ Pinned Files ══════════ */}
       <PinnedFilesSection formatTime={formatTime} />
+
+      {/* ══════════ Inbox ══════════ */}
+      <InboxSection />
 
       {/* ══════════ Spaces ══════════ */}
       {(spaceList.length > 0 || true) && (

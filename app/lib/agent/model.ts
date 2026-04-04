@@ -1,6 +1,6 @@
 import { getModel as piGetModel, type Model } from '@mariozechner/pi-ai';
 import { effectiveAiConfig } from '@/lib/settings';
-import { type ProviderId, PROVIDER_PRESETS, getPreset } from './providers';
+import { type ProviderId, getPreset, toPiProvider, getDefaultApi, getDefaultBaseUrl } from './providers';
 
 /** Check if any message in the conversation contains images */
 export function hasImages(messages: Array<{ images?: unknown[] }>): boolean {
@@ -42,10 +42,8 @@ export function getModelConfig(options?: ModelConfigOverrides): {
     baseUrl: options?.baseUrl ?? saved.baseUrl,
   };
 
-  const preset = getPreset(cfg.provider);
   const modelName = cfg.model;
-
-  let model = resolveModel(preset, modelName, cfg.baseUrl);
+  let model = resolveModel(cfg.provider, modelName, cfg.baseUrl);
 
   if (options?.hasImages) {
     model = ensureVisionCapable(model);
@@ -56,23 +54,27 @@ export function getModelConfig(options?: ModelConfigOverrides): {
 
 /**
  * Try pi-ai registry first, then fall back to a manually constructed Model.
- * Applies baseUrl overrides and compat flags from the provider preset.
+ * Applies baseUrl overrides and compat flags for custom endpoints.
  */
-function resolveModel(preset: typeof PROVIDER_PRESETS[ProviderId], modelName: string, baseUrl: string): Model<any> {
+function resolveModel(providerId: ProviderId, modelName: string, baseUrl: string): Model<any> {
+  const piProvider = toPiProvider(providerId);
+  const preset = getPreset(providerId);
   let model: Model<any>;
   const hasCustomBase = !!baseUrl;
 
+  // 1. Try pi-ai registry lookup
   try {
-    const resolved = piGetModel(preset.piProvider as any, modelName as any);
+    const resolved = piGetModel(piProvider as any, modelName as any);
     if (!resolved) throw new Error('Model not in registry');
     model = resolved;
   } catch {
+    // 2. Fallback: construct minimal Model using pi-ai derived defaults
     model = {
       id: modelName,
       name: modelName,
-      api: preset.piApiDefault as any,
-      provider: preset.piProvider,
-      baseUrl: preset.defaultBaseUrl || '',
+      api: getDefaultApi(providerId) as any,
+      provider: piProvider,
+      baseUrl: preset.fixedBaseUrl || getDefaultBaseUrl(providerId),
       reasoning: false,
       input: ['text'] as const,
       cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
@@ -81,31 +83,29 @@ function resolveModel(preset: typeof PROVIDER_PRESETS[ProviderId], modelName: st
     };
   }
 
+  // 3. Apply user's custom baseUrl
   if (hasCustomBase) {
     model = { ...model, baseUrl };
 
-    // For custom endpoints, use completions API for max compatibility
-    if (preset.piApiDefault === 'openai-responses' || model.api === 'openai-responses') {
+    if (model.api === 'openai-responses') {
       model = { ...model, api: 'openai-completions' as any };
     }
   }
 
-  // Merge preset compat flags
-  if (preset.compat || hasCustomBase) {
-    const baseCompat = hasCustomBase ? {
-      supportsStore: false,
-      supportsDeveloperRole: false,
-      supportsReasoningEffort: false,
-      supportsUsageInStreaming: false,
-      supportsStrictMode: false,
-    } : {};
-
+  // 4. For deepseek or any custom endpoint, apply conservative compat
+  if (hasCustomBase || preset.fixedBaseUrl) {
     model = {
       ...model,
-      compat: { ...(model as any).compat, ...baseCompat, ...preset.compat },
+      compat: {
+        ...(model as any).compat,
+        supportsStore: false,
+        supportsDeveloperRole: false,
+        supportsReasoningEffort: false,
+        supportsUsageInStreaming: false,
+        supportsStrictMode: false,
+      },
     };
   }
 
   return model;
 }
-

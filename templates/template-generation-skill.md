@@ -55,7 +55,6 @@
 
 - `CONFIG.json` 是配置的唯一权威源。
 - 字段语义内嵌于 `keySpecs`；目录命名规则内嵌于 `naming`。
-- 无需额外的 `CONFIG.md`。
 
 ## 7. 配置设计约束
 

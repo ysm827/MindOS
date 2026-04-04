@@ -1,7 +1,7 @@
 export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server';
 import { effectiveAiConfig } from '@/lib/settings';
-import { type ProviderId, isProviderId, PROVIDER_PRESETS } from '@/lib/agent/providers';
+import { type ProviderId, isProviderId, PROVIDER_PRESETS, getDefaultBaseUrl } from '@/lib/agent/providers';
 
 const TIMEOUT = 10_000;
 
@@ -53,45 +53,25 @@ export async function POST(req: NextRequest) {
 }
 
 async function fetchModels(provider: ProviderId, apiKey: string, baseUrl: string, signal: AbortSignal): Promise<string[]> {
-  const preset = PROVIDER_PRESETS[provider];
-
   if (provider === 'anthropic') {
     return fetchAnthropicModels(apiKey, signal);
   }
 
-  // OpenAI-compatible providers (openai, groq, deepseek, xai, openrouter, cerebras, mistral)
   const endpoint = resolveListModelsUrl(provider, baseUrl);
-  return fetchOpenAICompatModels(endpoint, apiKey, preset.authHeader, signal);
+  return fetchOpenAICompatModels(endpoint, apiKey, signal);
 }
 
 function resolveListModelsUrl(provider: ProviderId, baseUrl: string): string {
-  const preset = PROVIDER_PRESETS[provider];
-
   if (baseUrl) {
     return baseUrl.replace(/\/+$/, '') + '/models';
   }
 
-  if (preset.listModelsEndpoint) {
-    return preset.listModelsEndpoint;
+  const base = getDefaultBaseUrl(provider);
+  if (base) {
+    return base.replace(/\/+$/, '') + '/models';
   }
 
-  if (preset.defaultBaseUrl) {
-    return preset.defaultBaseUrl.replace(/\/+$/, '') + '/models';
-  }
-
-  // Infer from piProvider and known base URLs
-  const knownBases: Partial<Record<ProviderId, string>> = {
-    openai: 'https://api.openai.com/v1',
-    groq: 'https://api.groq.com/openai/v1',
-    xai: 'https://api.x.ai/v1',
-    openrouter: 'https://openrouter.ai/api/v1',
-    mistral: 'https://api.mistral.ai/v1',
-    cerebras: 'https://api.cerebras.ai/v1',
-    deepseek: 'https://api.deepseek.com/v1',
-  };
-
-  const base = knownBases[provider] || 'https://api.openai.com/v1';
-  return base + '/models';
+  return 'https://api.openai.com/v1/models';
 }
 
 async function fetchAnthropicModels(apiKey: string, signal: AbortSignal): Promise<string[]> {
@@ -116,16 +96,12 @@ async function fetchAnthropicModels(apiKey: string, signal: AbortSignal): Promis
 }
 
 async function fetchOpenAICompatModels(
-  endpoint: string, apiKey: string, authHeader: string, signal: AbortSignal,
+  endpoint: string, apiKey: string, signal: AbortSignal,
 ): Promise<string[]> {
-  const headers: Record<string, string> = {};
-  if (authHeader === 'bearer') {
-    headers['Authorization'] = `Bearer ${apiKey}`;
-  } else if (authHeader === 'x-api-key') {
-    headers['x-api-key'] = apiKey;
-  }
-
-  const res = await fetch(endpoint, { headers, signal });
+  const res = await fetch(endpoint, {
+    headers: { 'Authorization': `Bearer ${apiKey}` },
+    signal,
+  });
 
   if (!res.ok) {
     const errBody = await res.text().catch(() => '');

@@ -1,30 +1,42 @@
-import type { Model } from '@mariozechner/pi-ai';
+import {
+  getModel as piGetModel,
+  getModels as piGetModels,
+  getEnvApiKey as piGetEnvApiKey,
+  type Model,
+  type KnownProvider,
+} from '@mariozechner/pi-ai';
 
+/**
+ * MindOS-supported provider IDs.
+ *
+ * Most map 1:1 to pi-ai KnownProvider. The exception is `deepseek`,
+ * which pi-ai doesn't have — we treat it as OpenAI-compatible with
+ * a custom baseUrl.
+ */
 export type ProviderId =
   | 'anthropic' | 'openai' | 'google' | 'groq'
   | 'xai' | 'openrouter' | 'mistral' | 'deepseek'
   | 'zai' | 'kimi-coding'
   | 'cerebras' | 'minimax' | 'huggingface';
 
-type ModelCompat = NonNullable<Model<any>['compat']>;
-
+/**
+ * UI/UX metadata for each provider.
+ * Technical details (baseUrl, api protocol, auth, compat) are
+ * delegated to pi-ai's model registry — we only store what pi-ai
+ * doesn't provide.
+ */
 export interface ProviderPreset {
   id: ProviderId;
   name: string;
   nameZh: string;
   defaultModel: string;
-  defaultBaseUrl?: string;
+  /** If ProviderId differs from pi-ai's KnownProvider (e.g. deepseek → openai) */
+  piProviderOverride?: KnownProvider;
+  /** DeepSeek needs a fixed baseUrl since it's not a native pi-ai provider */
+  fixedBaseUrl?: string;
   supportsBaseUrl: boolean;
-  authHeader: 'bearer' | 'x-api-key' | 'none';
-  apiKeyEnvVar?: string;
-  modelEnvVar?: string;
-  baseUrlEnvVar?: string;
-  piProvider: string;
-  piApiDefault: string;
-  compat?: Partial<ModelCompat>;
   supportsThinking: boolean;
   supportsListModels: boolean;
-  listModelsEndpoint?: string;
   signupUrl?: string;
   category: 'primary' | 'secondary' | 'advanced';
 }
@@ -36,11 +48,6 @@ export const PROVIDER_PRESETS: Record<ProviderId, ProviderPreset> = {
     nameZh: 'Anthropic',
     defaultModel: 'claude-sonnet-4-6',
     supportsBaseUrl: false,
-    authHeader: 'x-api-key',
-    apiKeyEnvVar: 'ANTHROPIC_API_KEY',
-    modelEnvVar: 'ANTHROPIC_MODEL',
-    piProvider: 'anthropic',
-    piApiDefault: 'anthropic-messages',
     supportsThinking: true,
     supportsListModels: true,
     signupUrl: 'https://console.anthropic.com/settings/keys',
@@ -52,12 +59,6 @@ export const PROVIDER_PRESETS: Record<ProviderId, ProviderPreset> = {
     nameZh: 'OpenAI',
     defaultModel: 'gpt-5.4',
     supportsBaseUrl: true,
-    authHeader: 'bearer',
-    apiKeyEnvVar: 'OPENAI_API_KEY',
-    modelEnvVar: 'OPENAI_MODEL',
-    baseUrlEnvVar: 'OPENAI_BASE_URL',
-    piProvider: 'openai',
-    piApiDefault: 'openai-responses',
     supportsThinking: true,
     supportsListModels: true,
     signupUrl: 'https://platform.openai.com/api-keys',
@@ -69,11 +70,6 @@ export const PROVIDER_PRESETS: Record<ProviderId, ProviderPreset> = {
     nameZh: 'Google Gemini',
     defaultModel: 'gemini-2.5-flash',
     supportsBaseUrl: false,
-    authHeader: 'bearer',
-    apiKeyEnvVar: 'GOOGLE_GENERATIVE_AI_API_KEY',
-    modelEnvVar: 'GOOGLE_MODEL',
-    piProvider: 'google',
-    piApiDefault: 'google-generative-ai',
     supportsThinking: true,
     supportsListModels: false,
     signupUrl: 'https://aistudio.google.com/apikey',
@@ -85,10 +81,6 @@ export const PROVIDER_PRESETS: Record<ProviderId, ProviderPreset> = {
     nameZh: 'Groq',
     defaultModel: 'llama-3.3-70b-versatile',
     supportsBaseUrl: false,
-    authHeader: 'bearer',
-    apiKeyEnvVar: 'GROQ_API_KEY',
-    piProvider: 'groq',
-    piApiDefault: 'openai-completions',
     supportsThinking: false,
     supportsListModels: true,
     signupUrl: 'https://console.groq.com/keys',
@@ -100,10 +92,6 @@ export const PROVIDER_PRESETS: Record<ProviderId, ProviderPreset> = {
     nameZh: 'xAI (Grok)',
     defaultModel: 'grok-3',
     supportsBaseUrl: false,
-    authHeader: 'bearer',
-    apiKeyEnvVar: 'XAI_API_KEY',
-    piProvider: 'xai',
-    piApiDefault: 'openai-completions',
     supportsThinking: false,
     supportsListModels: true,
     category: 'secondary',
@@ -114,10 +102,6 @@ export const PROVIDER_PRESETS: Record<ProviderId, ProviderPreset> = {
     nameZh: 'OpenRouter',
     defaultModel: 'anthropic/claude-sonnet-4',
     supportsBaseUrl: false,
-    authHeader: 'bearer',
-    apiKeyEnvVar: 'OPENROUTER_API_KEY',
-    piProvider: 'openrouter',
-    piApiDefault: 'openai-completions',
     supportsThinking: false,
     supportsListModels: true,
     category: 'secondary',
@@ -128,10 +112,6 @@ export const PROVIDER_PRESETS: Record<ProviderId, ProviderPreset> = {
     nameZh: 'Mistral',
     defaultModel: 'mistral-large-latest',
     supportsBaseUrl: false,
-    authHeader: 'bearer',
-    apiKeyEnvVar: 'MISTRAL_API_KEY',
-    piProvider: 'mistral',
-    piApiDefault: 'mistral-conversations',
     supportsThinking: false,
     supportsListModels: true,
     category: 'secondary',
@@ -141,13 +121,9 @@ export const PROVIDER_PRESETS: Record<ProviderId, ProviderPreset> = {
     name: 'DeepSeek',
     nameZh: 'DeepSeek',
     defaultModel: 'deepseek-chat',
-    defaultBaseUrl: 'https://api.deepseek.com/v1',
+    piProviderOverride: 'openai' as KnownProvider,
+    fixedBaseUrl: 'https://api.deepseek.com/v1',
     supportsBaseUrl: true,
-    authHeader: 'bearer',
-    apiKeyEnvVar: 'DEEPSEEK_API_KEY',
-    piProvider: 'openai',
-    piApiDefault: 'openai-completions',
-    compat: { supportsDeveloperRole: false, supportsStore: false },
     supportsThinking: true,
     supportsListModels: true,
     signupUrl: 'https://platform.deepseek.com/api_keys',
@@ -159,10 +135,6 @@ export const PROVIDER_PRESETS: Record<ProviderId, ProviderPreset> = {
     nameZh: '智谱 AI (GLM)',
     defaultModel: 'glm-4-plus',
     supportsBaseUrl: false,
-    authHeader: 'bearer',
-    apiKeyEnvVar: 'ZAI_API_KEY',
-    piProvider: 'zai',
-    piApiDefault: 'openai-completions',
     supportsThinking: true,
     supportsListModels: false,
     category: 'secondary',
@@ -173,10 +145,6 @@ export const PROVIDER_PRESETS: Record<ProviderId, ProviderPreset> = {
     nameZh: 'Kimi Coding (月之暗面)',
     defaultModel: 'kimi-k2-thinking',
     supportsBaseUrl: false,
-    authHeader: 'bearer',
-    apiKeyEnvVar: 'KIMI_CODING_API_KEY',
-    piProvider: 'kimi-coding',
-    piApiDefault: 'anthropic-messages',
     supportsThinking: true,
     supportsListModels: false,
     category: 'secondary',
@@ -187,10 +155,6 @@ export const PROVIDER_PRESETS: Record<ProviderId, ProviderPreset> = {
     nameZh: 'Cerebras',
     defaultModel: 'llama-4-scout-17b-16e',
     supportsBaseUrl: false,
-    authHeader: 'bearer',
-    apiKeyEnvVar: 'CEREBRAS_API_KEY',
-    piProvider: 'cerebras',
-    piApiDefault: 'openai-completions',
     supportsThinking: false,
     supportsListModels: true,
     category: 'advanced',
@@ -201,10 +165,6 @@ export const PROVIDER_PRESETS: Record<ProviderId, ProviderPreset> = {
     nameZh: 'MiniMax',
     defaultModel: 'MiniMax-M1',
     supportsBaseUrl: false,
-    authHeader: 'bearer',
-    apiKeyEnvVar: 'MINIMAX_API_KEY',
-    piProvider: 'minimax',
-    piApiDefault: 'openai-completions',
     supportsThinking: false,
     supportsListModels: false,
     category: 'advanced',
@@ -215,10 +175,6 @@ export const PROVIDER_PRESETS: Record<ProviderId, ProviderPreset> = {
     nameZh: 'Hugging Face',
     defaultModel: 'Qwen/Qwen3-235B-A22B-Thinking-2507',
     supportsBaseUrl: false,
-    authHeader: 'bearer',
-    apiKeyEnvVar: 'HUGGINGFACE_API_KEY',
-    piProvider: 'huggingface',
-    piApiDefault: 'openai-completions',
     supportsThinking: true,
     supportsListModels: false,
     category: 'advanced',
@@ -246,4 +202,83 @@ export function groupedProviders(): { primary: ProviderId[]; secondary: Provider
     else advanced.push(id);
   }
   return { primary, secondary, advanced };
+}
+
+// ---------------------------------------------------------------------------
+// Helpers that delegate to pi-ai — single source of truth for technical details
+// ---------------------------------------------------------------------------
+
+/** Map ProviderId to pi-ai's KnownProvider (handles deepseek → openai) */
+export function toPiProvider(id: ProviderId): string {
+  return PROVIDER_PRESETS[id].piProviderOverride ?? id;
+}
+
+/**
+ * Get the env var name for a provider's API key, using pi-ai as source of truth.
+ * DeepSeek is not in pi-ai, so we hardcode its env var.
+ */
+const EXTRA_ENV_KEYS: Partial<Record<ProviderId, string>> = {
+  deepseek: 'DEEPSEEK_API_KEY',
+};
+
+export function getApiKeyEnvVar(id: ProviderId): string | undefined {
+  if (EXTRA_ENV_KEYS[id]) return EXTRA_ENV_KEYS[id];
+  return piEnvVarName(toPiProvider(id));
+}
+
+/** Read the actual API key from env for a provider */
+export function getApiKeyFromEnv(id: ProviderId): string | undefined {
+  if (id === 'deepseek') return process.env.DEEPSEEK_API_KEY;
+  return piGetEnvApiKey(toPiProvider(id) as KnownProvider);
+}
+
+/**
+ * Get the default baseUrl for a provider from pi-ai's model registry.
+ * For deepseek, returns its fixed baseUrl.
+ */
+export function getDefaultBaseUrl(id: ProviderId): string {
+  const preset = PROVIDER_PRESETS[id];
+  if (preset.fixedBaseUrl) return preset.fixedBaseUrl;
+  try {
+    const models = piGetModels(toPiProvider(id) as any);
+    return models[0]?.baseUrl ?? '';
+  } catch {
+    return '';
+  }
+}
+
+/**
+ * Get the default API type for a provider from pi-ai's model registry.
+ * Used as fallback when constructing models not in the registry.
+ */
+export function getDefaultApi(id: ProviderId): string {
+  try {
+    const models = piGetModels(toPiProvider(id) as any);
+    return models[0]?.api ?? 'openai-completions';
+  } catch {
+    return 'openai-completions';
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Internal: reverse-engineer pi-ai's env var name mapping (for UI display)
+// ---------------------------------------------------------------------------
+const PI_ENV_MAP: Record<string, string> = {
+  anthropic: 'ANTHROPIC_API_KEY',
+  openai: 'OPENAI_API_KEY',
+  'azure-openai-responses': 'AZURE_OPENAI_API_KEY',
+  google: 'GEMINI_API_KEY',
+  groq: 'GROQ_API_KEY',
+  cerebras: 'CEREBRAS_API_KEY',
+  xai: 'XAI_API_KEY',
+  openrouter: 'OPENROUTER_API_KEY',
+  zai: 'ZAI_API_KEY',
+  mistral: 'MISTRAL_API_KEY',
+  minimax: 'MINIMAX_API_KEY',
+  huggingface: 'HF_TOKEN',
+  'kimi-coding': 'KIMI_API_KEY',
+};
+
+function piEnvVarName(piProvider: string): string | undefined {
+  return PI_ENV_MAP[piProvider];
 }

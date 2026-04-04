@@ -6,7 +6,7 @@ import { FileNode, SYSTEM_FILES } from '@/lib/types';
 import { encodePath } from '@/lib/utils';
 import {
   ChevronDown, FileText, Table, Folder, FolderOpen, Plus, Loader2,
-  Trash2, Pencil, Layers, ScrollText, FolderInput, Copy, MoreHorizontal, Star,
+  Trash2, Pencil, Layers, ScrollText, FolderInput, Copy, MoreHorizontal, Star, Inbox,
 } from 'lucide-react';
 import { createFileAction, deleteFileAction, renameFileAction, renameSpaceAction, deleteSpaceAction, convertToSpaceAction, deleteFolderAction, undoDeleteAction } from '@/lib/actions';
 import { toast } from '@/lib/toast';
@@ -430,7 +430,9 @@ function DirectoryNode({ node, depth, currentPath, onNavigate, maxOpenDepth, onI
           `}
         >
           {isSpace
-            ? <Layers size={14} className="shrink-0 text-[var(--amber)]" />
+            ? node.name === 'Inbox'
+              ? <Inbox size={14} className="shrink-0 text-[var(--amber)]" />
+              : <Layers size={14} className="shrink-0 text-[var(--amber)]" />
             : open
               ? <FolderOpen size={14} className="text-yellow-400 shrink-0" />
               : <Folder size={14} className="text-yellow-400 shrink-0" />

@@ -68,6 +68,10 @@ export { createSpaceFilesystem, generateReadmeTemplate } from './create-space';
 export { summarizeTopLevelSpaces } from './list-spaces';
 export type { MindSpaceSummary } from './list-spaces';
 
+// Inbox
+export { INBOX_DIR, ensureInboxSpace, listInboxFiles, saveToInbox } from './inbox';
+export type { InboxFileInfo, InboxSaveResult, InboxSaveInput } from './inbox';
+
 // Content changes
 export {
   appendContentChange,

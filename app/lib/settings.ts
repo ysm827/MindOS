@@ -2,7 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import os from 'os';
 import { parseAcpAgentOverrides } from './acp/agent-descriptors';
-import { type ProviderId, PROVIDER_PRESETS, isProviderId } from './agent/providers';
+import { type ProviderId, PROVIDER_PRESETS, isProviderId, getApiKeyFromEnv } from './agent/providers';
 
 const SETTINGS_PATH = path.join(os.homedir(), '.mindos', 'config.json');
 
@@ -229,17 +229,15 @@ export function effectiveAiConfig(): {
     : (envProvider && isProviderId(envProvider) ? envProvider : 'anthropic');
 
   const preset = PROVIDER_PRESETS[provider] ?? PROVIDER_PRESETS.anthropic;
-  const provCfg = s.ai.providers[provider] ?? {};
+  const provCfg = s.ai.providers[provider] ?? { apiKey: '', model: '' };
 
   const apiKey = provCfg.apiKey
-    || (preset.apiKeyEnvVar ? process.env[preset.apiKeyEnvVar] : '')
+    || getApiKeyFromEnv(provider)
     || '';
   const model = provCfg.model
-    || (preset.modelEnvVar ? process.env[preset.modelEnvVar] : '')
     || preset.defaultModel;
   const baseUrl = provCfg.baseUrl
-    || (preset.baseUrlEnvVar ? process.env[preset.baseUrlEnvVar] : '')
-    || preset.defaultBaseUrl
+    || preset.fixedBaseUrl
     || '';
 
   return { provider, apiKey, model, baseUrl };

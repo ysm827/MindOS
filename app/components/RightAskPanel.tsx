@@ -1,5 +1,6 @@
 'use client';
 
+import { useCallback } from 'react';
 import { AlertCircle } from 'lucide-react';
 import AskContent from '@/components/ask/AskContent';
 import ErrorBoundary from '@/components/ErrorBoundary';
@@ -7,8 +8,9 @@ import { useResizeDrag } from '@/hooks/useResizeDrag';
 
 const DEFAULT_WIDTH = 380;
 const MIN_WIDTH = 300;
-const MAX_WIDTH_ABS = 1400;
-const MAX_WIDTH_RATIO = 0.92;
+const MAX_WIDTH_ABS = 2400;
+const MAX_WIDTH_RATIO = 0.95;
+const FOCUS_SNAP_THRESHOLD = 80;
 
 import type { AcpAgentSelection } from '@/hooks/useAskModal';
 
@@ -35,6 +37,15 @@ export default function RightAskPanel({
   width, onWidthChange, onWidthCommit, askMode, onModeSwitch,
   maximized = false, onMaximize, sidebarOffset = 0,
 }: RightAskPanelProps) {
+  const handleResizeEnd = useCallback((w: number) => {
+    const maxAvailable = window.innerWidth - sidebarOffset;
+    if (w >= maxAvailable - FOCUS_SNAP_THRESHOLD && onMaximize && !maximized) {
+      onMaximize();
+    } else {
+      onWidthCommit(w);
+    }
+  }, [sidebarOffset, onMaximize, maximized, onWidthCommit]);
+
   const handleMouseDown = useResizeDrag({
     width,
     minWidth: MIN_WIDTH,
@@ -43,7 +54,7 @@ export default function RightAskPanel({
     direction: 'left',
     disabled: maximized,
     onResize: onWidthChange,
-    onResizeEnd: onWidthCommit,
+    onResizeEnd: handleResizeEnd,
   });
 
   const effectiveWidth = maximized

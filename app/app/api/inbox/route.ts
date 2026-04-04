@@ -1,0 +1,61 @@
+export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
+
+import { NextRequest, NextResponse } from 'next/server';
+import { revalidatePath } from 'next/cache';
+import { effectiveSopRoot } from '@/lib/settings';
+import { listInboxFiles, saveToInbox } from '@/lib/core/inbox';
+import { invalidateCache } from '@/lib/fs';
+
+export async function GET() {
+  const mindRoot = effectiveSopRoot().trim();
+  if (!mindRoot) {
+    return NextResponse.json({ error: 'MIND_ROOT is not configured' }, { status: 400 });
+  }
+
+  try {
+    const files = listInboxFiles(mindRoot);
+    return NextResponse.json({ files });
+  } catch (err) {
+    return NextResponse.json(
+      { error: (err as Error).message },
+      { status: 500 },
+    );
+  }
+}
+
+export async function POST(req: NextRequest) {
+  const mindRoot = effectiveSopRoot().trim();
+  if (!mindRoot) {
+    return NextResponse.json({ error: 'MIND_ROOT is not configured' }, { status: 400 });
+  }
+
+  let body: unknown;
+  try {
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
+  }
+
+  if (!body || typeof body !== 'object' || !Array.isArray((body as { files?: unknown }).files)) {
+    return NextResponse.json({ error: 'Request body must contain a files array' }, { status: 400 });
+  }
+
+  const { files } = body as { files: Array<{ name: string; content: string; encoding?: 'text' | 'base64' }> };
+
+  try {
+    const result = saveToInbox(mindRoot, files);
+
+    if (result.saved.length > 0) {
+      invalidateCache();
+      try { revalidatePath('/', 'layout'); } catch { /* test env */ }
+    }
+
+    return NextResponse.json(result);
+  } catch (err) {
+    return NextResponse.json(
+      { error: (err as Error).message },
+      { status: 500 },
+    );
+  }
+}

@@ -20,7 +20,6 @@ export async function GET(req: NextRequest) {
       instruction: tryRead('INSTRUCTION.md'),
       index: tryRead('README.md'),
       config_json: tryRead('CONFIG.json'),
-      config_md: tryRead('CONFIG.md'),
       user_skill_rules: tryRead('user-skill-rules.md'),
     };
 
@@ -32,7 +31,6 @@ export async function GET(req: NextRequest) {
       result.target_readme = tryRead(path.join(targetDir, 'README.md'));
       result.target_instruction = tryRead(path.join(targetDir, 'INSTRUCTION.md'));
       result.target_config_json = tryRead(path.join(targetDir, 'CONFIG.json'));
-      result.target_config_md = tryRead(path.join(targetDir, 'CONFIG.md'));
     }
 
     return NextResponse.json(result);

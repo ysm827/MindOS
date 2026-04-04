@@ -174,4 +174,3 @@ Agent 进入知识库时，按以下顺序加载上下文：
 
 - `CONFIG.json` 是配置的唯一权威源。
 - 字段语义内嵌于 `keySpecs`；目录命名规则内嵌于 `naming`。
-- 无需额外的 `CONFIG.md`。

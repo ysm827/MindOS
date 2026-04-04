@@ -174,4 +174,3 @@ Create it only when local rules are reusable and meaningful. Avoid creating them
 
 - `CONFIG.json` is the single source of truth for all configuration.
 - Field semantics are embedded in `keySpecs`; directory naming rules in `naming`.
-- No separate `CONFIG.md` is needed.

@@ -5,7 +5,7 @@ import { AlertCircle, ChevronDown, Loader2, Sparkles, Bot, Monitor, ExternalLink
 import type { AiSettings, AgentSettings, ProviderConfig, SettingsData, AiTabProps } from './types';
 import { Field, Select, Input, EnvBadge, ApiKeyInput, Toggle, SettingCard, SettingRow } from './Primitives';
 import { useLocale } from '@/lib/LocaleContext';
-import { type ProviderId, PROVIDER_PRESETS, isProviderId } from '@/lib/agent/providers';
+import { type ProviderId, PROVIDER_PRESETS, isProviderId, getApiKeyEnvVar, getDefaultBaseUrl } from '@/lib/agent/providers';
 import ProviderSelect from '@/components/shared/ProviderSelect';
 
 type TestState = 'idle' | 'testing' | 'ok' | 'error';
@@ -104,7 +104,7 @@ export function AiTab({ data, updateAi, updateAgent, t }: AiTabProps) {
   }, [data.ai.providers, updateAi]);
 
   const currentConfig = data.ai.providers?.[provider] ?? { apiKey: '', model: '', baseUrl: '' };
-  const envKeyName = preset?.apiKeyEnvVar;
+  const envKeyName = preset ? getApiKeyEnvVar(provider) : undefined;
   const activeApiKey = currentConfig.apiKey;
   const activeEnvKey = envKeyName ? env[envKeyName] : false;
   const missingApiKey = !activeApiKey && !activeEnvKey;
@@ -170,11 +170,11 @@ export function AiTab({ data, updateAi, updateAgent, t }: AiTabProps) {
         {preset && (
           <div className="space-y-3 pt-3" style={{ borderTop: '1px solid var(--border)' }}>
             {/* Model */}
-            <Field label={<>{t.settings.ai.model} {preset.modelEnvVar && <EnvBadge overridden={env[preset.modelEnvVar]} />}</>}>
+            <Field label={t.settings.ai.model}>
               <ModelInput
                 value={currentConfig.model}
                 onChange={v => patchProvider(provider, { model: v })}
-                placeholder={(preset.modelEnvVar && envVal[preset.modelEnvVar]) || preset.defaultModel}
+                placeholder={preset.defaultModel}
                 provider={provider}
                 apiKey={currentConfig.apiKey}
                 envKey={!!activeEnvKey}
@@ -211,13 +211,13 @@ export function AiTab({ data, updateAi, updateAgent, t }: AiTabProps) {
             {/* Base URL — only for providers that support it */}
             {preset.supportsBaseUrl && (
               <Field
-                label={<>{t.settings.ai.baseUrl} {preset.baseUrlEnvVar && <EnvBadge overridden={env[preset.baseUrlEnvVar]} />}</>}
+                label={t.settings.ai.baseUrl}
                 hint={t.settings.ai.baseUrlHint}
               >
                 <Input
                   value={currentConfig.baseUrl ?? ''}
                   onChange={e => patchProvider(provider, { baseUrl: e.target.value })}
-                  placeholder={(preset.baseUrlEnvVar && envVal[preset.baseUrlEnvVar]) || preset.defaultBaseUrl || 'https://api.openai.com/v1'}
+                  placeholder={preset.fixedBaseUrl || getDefaultBaseUrl(provider) || 'https://api.openai.com/v1'}
                 />
               </Field>
             )}

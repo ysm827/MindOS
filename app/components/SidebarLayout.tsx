@@ -45,6 +45,84 @@ import { useAskPanel } from '@/hooks/useAskPanel';
 import { useAiOrganize } from '@/hooks/useAiOrganize';
 import type { Tab } from './settings/types';
 
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB per file
+
+function arrayBufferToBase64(buf: ArrayBuffer): string {
+  const bytes = new Uint8Array(buf);
+  const chunks: string[] = [];
+  for (let i = 0; i < bytes.length; i += 8192) {
+    chunks.push(String.fromCharCode(...bytes.subarray(i, i + 8192)));
+  }
+  return btoa(chunks.join(''));
+}
+
+async function quickDropToInbox(
+  files: File[],
+  t: ReturnType<typeof useLocale>['t'],
+) {
+  const payload: Array<{ name: string; content: string; encoding?: string }> = [];
+
+  for (const file of files) {
+    if (file.size > MAX_FILE_SIZE) continue;
+    try {
+      if (file.name.toLowerCase().endsWith('.pdf')) {
+        const buf = await file.arrayBuffer();
+        payload.push({ name: file.name, content: arrayBufferToBase64(buf), encoding: 'base64' });
+      } else {
+        const text = await file.text();
+        payload.push({ name: file.name, content: text });
+      }
+    } catch {
+      /* skip unreadable files */
+    }
+  }
+
+  if (payload.length === 0) return;
+
+  try {
+    const res = await fetch('/api/inbox', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ files: payload }),
+    });
+
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      console.error('[QuickDrop] Save failed:', data.error);
+      showQuickDropToast(0, payload.length, t);
+      return;
+    }
+
+    const result = await res.json();
+    const saved = result.saved?.length ?? 0;
+    const skipped = result.skipped?.length ?? 0;
+    showQuickDropToast(saved, skipped, t);
+    window.dispatchEvent(new Event('mindos:files-changed'));
+    window.dispatchEvent(new Event('mindos:inbox-updated'));
+  } catch (err) {
+    console.error('[QuickDrop] Network error:', err);
+    showQuickDropToast(0, payload.length, t);
+  }
+}
+
+function showQuickDropToast(
+  saved: number,
+  skipped: number,
+  t: ReturnType<typeof useLocale>['t'],
+) {
+  const message = skipped > 0 && saved > 0
+    ? t.inbox.savedWithSkipped(saved, skipped)
+    : saved > 0
+      ? t.inbox.savedToast(saved)
+      : t.inbox.saveFailed;
+
+  window.dispatchEvent(
+    new CustomEvent('mindos:toast', {
+      detail: { message, type: saved > 0 ? 'success' : 'error' },
+    }),
+  );
+}
+
 function collectDirPaths(nodes: FileNode[], prefix = ''): string[] {
   const result: string[] = [];
   for (const n of nodes) {
@@ -118,6 +196,26 @@ export default function SidebarLayout({ fileTree, children }: SidebarLayoutProps
     window.dispatchEvent(new Event('mindos:organize-history-update'));
   }, []);
 
+  // ── Quick Drop toast ──
+  const [quickDropMsg, setQuickDropMsg] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
+
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      if (detail?.message) {
+        setQuickDropMsg({ text: detail.message, type: detail.type ?? 'success' });
+      }
+    };
+    window.addEventListener('mindos:toast', handler);
+    return () => window.removeEventListener('mindos:toast', handler);
+  }, []);
+
+  useEffect(() => {
+    if (!quickDropMsg) return;
+    const timer = setTimeout(() => setQuickDropMsg(null), 4000);
+    return () => clearTimeout(timer);
+  }, [quickDropMsg]);
+
   // ── Import modal state ──
   const [importModalOpen, setImportModalOpen] = useState(false);
   const [importDefaultSpace, setImportDefaultSpace] = useState<string | undefined>(undefined);
@@ -180,6 +278,41 @@ export default function SidebarLayout({ fileTree, children }: SidebarLayoutProps
     window.addEventListener('mindos:open-import', handler);
     return () => window.removeEventListener('mindos:open-import', handler);
   }, [handleOpenImport]);
+
+  // ── Inbox: batch AI organize from InboxSection ──
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const files = (e as CustomEvent).detail?.files as Array<{ name: string; path: string }> | undefined;
+      if (!files || files.length === 0 || aiOrganize.phase === 'organizing') return;
+
+      const prompt = t.inbox.organizePrompt(files.map(f => f.name));
+
+      (async () => {
+        const attachments: Array<{ name: string; content: string }> = [];
+        for (const f of files) {
+          try {
+            const res = await fetch(`/api/file?path=${encodeURIComponent(f.path)}`);
+            if (res.ok) {
+              const data = await res.json();
+              attachments.push({ name: f.name, content: data.content ?? '' });
+            }
+          } catch { /* skip unreadable files */ }
+        }
+        if (attachments.length > 0) {
+          aiOrganize.start(attachments, prompt);
+        }
+      })();
+    };
+    window.addEventListener('mindos:inbox-organize', handler);
+    return () => window.removeEventListener('mindos:inbox-organize', handler);
+  }, [aiOrganize, t]);
+
+  // Notify InboxSection when organize finishes
+  useEffect(() => {
+    if (aiOrganize.phase === 'done' || aiOrganize.phase === 'error') {
+      window.dispatchEvent(new Event('mindos:organize-done'));
+    }
+  }, [aiOrganize.phase]);
 
   // Listen for cross-component "open panel" events (e.g. GuideCard → Agents)
   useEffect(() => {
@@ -525,9 +658,7 @@ export default function SidebarLayout({ fileTree, children }: SidebarLayoutProps
           dragCounterRef.current = 0;
           setDragOverlay(false);
           if (e.dataTransfer.files.length > 0) {
-            setImportInitialFiles(Array.from(e.dataTransfer.files));
-            setImportDefaultSpace(undefined);
-            setImportModalOpen(true);
+            quickDropToInbox(Array.from(e.dataTransfer.files), t);
           }
         }}
       >
@@ -539,13 +670,13 @@ export default function SidebarLayout({ fileTree, children }: SidebarLayoutProps
         <SpaceInitToast />
         <CreateSpaceModal t={t} dirPaths={dirPaths} />
 
-        {/* Global drag overlay */}
+        {/* Global drag overlay — Quick Drop to Inbox */}
         {dragOverlay && !importModalOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm transition-opacity duration-200">
             <div className="border-2 border-dashed border-[var(--amber)]/50 rounded-xl p-12 flex flex-col items-center gap-3">
               <FolderInput size={48} className="text-[var(--amber)]/60" />
-              <p className="text-sm text-foreground font-medium">{t.fileImport.dropOverlay}</p>
-              <p className="text-xs text-muted-foreground">{t.fileImport.dropOverlayFormats}</p>
+              <p className="text-sm text-foreground font-medium">{t.inbox.dropOverlay}</p>
+              <p className="text-xs text-muted-foreground">{t.inbox.dropOverlayFormats}</p>
             </div>
           </div>
         )}
@@ -567,6 +698,28 @@ export default function SidebarLayout({ fileTree, children }: SidebarLayoutProps
           onCancel={() => { aiOrganize.abort(); aiOrganize.reset(); setOrganizeToastVisible(false); }}
           onHistoryUpdate={handleHistoryUpdate}
         />
+      )}
+
+      {/* Quick Drop toast */}
+      {quickDropMsg && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 animate-in fade-in slide-in-from-bottom-2 duration-200">
+          <div className={`flex items-center gap-2 px-4 py-2.5 rounded-lg shadow-lg border ${
+            quickDropMsg.type === 'success'
+              ? 'bg-card border-border text-foreground'
+              : 'bg-card border-error/30 text-error'
+          }`}>
+            {quickDropMsg.type === 'success' && (
+              <span className="w-1.5 h-1.5 rounded-full bg-success shrink-0" />
+            )}
+            <span className="text-sm">{quickDropMsg.text}</span>
+            <button
+              onClick={() => setQuickDropMsg(null)}
+              className="ml-2 p-0.5 rounded text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <X size={12} />
+            </button>
+          </div>
+        </div>
       )}
 
       <style>{`

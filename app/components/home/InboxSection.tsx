@@ -154,8 +154,9 @@ export function InboxSection({ isOrganizing: externalOrganizing = false }: Inbox
 }
 
 function InboxFileRow({ file }: { file: InboxFile }) {
+  const { t } = useLocale();
   const isCSV = file.name.endsWith('.csv');
-  const age = formatRelativeTime(file.modifiedAt);
+  const age = formatRelativeTime(file.modifiedAt, t.home.relativeTime);
 
   return (
     <Link
@@ -188,23 +189,31 @@ function InboxFileRow({ file }: { file: InboxFile }) {
       </span>
       {/* Aging warning */}
       {file.isAging && (
-        <AlertCircle
-          size={11}
-          className="shrink-0 text-[var(--amber)]/60"
-          title="7+ days"
-        />
+        <span title="7+ days">
+          <AlertCircle
+            size={11}
+            className="shrink-0 text-[var(--amber)]/60"
+          />
+        </span>
       )}
     </Link>
   );
 }
 
-function formatRelativeTime(isoString: string): string {
+interface RelativeTimeStrings {
+  justNow: string;
+  minutesAgo: (n: number) => string;
+  hoursAgo: (n: number) => string;
+  daysAgo: (n: number) => string;
+}
+
+function formatRelativeTime(isoString: string, rt: RelativeTimeStrings): string {
   const diff = Date.now() - new Date(isoString).getTime();
   const minutes = Math.floor(diff / 60000);
-  if (minutes < 1) return 'just now';
-  if (minutes < 60) return `${minutes}m`;
+  if (minutes < 1) return rt.justNow;
+  if (minutes < 60) return rt.minutesAgo(minutes);
   const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h`;
+  if (hours < 24) return rt.hoursAgo(hours);
   const days = Math.floor(hours / 24);
-  return `${days}d`;
+  return rt.daysAgo(days);
 }

@@ -60,6 +60,10 @@
 - [x] **P2: 统一 exit code 规范** — `EXIT` 常量（OK=0, ERROR=1, ARGS=2, CONNECT=3, NOT_FOUND=4）定义在 `bin/lib/command.js`，所有 `commands/` 模块已迁移
 - [x] **P3: --json 覆盖所有命令** — doctor/sync/config show/token 全部支持 `--json`，Agent 可对所有命令获取结构化输出
 
+### Inbox Quick Capture
+
+- [x] **Inbox Space + Quick Drop + Homepage Section + Batch AI Organize** — 用户可将文件直接拖拽到窗口快速保存到 Inbox，首页显示 Inbox 文件列表，一键触发 AI 整理。核心模块 `lib/core/inbox.ts`（ensureInboxSpace / listInboxFiles / saveToInbox）+ API route `/api/inbox` + `InboxSection` UI + SidebarLayout Quick Drop。21 项测试全覆盖。红队审查修复 3 项：O(n²) base64 编码、文件大小限制、content 校验。FileTree 中 Inbox Space 使用专属图标。
+
 ### 🔴 高优先（下一批做）
 
 - [x] **清理生产代码 console.log** — `app/api/ask/route.ts`、`lib/agent/context.ts`、`lib/acp/subprocess.ts` 残留 `[ask]`/`[ACP]` debug 日志。已改为 `NODE_ENV === 'development'` 条件输出
@@ -78,6 +82,7 @@
 - [x] **Desktop：MindOS 运行时择优（代码层）** — `pickMindOsRuntime` + `resolveLocalMindOsProjectRoot` 接入 `startLocalMode`；`config`/`MINDOS_RUNTIME_ROOT`/`MINDOS_DEV_BUNDLED_ROOT`；Desktop `npm test` 覆盖 pick+layout。内置 `extraResources` 产物与三平台冒烟仍待办。[spec](./specs/spec-desktop-bundled-mindos.md)
 - [x] **Desktop：内置运行时 Next standalone + 精简 prepare** — `app/next.config` `output: 'standalone'`；`prepare-mindos-bundle.mjs` 合并 static/public、拷贝 app 时去掉 `node_modules` / `.next/cache` / `.next/dev`。[spec](./specs/spec-desktop-standalone-runtime.md)
 - [x] **Electron Desktop App（Phase 1）** — 本地+远程双模式桌面端，含系统托盘（模式感知）、自动更新（electron-updater）、IPC 安全桥接、窗口状态持久化、Node.js 自动检测/下载。CI 多平台构建（macOS arm64+x64/Windows/Linux）。30+ 源文件 + 198MB 内置运行时。[spec](./specs/spec-electron-desktop-app.md)
+- [x] **Ask Panel Focus Mode + 宽度扩展** — 拖拽上限从 700px/45% 扩展到 1400px/92%，Maximize 改为 Focus Mode（统一用 width 定位，消除 left 定位跳变）。支持 Esc 退出 Focus，进入/退出平滑过渡。[spec](./specs/spec-ask-panel-focus-mode.md)
 - [ ] **Capacitor 移动端（Phase 2）** — iOS/Android 原生壳，复用 Phase 1 连接 SDK。[spec](./specs/spec-capacitor-mobile-app.md)
 - [x] **Help 页面** — `/help` 路由 + ActivityBar 底部 `?` 图标入口。6 个 section，前 4 个默认展开：
   - 什么是 MindOS（非技术版定位：你和 AI 共享同一个大脑）
