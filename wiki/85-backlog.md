@@ -89,7 +89,8 @@
   - **设计决策：** 核心概念选 Space/Instruction/Skill 而非 Plugin/AI Ask——Plugin 太窄（只是渲染），AI Ask 是功能入口不是概念。三者形成完整链路：结构层→控制层→执行层。"典型使用场景"不独立成 section，合并进"在 Agent 中使用"更连贯。
 - [x] **I1：CLI `mindos status` 命令** — 已有 `mindos doctor` 覆盖此需求
 - [x] **I2：登录页产品标语** — 已实现（`loginT.tagline` + `loginT.subtitle`）
-- [x] **I3：API Key 连通性验证** — Settings AI Tab 已有 Test 按钮（`/api/settings/test-key`），支持 Anthropic/OpenAI，返回延迟和错误分类
+- [x] **I3：API Key 连通性验证** — Settings AI Tab 已有 Test 按钮（`/api/settings/test-key`），支持 13 个 AI Provider（通过 `PROVIDER_PRESETS` 动态注册），使用 `pi-ai.complete()` 统一测试路径（与聊天完全一致），返回延迟和错误分类
+- [x] **I28：Multi-Provider AI 支持** — 新增 `PROVIDER_PRESETS` 注册表（13 个 Provider：Anthropic/OpenAI/Google/Groq/xAI/OpenRouter/Mistral/DeepSeek/智谱/Kimi/Cerebras/MiniMax/HuggingFace），`settings.ts`/`model.ts` 重构为 provider-agnostic，`test-key` 改用 `pi-ai.complete()` 消除 "测试通过但聊天失败" bug，新增 `ProviderSelect` 组件用于 Onboarding 和 Settings 动态渲染
 - [x] **I3.5：`mindos uninstall` 命令** — 一条命令干净卸载（停进程 + 卸 daemon + 删配置 + 删知识库三重保护 + npm uninstall）— v0.5.15
 - [x] **I12：Activity Bar + Panel 布局重构** — 左侧新增 48px Rail（Logo + Files/Search/AI + Settings/Sync），Sidebar 改为可切换 Panel。AI 对话/搜索/设置从 Modal 变为 Panel，不遮盖内容。移动端不变。[spec](./specs/spec-activity-bar-layout.md)
 - [x] **Agent Panel 统一体验重构 (Phase 1-3)** — 抽取 snippet 生成为 shared util，创建 McpProvider 共享数据层，AgentsPanel 展开显示 config snippet + Skills toggle 区，McpTab 消费共享 context 不再重复 fetch。[spec](./specs/spec-agent-panel-unify.md)
