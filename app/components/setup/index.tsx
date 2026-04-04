@@ -324,12 +324,8 @@ export default function SetupWizard() {
     setSubmitting(false);
     setCompleted(true);
     setSetupPhase('done');
-
-    if (restartNeeded) {
-      // Config changed requiring restart — stay on page, show restart block
-      return;
-    }
-    window.location.href = '/?welcome=1';
+    // Always stay on done page to show health check summary.
+    // User navigates away via the "Go to MindOS" button.
   };
 
   const retryAgent = useCallback(async (key: string) => {
@@ -427,14 +423,14 @@ export default function SetupWizard() {
               {s.next} <ChevronRight size={14} />
             </button>
           ) : completed ? (
-            // After completing: show Done link or Restart button in the same position
+            // After completing: show Restart button or Go link
             needsRestart ? (
               <RestartButton s={s} newPort={state.webPort} />
             ) : (
               <a href="/?welcome=1"
-                className="flex items-center gap-1 px-5 py-2 text-sm font-medium rounded-lg transition-colors"
+                className="flex items-center gap-1.5 px-5 py-2 text-sm font-medium rounded-lg transition-colors hover:opacity-90 focus-visible:ring-2 focus-visible:ring-ring"
                 style={{ background: 'var(--amber)', color: 'var(--amber-foreground)' }}>
-                {s.completeDone} &rarr;
+                {s.healthGoHome ?? 'Go to MindOS'} &rarr;
               </a>
             )
           ) : (

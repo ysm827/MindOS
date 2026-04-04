@@ -1,9 +1,12 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import {
-  Loader2, AlertTriangle, CheckCircle2, XCircle,
+  Loader2, AlertTriangle, CheckCircle2, XCircle, Copy, Check,
+  FolderOpen, Brain, Plug, Shield,
 } from 'lucide-react';
+import { copyToClipboard } from '@/lib/clipboard';
+import { toast } from '@/lib/toast';
 import type { SetupState, SetupMessages, AgentInstallStatus } from './types';
 
 // ─── Restart Block ────────────────────────────────────────────────────────────
@@ -211,7 +214,156 @@ export default function StepReview({
           {s.completeFailed}: {error}
         </div>
       )}
-      {needsRestart && setupPhase === 'done' && <RestartBanner s={s} />}
+
+      {/* Health Check Summary — shown when setup is done */}
+      {setupPhase === 'done' && (
+        <HealthCheckView
+          state={state}
+          selectedAgents={selectedAgents}
+          agentStatuses={agentStatuses}
+          needsRestart={needsRestart}
+          s={s}
+        />
+      )}
+    </div>
+  );
+}
+
+/* ── Health Check Summary ─────────────────────────────────────────────────── */
+
+function HealthCheckView({ state, selectedAgents, agentStatuses, needsRestart, s }: {
+  state: SetupState;
+  selectedAgents: Set<string>;
+  agentStatuses: Record<string, AgentInstallStatus>;
+  needsRestart: boolean;
+  s: SetupMessages;
+}) {
+  const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    if (!copied) return;
+    const t = setTimeout(() => setCopied(false), 2000);
+    return () => clearTimeout(t);
+  }, [copied]);
+
+  const handleCopyToken = useCallback(async () => {
+    if (!state.authToken) return;
+    const ok = await copyToClipboard(state.authToken);
+    if (ok) { setCopied(true); toast.copy(); }
+  }, [state.authToken]);
+
+  // Derive health check statuses
+  const kbOk = !!state.mindRoot;
+  const aiOk = state.provider !== 'skip' && state.provider !== '';
+  const successAgents = Object.values(agentStatuses).filter(a => a.state === 'ok').length;
+  const agentsOk = successAgents > 0;
+  const hasToken = !!state.authToken;
+
+  const checks: Array<{
+    ok: boolean;
+    icon: React.ReactNode;
+    title: string;
+    detail: string;
+    action?: string;
+  }> = [
+    {
+      ok: kbOk,
+      icon: <FolderOpen size={14} />,
+      title: s.healthKb ?? 'Knowledge Base',
+      detail: kbOk ? state.mindRoot : (s.healthKbNone ?? 'Not configured'),
+    },
+    {
+      ok: aiOk,
+      icon: <Brain size={14} />,
+      title: s.healthAi ?? 'AI Provider',
+      detail: aiOk
+        ? `${state.provider === 'anthropic' ? 'Anthropic' : 'OpenAI'} (${(state.provider === 'anthropic' ? state.anthropicModel : state.openaiModel) || 'default'})`
+        : (s.healthAiNone ?? 'Not configured — AI features disabled'),
+      action: aiOk ? undefined : (s.healthAiAction ?? 'Add an API key in Settings → AI.'),
+    },
+    {
+      ok: agentsOk,
+      icon: <Plug size={14} />,
+      title: s.healthAgents ?? 'Agent Tools',
+      detail: agentsOk
+        ? (s.healthAgentsOk?.(successAgents) ?? `${successAgents} agent(s) configured`)
+        : selectedAgents.size > 0
+          ? (s.healthAgentsPartial ?? 'Configuration in progress...')
+          : (s.healthAgentsNone ?? 'No agents configured'),
+      action: agentsOk ? undefined : (s.healthAgentsAction ?? 'You can add agents later in Settings → MCP.'),
+    },
+  ];
+
+  return (
+    <div className="space-y-4">
+      {/* Health check items */}
+      <div className="rounded-xl border overflow-hidden" style={{ borderColor: 'var(--border)' }}>
+        {checks.map(({ ok, icon, title, detail, action }, i) => (
+          <div key={i}
+            className="flex items-start gap-3 px-4 py-3"
+            style={{
+              background: i % 2 === 0 ? 'var(--card)' : 'transparent',
+              borderTop: i > 0 ? '1px solid var(--border)' : undefined,
+            }}>
+            <div className="w-5 h-5 rounded-full flex items-center justify-center shrink-0 mt-0.5"
+              style={{
+                background: ok
+                  ? 'color-mix(in srgb, var(--success) 15%, transparent)'
+                  : 'color-mix(in srgb, var(--amber) 15%, transparent)',
+                color: ok ? 'var(--success)' : 'var(--amber)',
+              }}>
+              {ok ? <CheckCircle2 size={12} /> : <AlertTriangle size={10} />}
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-1.5 text-sm font-medium" style={{ color: 'var(--foreground)' }}>
+                {icon} {title}
+              </div>
+              <p className="text-xs mt-0.5 truncate" style={{ color: ok ? 'var(--muted-foreground)' : 'var(--amber-text)' }}>
+                {detail}
+              </p>
+              {action && (
+                <p className="text-xs mt-0.5" style={{ color: 'var(--muted-foreground)' }}>{action}</p>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Auth Token — always shown prominently */}
+      {hasToken && (
+        <div className="rounded-xl border p-4 space-y-2" style={{ borderColor: 'var(--border)', background: 'var(--card)' }}>
+          <div className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wider" style={{ color: 'var(--muted-foreground)' }}>
+            <Shield size={11} />
+            {s.healthTokenTitle ?? 'MCP Auth Token'}
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="flex-1 flex items-center px-3 py-2 rounded-lg min-h-[38px]"
+              style={{ background: 'var(--muted)', border: '1px solid var(--border)' }}>
+              <code className="flex-1 text-xs font-mono break-all select-all leading-relaxed" style={{ color: 'var(--foreground)' }}>
+                {state.authToken}
+              </code>
+            </div>
+            <button
+              type="button"
+              onClick={handleCopyToken}
+              className="shrink-0 p-2 rounded-lg border transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
+              style={{
+                borderColor: copied ? 'color-mix(in srgb, var(--success) 50%, transparent)' : 'var(--border)',
+                background: copied ? 'color-mix(in srgb, var(--success) 10%, transparent)' : 'transparent',
+                color: copied ? 'var(--success)' : 'var(--muted-foreground)',
+              }}
+              title={s.healthTokenCopy ?? 'Copy token'}>
+              {copied ? <Check size={14} /> : <Copy size={14} />}
+            </button>
+          </div>
+          <p className="text-xs" style={{ color: 'var(--muted-foreground)' }}>
+            {s.healthTokenHint ?? 'Use this token when connecting AI agents. Also available in Settings → MCP.'}
+          </p>
+        </div>
+      )}
+
+      {/* Restart banner */}
+      {needsRestart && <RestartBanner s={s} />}
     </div>
   );
 }
