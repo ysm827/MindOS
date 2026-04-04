@@ -643,8 +643,8 @@ export function SyncTab({ t }: SyncTabProps) {
           </div>
         )}
 
-        {/* Error */}
-        {status.lastError && (
+        {/* Error — hide if conflicts section already explains the issue */}
+        {status.lastError && conflicts.length === 0 && (
           <div className="flex items-start gap-2 text-xs p-2.5 rounded-lg bg-destructive/10 text-destructive">
             <AlertCircle size={12} className="shrink-0 mt-0.5" />
             <div className="space-y-1">
