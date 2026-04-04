@@ -251,7 +251,7 @@ MindOS/
 ├── mcp/              # MCP Server — HTTP adapter that maps tools to App API
 ├── skills/           # MindOS Skills (`mindos`, `mindos-zh`) — Workflow guides for Agents
 ├── templates/        # Preset templates (`en/`, `zh/`, `empty/`) — copied to knowledge base on onboard
-├── bin/              # CLI (`mindos start`, `mindos file`, `mindos ask`, `mindos agent`, ... 22 commands)
+├── bin/              # CLI (`mindos start`, `mindos file`, `mindos ask`, `mindos agent`, etc.)
 ├── scripts/          # Setup wizard and helper scripts
 └── README.md
 
@@ -292,7 +292,7 @@ MindOS/
 | `mindos doctor` | Health check |
 | `mindos update` | Update to latest version |
 
-**Keyboard shortcuts:** `⌘K` Search · `⌘/` AI Assistant · `E` Edit · `⌘S` Save · `Esc` Close
+**Main keyboard shortcuts:** `⌘K` Search · `⌘/` AI Assistant · `E` Edit · `⌘S` Save · `Esc` Close — see **[docs/en/cli-commands.md](docs/en/cli-commands.md)** for full list.
 
 ---
 
@@ -311,10 +311,10 @@ Join our WeChat group for early access, feedback, and AI workflow discussions:
 ## 👥 Contributors
 
 <a href="https://github.com/GeminiLight"><img src="https://github.com/GeminiLight.png" width="60" style="border-radius:50%" alt="GeminiLight" /></a>
-<a href="https://github.com/U-rara"><img src="https://github.com/U-rara.png" width="60" style="border-radius:50%" alt="U-rara" /></a>
 <a href="https://github.com/yeahjack"><img src="https://github.com/yeahjack.png" width="60" style="border-radius:50%" alt="yeahjack" /></a>
 <a href="https://github.com/USTChandsomeboy"><img src="https://github.com/USTChandsomeboy.png" width="60" style="border-radius:50%" alt="USTChandsomeboy" /></a>
 <a href="https://github.com/ppsmk388"><img src="https://github.com/ppsmk388.png" width="60" style="border-radius:50%" alt="ppsmk388" /></a>
+<a href="https://github.com/U-rara"><img src="https://github.com/U-rara.png" width="60" style="border-radius:50%" alt="U-rara" /></a>
 <a href="https://github.com/one2piece2hello"><img src="https://github.com/one2piece2hello.png" width="60" style="border-radius:50%" alt="one2piece2hello" /></a>
 <a href="https://github.com/zz-haooo"><img src="https://github.com/zz-haooo.png" width="60" style="border-radius:50%" alt="zz-haooo" /></a>
 

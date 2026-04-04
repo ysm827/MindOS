@@ -251,14 +251,14 @@ MindOS/
 ├── mcp/              # MCP Server — 将工具映射到 App API 的 HTTP 适配器
 ├── skills/           # MindOS Skills（`mindos`、`mindos-zh`）— Agent 工作流指南
 ├── templates/        # 预设模板（`en/`、`zh/`、`empty/`）— onboard 时复制到知识库目录
-├── bin/              # CLI（`mindos start`、`mindos file`、`mindos ask`、`mindos agent` 等 22 个命令）
+├── bin/              # CLI（`mindos start`、`mindos file`、`mindos ask`、`mindos agent` 等）
 ├── scripts/          # 配置向导与辅助脚本
 └── README.md
 
 ~/.mindos/            # 用户数据目录（项目外，不会被提交）
 ├── config.json       # 所有配置（AI 密钥、端口、Auth token、同步设置）
 ├── sync-state.json   # 同步状态（最后同步时间、冲突文件）
-└── my-mind/          # 你的私有知识库（默认路径，onboard 时可自定义）
+└── mind/             # 你的私有知识库（默认路径，onboard 时可自定义）
 ```
 
 ## ⌨️ CLI 命令
@@ -292,7 +292,7 @@ MindOS/
 | `mindos doctor` | 健康检查 |
 | `mindos update` | 更新到最新版本 |
 
-**快捷键：** `⌘K` 搜索 · `⌘/` AI 助手 · `E` 编辑 · `⌘S` 保存 · `Esc` 关闭
+**主要快捷键：** `⌘K` 搜索 · `⌘/` AI 助手 · `E` 编辑 · `⌘S` 保存 · `Esc` 关闭 — 完整列表见 **[docs/zh/cli-commands.md](docs/zh/cli-commands.md)**。
 
 ---
 
