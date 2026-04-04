@@ -173,9 +173,10 @@ export default function SystemPulse() {
         {visibleAgents.map(agent => {
           const age = activityAge(agent.runtimeLastActivityAt);
           return (
-            <div
+            <Link
               key={agent.key}
-              className="flex items-center gap-3 px-3.5 py-3 rounded-xl border border-border hover:border-[var(--amber)]/30 hover:shadow-sm transition-all duration-150"
+              href={`/agents/${encodeURIComponent(agent.key)}`}
+              className="flex items-center gap-3 px-3.5 py-3 rounded-xl border border-border hover:border-[var(--amber)]/30 hover:shadow-sm transition-all duration-150 hover:bg-muted/30 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
               {/* Avatar */}
               <div className="relative w-8 h-8 rounded-lg bg-[var(--amber)]/8 text-[var(--amber-text)] ring-1 ring-[var(--amber)]/15 flex items-center justify-center text-xs font-semibold font-display shrink-0">
@@ -190,7 +191,7 @@ export default function SystemPulse() {
                   {age ? ` · ${age}` : ''}
                 </span>
               </div>
-            </div>
+            </Link>
           );
         })}
       </div>
