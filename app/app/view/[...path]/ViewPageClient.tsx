@@ -354,7 +354,7 @@ export default function ViewPageClient({
     <div className="flex flex-col min-h-screen">
       {/* Top bar */}
       <div className="sticky top-[52px] md:top-0 z-20 border-b border-border px-4 md:px-6 py-2.5" style={{ background: 'var(--background)' }}>
-        <div className="content-width xl:mr-[220px] flex items-center justify-between gap-2">
+        <div className="content-width toc-aware flex items-center justify-between gap-2">
           <div className="min-w-0 flex-1 flex items-center gap-1.5">
             <button
               onClick={() => router.back()}
@@ -476,7 +476,7 @@ export default function ViewPageClient({
                   type="button"
                   onClick={() => setMoreOpen(v => !v)}
                   className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-                  title="More"
+                  title={t.view?.more ?? 'More'}
                 >
                   <MoreHorizontal size={16} />
                 </button>
@@ -486,14 +486,14 @@ export default function ViewPageClient({
                     className="absolute right-0 top-full mt-1 z-50 min-w-[160px] rounded-lg border border-border bg-card shadow-lg py-1"
                   >
                     <button className="w-full flex items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-muted transition-colors text-left" onClick={handleCopyPath}>
-                      <Copy size={14} className="shrink-0" /> Copy Path
+                      <Copy size={14} className="shrink-0" /> {t.view?.copyPath ?? t.fileTree?.copyPath ?? 'Copy Path'}
                     </button>
                     <button className="w-full flex items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-muted transition-colors text-left" onClick={handleStartRename}>
-                      <Pencil size={14} className="shrink-0" /> Rename
+                      <Pencil size={14} className="shrink-0" /> {t.view?.rename ?? 'Rename'}
                     </button>
                     <div className="my-1 border-t border-border/50" />
                     <button className="w-full flex items-center gap-2 px-3 py-2 text-sm text-error hover:bg-error/10 transition-colors text-left" onClick={() => { setMoreOpen(false); setShowDeleteConfirm(true); }}>
-                      <Trash2 size={14} className="shrink-0" /> Delete
+                      <Trash2 size={14} className="shrink-0" /> {t.view?.delete ?? 'Delete'}
                     </button>
                   </div>
                 )}
@@ -506,7 +506,7 @@ export default function ViewPageClient({
       {/* Content */}
       <div className="flex-1 px-4 md:px-6 py-6 md:py-8">
         {editing ? (
-          <div className="content-width xl:mr-[220px]">
+          <div className="content-width toc-aware">
             {isDraft && showSaveAs && (
               <div className="mb-3 rounded-lg border border-border bg-card p-3 flex flex-col gap-2">
                 <div>
@@ -553,7 +553,7 @@ export default function ViewPageClient({
             )}
           </div>
         ) : showRenderer && LazyComponent ? (
-          <div ref={contentRef} className="content-width xl:mr-[220px]">
+          <div ref={contentRef} className="content-width toc-aware">
             {findOpen && <FindInPage containerRef={contentRef} onClose={() => setFindOpen(false)} />}
             <Suspense fallback={<div className="flex items-center justify-center py-12"><Loader2 size={20} className="animate-spin text-muted-foreground" /></div>}>
               <LazyComponent
@@ -566,7 +566,7 @@ export default function ViewPageClient({
             <Backlinks filePath={filePath} />
           </div>
         ) : (
-          <div ref={contentRef} className="content-width xl:mr-[220px]">
+          <div ref={contentRef} className="content-width toc-aware">
             {findOpen && <FindInPage containerRef={contentRef} onClose={() => setFindOpen(false)} />}
             {extension === 'csv' ? (
               <CsvView

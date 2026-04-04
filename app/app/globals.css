@@ -139,8 +139,13 @@ body {
 .font-display { font-family: 'IBM Plex Mono', var(--font-ibm-plex-mono), monospace; }
 
 /* Content width — controlled by Settings > Appearance */
-:root { --content-width: 780px; }
+:root { --content-width: 780px; --toc-width: 0px; }
 .content-width { max-width: var(--content-width-override, var(--content-width)); margin-left: auto; margin-right: auto; }
+
+/* TOC margin — only on xl screens where TOC is visible */
+@media (min-width: 1280px) {
+  .toc-aware { margin-right: calc(var(--toc-width, 0px) + 8px); transition: margin-right 200ms ease-in-out; }
+}
 
 ::-webkit-scrollbar { width: 5px; height: 5px; }
 ::-webkit-scrollbar-track { background: transparent; }
