@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useEffect } from 'react';
+import { useRef, useEffect, memo } from 'react';
 import { Sparkles, Loader2, AlertCircle, Wrench, WifiOff, Zap } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -142,7 +142,7 @@ interface MessageListProps {
   };
 }
 
-export default function MessageList({
+export default memo(function MessageList({
   messages,
   isLoading,
   loadingPhase,
@@ -232,4 +232,4 @@ export default function MessageList({
       <div ref={endRef} />
     </div>
   );
-}
+});

@@ -152,7 +152,7 @@ function McpStatusCard({ status, restarting, onRestart, onRefresh, m }: {
                 <span className="text-muted-foreground">·</span>
                 <span className="font-mono text-muted-foreground">{status.endpoint}</span>
                 <span className="text-muted-foreground">·</span>
-                <span className="text-muted-foreground">{status.toolCount} tools</span>
+                <span className="text-muted-foreground">{status.toolCount} {m?.tools ?? 'tools'}</span>
               </>
             )}
           </>

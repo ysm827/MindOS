@@ -7,13 +7,16 @@ import { apiFetch } from '@/lib/api';
 import type { SyncStatus, SyncTabProps } from './types';
 import type { Messages } from '@/lib/i18n';
 
-export function timeAgo(iso: string | null | undefined): string {
-  if (!iso) return 'never';
+export function timeAgo(iso: string | null | undefined, syncT?: Record<string, unknown>): string {
+  if (!iso) return (syncT?.timeNever as string) ?? 'never';
   const diff = Date.now() - new Date(iso).getTime();
-  if (diff < 60000) return 'just now';
-  if (diff < 3600000) return `${Math.floor(diff / 60000)}m ago`;
-  if (diff < 86400000) return `${Math.floor(diff / 3600000)}h ago`;
-  return `${Math.floor(diff / 86400000)}d ago`;
+  if (diff < 60000) return (syncT?.timeJustNow as string) ?? 'just now';
+  const m = Math.floor(diff / 60000);
+  if (diff < 3600000) return (syncT?.timeMinAgo as ((n: number) => string))?.(m) ?? `${m}m ago`;
+  const h = Math.floor(diff / 3600000);
+  if (diff < 86400000) return (syncT?.timeHourAgo as ((n: number) => string))?.(h) ?? `${h}h ago`;
+  const d = Math.floor(diff / 86400000);
+  return (syncT?.timeDayAgo as ((n: number) => string))?.(d) ?? `${d}d ago`;
 }
 
 /* ── Empty state — GUI sync init form ─────────────────────────── */
@@ -192,6 +195,7 @@ function SyncEmptyState({ t, onInitComplete }: { t: Messages; onInitComplete: ()
 /* ── Main SyncTab ──────────────────────────────────────────────── */
 
 export function SyncTab({ t }: SyncTabProps) {
+  const syncT = t.settings?.sync;
   const [status, setStatus] = useState<SyncStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
@@ -221,10 +225,10 @@ export function SyncTab({ t }: SyncTabProps) {
         body: JSON.stringify({ action: 'now' }),
         timeout: 120_000, // sync can take 60s+ for large repos
       });
-      setMessage({ type: 'success', text: 'Sync complete' });
+      setMessage({ type: 'success', text: syncT?.syncComplete ?? 'Sync complete' });
       await fetchStatus();
     } catch {
-      setMessage({ type: 'error', text: 'Sync failed' });
+      setMessage({ type: 'error', text: syncT?.syncFailed ?? 'Sync failed' });
     } finally {
       setSyncing(false);
       setTimeout(() => setMessage(null), 3000);
@@ -243,9 +247,9 @@ export function SyncTab({ t }: SyncTabProps) {
         body: JSON.stringify({ action }),
       });
       await fetchStatus();
-      setMessage({ type: 'success', text: status.enabled ? 'Auto-sync disabled' : 'Auto-sync enabled' });
+      setMessage({ type: 'success', text: status.enabled ? (syncT?.autoSyncDisabled ?? 'Auto-sync disabled') : (syncT?.autoSyncEnabled ?? 'Auto-sync enabled') });
     } catch {
-      setMessage({ type: 'error', text: 'Failed to toggle sync' });
+      setMessage({ type: 'error', text: syncT?.toggleFailed ?? 'Failed to toggle sync' });
     } finally {
       setToggling(false);
       setTimeout(() => setMessage(null), 3000);
@@ -268,32 +272,32 @@ export function SyncTab({ t }: SyncTabProps) {
 
   return (
     <div className="space-y-6">
-      <SectionLabel>Sync</SectionLabel>
+      <SectionLabel>{syncT?.sectionTitle ?? 'Sync'}</SectionLabel>
 
       {/* Status overview */}
       <div className="space-y-2.5 text-sm">
         <div className="flex items-center gap-2">
-          <span className="text-muted-foreground w-24 shrink-0">Provider</span>
+          <span className="text-muted-foreground w-24 shrink-0">{syncT?.labelProvider ?? 'Provider'}</span>
           <span className="font-mono text-sm">{status.provider}</span>
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-muted-foreground w-24 shrink-0">Remote</span>
+          <span className="text-muted-foreground w-24 shrink-0">{syncT?.labelRemote ?? 'Remote'}</span>
           <span className="font-mono text-sm truncate" title={status.remote}>{status.remote}</span>
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-muted-foreground w-24 shrink-0">Branch</span>
+          <span className="text-muted-foreground w-24 shrink-0">{syncT?.labelBranch ?? 'Branch'}</span>
           <span className="font-mono text-sm">{status.branch}</span>
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-muted-foreground w-24 shrink-0">Last sync</span>
-          <span className="text-sm">{timeAgo(status.lastSync)}</span>
+          <span className="text-muted-foreground w-24 shrink-0">{syncT?.labelLastSync ?? 'Last sync'}</span>
+          <span className="text-sm">{timeAgo(status.lastSync, syncT)}</span>
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-muted-foreground w-24 shrink-0">Unpushed</span>
-          <span className="text-sm">{status.unpushed} commits</span>
+          <span className="text-muted-foreground w-24 shrink-0">{syncT?.labelUnpushed ?? 'Unpushed'}</span>
+          <span className="text-sm">{(syncT?.unpushedCommits as ((n: number) => string))?.(status.unpushed) ?? `${status.unpushed} commits`}</span>
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-muted-foreground w-24 shrink-0">Auto-sync</span>
+          <span className="text-muted-foreground w-24 shrink-0">{syncT?.labelAutoSync ?? 'Auto-sync'}</span>
           <span className="text-sm">
             commit: {status.autoCommitInterval}s, pull: {Math.floor((status.autoPullInterval || 300) / 60)}min
           </span>
@@ -310,7 +314,7 @@ export function SyncTab({ t }: SyncTabProps) {
           className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg border border-border text-muted-foreground hover:text-foreground hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
         >
           <RefreshCw size={12} className={syncing ? 'animate-spin' : ''} />
-          Sync Now
+          {syncT?.syncNow ?? 'Sync Now'}
         </button>
         <button
           type="button"
@@ -323,7 +327,7 @@ export function SyncTab({ t }: SyncTabProps) {
               : 'border-success/30 text-success hover:bg-success/10'
           }`}
         >
-          {status.enabled ? 'Disable Auto-sync' : 'Enable Auto-sync'}
+          {status.enabled ? (syncT?.disableAutoSync ?? 'Disable Auto-sync') : (syncT?.enableAutoSync ?? 'Enable Auto-sync')}
         </button>
       </div>
 
@@ -341,7 +345,7 @@ export function SyncTab({ t }: SyncTabProps) {
       {/* Conflicts (Task H — enhanced with links) */}
       {conflicts.length > 0 && (
         <div className="pt-2 border-t border-border">
-          <SectionLabel>Conflicts ({conflicts.length})</SectionLabel>
+          <SectionLabel>{(syncT?.conflictsTitle as ((n: number) => string))?.(conflicts.length) ?? `Conflicts (${conflicts.length})`}</SectionLabel>
           <div className="space-y-1.5">
             {conflicts.map((c, i) => (
               <div key={i} className="flex items-center gap-2 text-xs group">
@@ -360,12 +364,12 @@ export function SyncTab({ t }: SyncTabProps) {
                 >
                   <ExternalLink size={11} />
                 </a>
-                <span className="text-muted-foreground shrink-0 ml-auto">{timeAgo(c.time)}</span>
+                <span className="text-muted-foreground shrink-0 ml-auto">{timeAgo(c.time, syncT)}</span>
               </div>
             ))}
           </div>
           <p className="text-xs text-muted-foreground mt-2">
-            Click a file to view your version. Hover and click <ExternalLink size={10} className="inline" /> to see the remote version.
+            {syncT?.conflictHint ?? 'Click a file to view your version. Hover and click'} <ExternalLink size={10} className="inline" /> {syncT?.conflictHintSuffix ?? 'to see the remote version.'}
           </p>
         </div>
       )}

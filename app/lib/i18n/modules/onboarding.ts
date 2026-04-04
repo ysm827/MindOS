@@ -34,7 +34,7 @@ export const onboardingEn = {
     apiKeyExisting: 'Existing key configured. Leave blank to keep it.',
     model: 'Model',
     baseUrl: 'Base URL',
-    baseUrlHint: 'Optional. For proxies or OpenAI-compatible APIs.',
+    baseUrlHint: 'Optional. For proxies or custom API endpoints.',
     // Step 3
     webPort: 'Web UI port',
     mcpPort: 'MCP server port',
@@ -248,7 +248,7 @@ export const onboardingZh = {
     apiKeyExisting: '已配置密钥。留空即保持不变。',
     model: '模型',
     baseUrl: '接口地址',
-    baseUrlHint: '可选。用于代理或 OpenAI 兼容 API。',
+    baseUrlHint: '可选。用于代理或自定义 API 端点。',
     // Step 3
     webPort: 'Web UI 端口',
     mcpPort: 'MCP 服务端口',
