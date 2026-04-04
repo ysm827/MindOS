@@ -663,18 +663,6 @@ export default function AskContent({ visible, currentFile, initialMessage, initi
                 disabled={isLoading}
               />
             )}
-            {/* Inline footer hints — right-aligned */}
-            <div className="flex-1" />
-            <div className={cn(
-              'flex items-center gap-x-2 text-[10px] text-muted-foreground/40 shrink-0',
-            )}>
-              <span suppressHydrationWarning>
-                <kbd className="font-mono">@</kbd> {t.ask.attachFile}
-              </span>
-              <span suppressHydrationWarning>
-                <kbd className="font-mono">/</kbd> {t.ask.skillsHint}
-              </span>
-            </div>
           </div>
         </div>
       </div>

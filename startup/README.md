@@ -25,6 +25,9 @@
 | 4 | `4_business-plan.md` | 执行摘要、市场机会、商业模式、财务预测、融资需求 |
 | 5 | `5_competitive-analysis.md` | vs Obsidian/Notion/MemOS/OpenAI Memory、四个独占优势 |
 | 6 | `6_user-interview-guide.md` | 16 个访谈问题、记录模板、找人渠道 |
+| 7 | `7_functions-and-cases.md` | 功能全景（5 层 30+ 功能）、6 类使用场景（25+ 个）、场景优先级 |
+| — | `bmc-mindos.zh.md` | BMC 九格商业模式深度分析 |
+| — | `spec-flywheel-experience.md` | 飞轮体验设计 Spec |
 
 ## 核心叙事（一段话版）
 
@@ -58,5 +61,5 @@
 |------|------|
 | `wiki/00-product-proposal.md` | 产品"宪法" |
 | `wiki/03-technical-pillars.md` | 技术支柱详细版 |
-| `marketing/` | 营销文案和社区策略 |
+| `marketing/` | 营销文案和社区策略（已移入 `startup/marketing/`） |
 | `landing/content.md` | Landing page 文案 |

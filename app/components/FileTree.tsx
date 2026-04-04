@@ -45,7 +45,7 @@ export function setShowHiddenFiles(value: boolean) {
   window.dispatchEvent(new Event('mindos:hidden-files-changed'));
 }
 
-function useShowHiddenFiles() {
+export function useShowHiddenFiles() {
   return useSyncExternalStore(subscribeHiddenFiles, getShowHiddenFiles, () => false);
 }
 

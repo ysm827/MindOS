@@ -261,7 +261,7 @@ export const onboardingZh = {
     portConflict: 'Web UI 端口和 MCP 端口不能相同。',
     portVerifyHint: '点击输入框外部验证，或等待自动检测。',
     // Step 4
-    authToken: 'Auth Token',
+    authToken: '认证令牌',
     authTokenHint: 'MCP / API 客户端使用的 Bearer Token，自动生成。',
     authTokenUsage: '用于 MCP 连接和 API 客户端身份验证。配置 Agent 时会自动写入，无需手动填写。',
     authTokenUsageWhat: '这是什么？',
@@ -306,12 +306,12 @@ export const onboardingZh = {
     agentUnverified: '未验证',
     agentVerifyNote: 'stdio agent 需重启后验证',
     // Skill auto-install
-    skillWhat: 'Skill 教 AI Agent 如何使用你的知识库 — 包括笔记的读取、写入和整理规则。',
-    skillAutoHint: (name: string) => `根据您选择的模板，将向选中的 Agent 安装「${name}」Skill。`,
-    skillLabel: 'Skill',
-    skillInstalling: '正在安装 Skill…',
-    skillInstalled: 'Skill 已安装',
-    skillFailed: 'Skill 安装失败',
+    skillWhat: '技能教 AI Agent 如何使用你的知识库——包括笔记的读取、写入和整理规则。',
+    skillAutoHint: (name: string) => `根据您选择的模板，将向选中的 Agent 安装「${name}」技能。`,
+    skillLabel: '技能',
+    skillInstalling: '正在安装技能…',
+    skillInstalled: '技能已安装',
+    skillFailed: '技能安装失败',
     // Step 2 — AI skip card
     aiSkipTitle: '暂时跳过',
     aiSkipDesc: '稍后可在 设置 → AI 中添加 API 密钥。',

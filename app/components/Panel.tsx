@@ -2,14 +2,15 @@
 
 import { useMemo, useState, useRef, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { ChevronsDownUp, ChevronsUpDown, Plus, Import, FileText, Layers } from 'lucide-react';
+import { ChevronsDownUp, ChevronsUpDown, Plus, Import, FileText, Layers, MoreHorizontal, Eye, EyeOff, Trash2 } from 'lucide-react';
 import type { PanelId } from './ActivityBar';
 import type { FileNode } from '@/lib/types';
-import FileTree from './FileTree';
+import FileTree, { setShowHiddenFiles, useShowHiddenFiles } from './FileTree';
 import SyncStatusBar from './SyncStatusBar';
 import PanelHeader from './panels/PanelHeader';
 import { useResizeDrag } from '@/hooks/useResizeDrag';
 import { useLocale } from '@/lib/stores/locale-store';
+import { listTrashAction } from '@/lib/actions';
 
 const noop = () => {};
 
@@ -108,6 +109,42 @@ export default function Panel({
     };
   }, [newPopover]);
 
+  // "More" dropdown popover
+  const [morePopover, setMorePopover] = useState(false);
+  const moreBtnRef = useRef<HTMLButtonElement>(null);
+  const morePopoverRef = useRef<HTMLDivElement>(null);
+  const showHidden = useShowHiddenFiles();
+  const [trashCount, setTrashCount] = useState(0);
+
+  useEffect(() => {
+    if (!morePopover) return;
+    const handler = (e: MouseEvent) => {
+      if (
+        moreBtnRef.current && !moreBtnRef.current.contains(e.target as Node) &&
+        morePopoverRef.current && !morePopoverRef.current.contains(e.target as Node)
+      ) {
+        setMorePopover(false);
+      }
+    };
+    const keyHandler = (e: KeyboardEvent) => { if (e.key === 'Escape') setMorePopover(false); };
+    document.addEventListener('mousedown', handler);
+    document.addEventListener('keydown', keyHandler);
+    return () => {
+      document.removeEventListener('mousedown', handler);
+      document.removeEventListener('keydown', keyHandler);
+    };
+  }, [morePopover]);
+
+  // Fetch trash count on mount and when files change
+  useEffect(() => {
+    const fetchCount = () => {
+      listTrashAction().then(items => setTrashCount(items.length)).catch(() => {});
+    };
+    fetchCount();
+    window.addEventListener('mindos:files-changed', fetchCount);
+    return () => window.removeEventListener('mindos:files-changed', fetchCount);
+  }, []);
+
   // Double-click hint: show only until user has used it once.
   // Initialize false to match SSR; hydrate from localStorage in useEffect.
   const [dblHintSeen, setDblHintSeen] = useState(false);
@@ -153,7 +190,7 @@ export default function Panel({
               <button
                 ref={newBtnRef}
                 type="button"
-                onClick={() => setNewPopover(v => !v)}
+                onClick={() => { setMorePopover(false); setNewPopover(v => !v); }}
                 className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors focus-visible:ring-1 focus-visible:ring-ring"
                 aria-label={t.sidebar.new}
                 title={t.sidebar.new}
@@ -222,6 +259,47 @@ export default function Panel({
             >
               <ChevronsUpDown size={13} />
             </button>
+            {/* Separator */}
+            <div className="w-px h-3.5 bg-border mx-0.5" />
+            {/* More */}
+            <div className="relative">
+              <button
+                ref={moreBtnRef}
+                type="button"
+                onClick={() => { setNewPopover(false); setMorePopover(v => !v); }}
+                className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors focus-visible:ring-1 focus-visible:ring-ring"
+                aria-label={t.sidebar.more}
+                title={t.sidebar.more}
+              >
+                <MoreHorizontal size={13} />
+              </button>
+              {morePopover && (
+                <div
+                  ref={morePopoverRef}
+                  className="absolute top-full right-0 mt-1 min-w-[172px] bg-card border border-border rounded-lg shadow-lg py-1 z-50"
+                >
+                  <button
+                    className="w-full flex items-center gap-2 px-3 py-1.5 text-sm text-foreground hover:bg-muted transition-colors text-left"
+                    onClick={() => { setShowHiddenFiles(!showHidden); }}
+                  >
+                    {showHidden ? <EyeOff size={14} className="shrink-0" /> : <Eye size={14} className="shrink-0" />}
+                    <span className="flex-1">{t.sidebar.showHiddenFiles}</span>
+                    {showHidden && <span className="text-[var(--amber)] text-xs">✓</span>}
+                  </button>
+                  <div className="my-1 border-t border-border/50" />
+                  <button
+                    className="w-full flex items-center gap-2 px-3 py-1.5 text-sm text-foreground hover:bg-muted transition-colors text-left"
+                    onClick={() => { setMorePopover(false); router.push('/trash'); }}
+                  >
+                    <Trash2 size={14} className="shrink-0" />
+                    <span className="flex-1">{t.trash.title}</span>
+                    {trashCount > 0 && (
+                      <span className="text-xs text-muted-foreground tabular-nums">{trashCount}</span>
+                    )}
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </PanelHeader>
         <div className="flex-1 overflow-y-auto min-h-0 px-2 py-2">
