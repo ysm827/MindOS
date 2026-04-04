@@ -3,7 +3,7 @@
 import { useEffect, useLayoutEffect, useRef, useState, useCallback } from 'react';
 import { Sparkles, Send, StopCircle, SquarePen, History, X, Maximize2, Minimize2, PanelRight, AppWindow, Plus } from 'lucide-react';
 import { useLocale } from '@/lib/LocaleContext';
-import type { Message, ImagePart, AskMode } from '@/lib/types';
+import type { AskMode } from '@/lib/types';
 import ModeCapsule, { getPersistedMode } from '@/components/ask/ModeCapsule';
 import { useAskSession } from '@/hooks/useAskSession';
 import { useFileUpload } from '@/hooks/useFileUpload';
@@ -20,8 +20,7 @@ import FileChip from '@/components/ask/FileChip';
 import AgentSelectorCapsule from '@/components/ask/AgentSelectorCapsule';
 import ProviderModelCapsule, { getPersistedProvider } from '@/components/ask/ProviderModelCapsule';
 import type { ProviderId } from '@/lib/agent/providers';
-import { consumeUIMessageStream } from '@/lib/agent/stream-consumer';
-import { isRetryableError, retryDelay, sleep } from '@/lib/agent/reconnect';
+import { useAskChat } from '@/hooks/useAskChat';
 import { cn } from '@/lib/utils';
 import { useAcpDetection } from '@/hooks/useAcpDetection';
 import type { AcpAgentSelection } from '@/hooks/useAskModal';
@@ -82,8 +81,6 @@ export default function AskContent({ visible, currentFile, initialMessage, initi
 
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
-  const abortRef = useRef<AbortController | null>(null);
-  const firstMessageFired = useRef(false);
   const { t } = useLocale();
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
@@ -91,10 +88,6 @@ export default function AskContent({ visible, currentFile, initialMessage, initi
   const [input, setInput] = useState('');
   const inputValueRef = useRef('');
   inputValueRef.current = input;
-  const [isLoading, setIsLoading] = useState(false);
-  const [loadingPhase, setLoadingPhase] = useState<'connecting' | 'thinking' | 'streaming' | 'reconnecting'>('connecting');
-  const [reconnectAttempt, setReconnectAttempt] = useState(0);
-  const reconnectMaxRef = useRef(3);
   const [attachedFiles, setAttachedFiles] = useState<string[]>([]);
   const attachedFilesRef = useRef(attachedFiles);
   attachedFilesRef.current = attachedFiles;
@@ -126,6 +119,31 @@ export default function AskContent({ visible, currentFile, initialMessage, initi
   const mention = useMention();
   const slash = useSlashCommand();
   const acpDetection = useAcpDetection();
+
+  const imageUploadRef = useRef(imageUpload);
+  imageUploadRef.current = imageUpload;
+  const mentionRef = useRef(mention);
+  mentionRef.current = mention;
+  const slashRef = useRef(slash);
+  slashRef.current = slash;
+
+  const resetInputState = useCallback(() => {
+    setInput('');
+    setSelectedSkill(null);
+    setSelectedAcpAgent(null);
+    setAttachedFiles(currentFile ? [currentFile] : []);
+  }, [currentFile]);
+
+  const chatRefs = useRef({ inputValueRef, mentionRef, slashRef, imageUploadRef, sessionRef, uploadRef, selectedSkillRef, selectedAcpAgentRef, attachedFilesRef });
+  const chat = useAskChat({
+    currentFile,
+    chatMode,
+    providerOverride,
+    onFirstMessage,
+    refs: chatRefs.current,
+    errorLabels: { noResponse: t.ask.errorNoResponse, stopped: t.ask.stopped },
+    resetInputState,
+  });
 
   useEffect(() => {
     const handler = (e: Event) => {
@@ -167,7 +185,7 @@ export default function AskContent({ visible, currentFile, initialMessage, initi
       setAttachedFiles(currentFile ? [currentFile] : []);
     } else if (!visible && variant === 'modal') {
       // Modal: abort streaming on close
-      abortRef.current?.abort();
+      chat.abortRef.current?.abort();
     }
     prevVisibleRef.current = visible;
     prevFileRef.current = currentFile;
@@ -178,14 +196,14 @@ export default function AskContent({ visible, currentFile, initialMessage, initi
   useEffect(() => {
     if (!visible || !session.activeSessionId) return;
     const msgs = session.messages;
-    if (isLoading && msgs.length > 0) {
+    if (chat.isLoading && msgs.length > 0) {
       const last = msgs[msgs.length - 1];
       if (last.role === 'assistant' && !last.content.trim() && (!last.parts || last.parts.length === 0)) return;
     }
     session.persistSession(msgs, session.activeSessionId);
     return () => session.clearPersistTimer();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [visible, session.messages, session.activeSessionId, isLoading]);
+  }, [visible, session.messages, session.activeSessionId, chat.isLoading]);
 
   // Esc to close modal or exit focus mode
   useEffect(() => {
@@ -233,10 +251,6 @@ export default function AskContent({ visible, currentFile, initialMessage, initi
 
   const mentionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const slashTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const mentionRef = useRef(mention);
-  mentionRef.current = mention;
-  const slashRef = useRef(slash);
-  slashRef.current = slash;
   const handleInputChange = useCallback((val: string, cursorPos?: number) => {
     setInput(val);
     const pos = cursorPos ?? val.length;
@@ -287,10 +301,6 @@ export default function AskContent({ visible, currentFile, initialMessage, initi
     }, 0);
   }, []);
 
-  const imageUploadRef = useRef(imageUpload);
-  imageUploadRef.current = imageUpload;
-  const isLoadingRef = useRef(isLoading);
-  isLoadingRef.current = isLoading;
   const selectMentionRef = useRef(selectMention);
   selectMentionRef.current = selectMention;
   const selectSlashRef = useRef(selectSlashCommand);
@@ -342,7 +352,7 @@ export default function AskContent({ visible, currentFile, initialMessage, initi
         }
         return;
       }
-      if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing && !isLoadingRef.current && (inputValueRef.current.trim() || imageUploadRef.current.images.length > 0)) {
+      if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing && !chat.isLoadingRef.current && (inputValueRef.current.trim() || imageUploadRef.current.images.length > 0)) {
         e.preventDefault();
         (e.currentTarget as HTMLTextAreaElement).form?.requestSubmit();
       }
@@ -350,188 +360,12 @@ export default function AskContent({ visible, currentFile, initialMessage, initi
     [],
   );
 
-  const handleStop = useCallback(() => { abortRef.current?.abort(); }, []);
-
-  const handleSubmit = useCallback(async (e: React.FormEvent) => {
-    e.preventDefault();
-    const m = mentionRef.current;
-    const s = slashRef.current;
-    const img = imageUploadRef.current;
-    const sess = sessionRef.current;
-    const upl = uploadRef.current;
-    if (m.mentionQuery !== null || s.slashQuery !== null) return;
-    const text = inputValueRef.current.trim();
-    if ((!text && img.images.length === 0) || isLoadingRef.current) return;
-
-    const skill = selectedSkillRef.current;
-    const acpAgent = selectedAcpAgentRef.current;
-    const pendingImages = img.images.length > 0 ? [...img.images] : undefined;
-    const userMsg: Message = {
-      role: 'user',
-      content: text,
-      timestamp: Date.now(),
-      ...(skill && { skillName: skill.name }),
-      ...(pendingImages && { images: pendingImages }),
-    };
-    img.clearImages();
-    const requestMessages = [...sess.messages, userMsg];
-    sess.setMessages([...requestMessages, { role: 'assistant', content: '', timestamp: Date.now() }]);
-    setInput('');
-    setSelectedSkill(null);
-    setSelectedAcpAgent(null);
-    if (onFirstMessage && !firstMessageFired.current) {
-      firstMessageFired.current = true;
-      onFirstMessage();
-    }
-    setAttachedFiles(currentFile ? [currentFile] : []);
-    setIsLoading(true);
-    setLoadingPhase('connecting');
-    setReconnectAttempt(0);
-
-    const controller = new AbortController();
-    abortRef.current = controller;
-
-    let maxRetries = 3;
-    try {
-      const stored = localStorage.getItem('mindos-reconnect-retries');
-      if (stored !== null) { const n = parseInt(stored, 10); if (Number.isFinite(n)) maxRetries = Math.max(0, Math.min(10, n)); }
-    } catch { /* localStorage unavailable */ }
-    reconnectMaxRef.current = maxRetries;
-
-    const requestBody = JSON.stringify({
-      messages: requestMessages,
-      currentFile,
-      attachedFiles: attachedFilesRef.current,
-      uploadedFiles: upl.localAttachments.map(f => ({
-        name: f.name,
-        content: f.content.length > 20_000
-          ? f.content.slice(0, 20_000) + '\n\n[...truncated to first ~20000 chars]'
-          : f.content,
-      })),
-      selectedAcpAgent: acpAgent,
-      mode: chatMode,
-      providerOverride: providerOverride ?? undefined,
-    });
-
-    const doFetch = async (): Promise<{ finalMessage: Message }> => {
-      const res = await fetch('/api/ask', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: requestBody,
-        signal: controller.signal,
-      });
-
-      if (!res.ok) {
-        let errorMsg = `Request failed (${res.status})`;
-        try {
-          const errBody = await res.json() as { error?: { message?: string } | string; message?: string };
-          if (typeof errBody?.error === 'string' && errBody.error.trim()) {
-            errorMsg = errBody.error;
-          } else if (typeof errBody?.error === 'object' && typeof errBody.error?.message === 'string' && errBody.error.message.trim()) {
-            errorMsg = errBody.error.message;
-          } else if (typeof errBody?.message === 'string' && errBody.message.trim()) {
-            errorMsg = errBody.message;
-          }
-        } catch (err) { console.warn("[AskContent] error body parse failed:", err); }
-        const err = new Error(errorMsg);
-        (err as Error & { httpStatus?: number }).httpStatus = res.status;
-        throw err;
-      }
-
-      if (!res.body) throw new Error('No response body');
-
-      setLoadingPhase('thinking');
-
-      const finalMessage = await consumeUIMessageStream(
-        res.body,
-        (msg) => {
-          setLoadingPhase('streaming');
-          sessionRef.current.setMessages(prev => {
-            const updated = [...prev];
-            updated[updated.length - 1] = msg;
-            return updated;
-          });
-        },
-        controller.signal,
-      );
-      return { finalMessage };
-    };
-
-    try {
-      let lastError: Error | null = null;
-
-      for (let attempt = 0; attempt <= maxRetries; attempt++) {
-        if (controller.signal.aborted) break;
-
-        if (attempt > 0) {
-          setReconnectAttempt(attempt);
-          setLoadingPhase('reconnecting');
-          sessionRef.current.setMessages(prev => {
-            const updated = [...prev];
-            updated[updated.length - 1] = { role: 'assistant', content: '', timestamp: Date.now() };
-            return updated;
-          });
-          await sleep(retryDelay(attempt - 1), controller.signal);
-          setLoadingPhase('connecting');
-        }
-
-        try {
-          const { finalMessage } = await doFetch();
-          if (!finalMessage.content.trim() && (!finalMessage.parts || finalMessage.parts.length === 0)) {
-            sessionRef.current.setMessages(prev => {
-              const updated = [...prev];
-              updated[updated.length - 1] = { role: 'assistant', content: `__error__${t.ask.errorNoResponse}` };
-              return updated;
-            });
-          }
-          return;
-        } catch (err) {
-          lastError = err instanceof Error ? err : new Error(String(err));
-          const httpStatus = (err as Error & { httpStatus?: number }).httpStatus;
-          if (!isRetryableError(err, httpStatus) || attempt >= maxRetries) break;
-        }
-      }
-
-      if (lastError) throw lastError;
-    } catch (err) {
-      if ((err as Error).name === 'AbortError') {
-        sessionRef.current.setMessages(prev => {
-          const updated = [...prev];
-          const lastIdx = updated.length - 1;
-          if (lastIdx >= 0 && updated[lastIdx].role === 'assistant') {
-            const last = updated[lastIdx];
-            const hasContent = last.content.trim() || (last.parts && last.parts.length > 0);
-            if (!hasContent) {
-              updated[lastIdx] = { role: 'assistant', content: `__error__${t.ask.stopped}` };
-            }
-          }
-          return updated;
-        });
-      } else {
-        const errMsg = err instanceof Error ? err.message : 'Something went wrong';
-        sessionRef.current.setMessages(prev => {
-          const updated = [...prev];
-          const lastIdx = updated.length - 1;
-          if (lastIdx >= 0 && updated[lastIdx].role === 'assistant') {
-            const last = updated[lastIdx];
-            const hasContent = last.content.trim() || (last.parts && last.parts.length > 0);
-            if (!hasContent) {
-              updated[lastIdx] = { role: 'assistant', content: `__error__${errMsg}` };
-              return updated;
-            }
-          }
-          return [...updated, { role: 'assistant', content: `__error__${errMsg}` }];
-        });
-      }
-    } finally {
-      setIsLoading(false);
-      setReconnectAttempt(0);
-      abortRef.current = null;
-    }
-  }, [currentFile, chatMode, providerOverride, t.ask.errorNoResponse, t.ask.stopped, onFirstMessage]);
+  const { isLoading, loadingPhase, reconnectAttempt, reconnectMaxRef } = chat;
+  const handleSubmit = chat.submit;
+  const handleStop = chat.stop;
 
   const handleResetSession = useCallback(() => {
-    if (isLoadingRef.current) return;
+    if (chat.isLoadingRef.current) return;
     sessionRef.current.resetSession();
     setInput('');
     setAttachedFiles(currentFile ? [currentFile] : []);

@@ -6,6 +6,7 @@ import { revalidatePath } from 'next/cache';
 import { resolveSafe } from '@/lib/core/security';
 import { sanitizeFileName, convertToMarkdown } from '@/lib/core/file-convert';
 import { effectiveSopRoot } from '@/lib/settings';
+import { SYSTEM_FILES } from '@/lib/types';
 import {
   getFileContent,
   saveFileContent,
@@ -31,6 +32,13 @@ import { appendAgentAuditEvent, parseAgentAuditJsonLines } from '@/lib/core/agen
 
 function err(msg: string, status = 400) {
   return NextResponse.json({ error: msg }, { status });
+}
+
+/** Returns true if the path targets a root-level system file (INSTRUCTION.md, CONFIG.json, etc.). */
+function isSystemFile(filePath: string): boolean {
+  const basename = path.posix.basename(filePath);
+  // Only root-level: no directory separators allowed
+  return !filePath.includes('/') && SYSTEM_FILES.has(basename);
 }
 
 function safeRead(filePath: string): string {
@@ -123,6 +131,12 @@ export async function POST(req: NextRequest) {
   const { op, path: filePath, ...params } = body as Record<string, unknown>;
   if (!op || typeof op !== 'string') return err('missing op');
   if (!filePath || typeof filePath !== 'string') return err('missing path');
+
+  // Block agent writes to root-level system files (INSTRUCTION.md, CONFIG.json, etc.)
+  const source = sourceFromRequest(req, body);
+  if (source === 'agent' && isSystemFile(filePath)) {
+    return err(`System file "${filePath}" is protected and cannot be modified by agents`, 403);
+  }
 
   try {
     let resp: NextResponse;

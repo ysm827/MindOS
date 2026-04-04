@@ -139,7 +139,7 @@ export function KnowledgeTab({ data, setData, t }: KnowledgeTabProps) {
       {/* ── Card 1: Knowledge Base ── */}
       <SettingCard
         icon={<DatabaseIcon size={15} />}
-        title="Knowledge Base"
+        title={k.cardTitle ?? 'Knowledge Base'}
         description={k.mindRootHint}
       >
         <Field
@@ -186,7 +186,7 @@ export function KnowledgeTab({ data, setData, t }: KnowledgeTabProps) {
       {/* ── Card 2: Security ── */}
       <SettingCard
         icon={<HardDrive size={15} />}
-        title="Security"
+        title={k.securityTitle ?? 'Security'}
       >
         <Field label={k.webPassword} hint={k.webPasswordHint}>
           <div className="flex gap-2">
@@ -195,14 +195,14 @@ export function KnowledgeTab({ data, setData, t }: KnowledgeTabProps) {
               value={isPasswordMasked ? '••••••••' : (data.webPassword ?? '')}
               onChange={e => setData(d => d ? { ...d, webPassword: e.target.value } : d)}
               onFocus={() => { if (isPasswordMasked) setData(d => d ? { ...d, webPassword: '' } : d); }}
-              placeholder="Leave empty to disable"
+              placeholder={k.passwordPlaceholder ?? 'Leave empty to disable'}
             />
             <button
               type="button"
               onClick={() => setShowPassword(v => !v)}
               className="px-3 py-2 text-sm rounded-lg border border-border text-muted-foreground hover:text-foreground hover:bg-muted transition-colors shrink-0"
             >
-              {showPassword ? 'Hide' : 'Show'}
+              {showPassword ? (k.passwordHide ?? 'Hide') : (k.passwordShow ?? 'Show')}
             </button>
           </div>
         </Field>
@@ -215,7 +215,7 @@ export function KnowledgeTab({ data, setData, t }: KnowledgeTabProps) {
             {/* Token display */}
             <div className="flex items-center gap-2 px-3 py-2 bg-background border border-border rounded-lg min-h-[38px]">
               <code className="flex-1 text-xs font-mono text-foreground break-all select-all">
-                {displayToken || <span className="text-muted-foreground italic">— not set —</span>}
+                {displayToken || <span className="text-muted-foreground italic">{k.tokenNotSet ?? '— not set —'}</span>}
               </code>
               {displayToken && (
                 <button
@@ -233,7 +233,7 @@ export function KnowledgeTab({ data, setData, t }: KnowledgeTabProps) {
               <p className="text-xs text-muted-foreground">
                 {k.authTokenMcpPort}: <code className="font-mono">{data.mcpPort}</code>
                 {displayToken && (
-                  <> &nbsp;·&nbsp; MCP URL: <code className="font-mono select-all">
+                  <> &nbsp;·&nbsp; {k.mcpUrl ?? 'MCP URL'}: <code className="font-mono select-all">
                     {`${origin}:${data.mcpPort}/mcp`}
                   </code></>
                 )}
@@ -264,7 +264,7 @@ export function KnowledgeTab({ data, setData, t }: KnowledgeTabProps) {
             </div>
             {revealedToken && (
               <p className="text-xs text-[var(--amber-text)]">
-                New token generated. Copy it now — it won&apos;t be shown in full again.
+                {k.tokenGenerated}
               </p>
             )}
           </div>
@@ -291,14 +291,14 @@ export function KnowledgeTab({ data, setData, t }: KnowledgeTabProps) {
       )}
 
       {/* System Monitoring — collapsible */}
-      <MonitoringSection />
+      <MonitoringSection k={k} />
 
       <ConfirmDialog
         open={showResetConfirm}
         title={k.authTokenReset ?? 'Regenerate Token'}
         message={k.authTokenResetConfirm}
         confirmLabel={k.authTokenReset ?? 'Regenerate'}
-        cancelLabel="Cancel"
+        cancelLabel={k.cancel ?? 'Cancel'}
         onConfirm={() => { setShowResetConfirm(false); doResetToken(); }}
         onCancel={() => setShowResetConfirm(false)}
       />
@@ -307,7 +307,7 @@ export function KnowledgeTab({ data, setData, t }: KnowledgeTabProps) {
         title={k.cleanupExamples ?? 'Cleanup Examples'}
         message={exampleCount !== null ? k.cleanupExamplesConfirm(exampleCount) : ''}
         confirmLabel={k.cleanupExamplesButton ?? 'Clean up'}
-        cancelLabel="Cancel"
+        cancelLabel={k.cancel ?? 'Cancel'}
         variant="destructive"
         onConfirm={async () => {
           setShowCleanupConfirm(false);
@@ -348,7 +348,7 @@ interface MonitoringData {
   mcp: { running: boolean; port: number };
 }
 
-function MonitoringSection() {
+function MonitoringSection({ k }: { k: Record<string, unknown> }) {
   const [expanded, setExpanded] = useState(false);
   const [data, setData] = useState<MonitoringData | null>(null);
   const [loading, setLoading] = useState(false);
@@ -379,57 +379,57 @@ function MonitoringSection() {
       >
         {expanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
         <Cpu size={12} />
-        System Monitoring
+        {(k.monitoringTitle as string) ?? 'System Monitoring'}
         {loading && <Loader2 size={10} className="animate-spin ml-1" />}
       </button>
 
       {expanded && data && (
         <div className="mt-3 grid grid-cols-2 gap-x-6 gap-y-2 text-xs">
           <div>
-            <span className="text-muted-foreground">Heap</span>
+            <span className="text-muted-foreground">{(k.monitorHeap as string) ?? 'Heap'}</span>
             <span className="ml-2 tabular-nums">{formatBytes(data.system.memory.heapUsed)} / {formatBytes(data.system.memory.heapTotal)}</span>
           </div>
           <div>
-            <span className="text-muted-foreground">RSS</span>
+            <span className="text-muted-foreground">{(k.monitorRss as string) ?? 'RSS'}</span>
             <span className="ml-2 tabular-nums">{formatBytes(data.system.memory.rss)}</span>
           </div>
           <div>
-            <span className="text-muted-foreground">Uptime</span>
+            <span className="text-muted-foreground">{(k.monitorUptime as string) ?? 'Uptime'}</span>
             <span className="ml-2 tabular-nums">{formatUptime(data.system.uptimeMs)}</span>
           </div>
           <div>
-            <span className="text-muted-foreground">Node</span>
+            <span className="text-muted-foreground">{(k.monitorNode as string) ?? 'Node'}</span>
             <span className="ml-2">{data.system.nodeVersion}</span>
           </div>
           <div>
-            <span className="text-muted-foreground">Requests</span>
+            <span className="text-muted-foreground">{(k.monitorRequests as string) ?? 'Requests'}</span>
             <span className="ml-2 tabular-nums">{data.application.agentRequests}</span>
           </div>
           <div>
-            <span className="text-muted-foreground">Tool Calls</span>
+            <span className="text-muted-foreground">{(k.monitorToolCalls as string) ?? 'Tool Calls'}</span>
             <span className="ml-2 tabular-nums">{data.application.toolExecutions}</span>
           </div>
           <div>
-            <span className="text-muted-foreground">Tokens</span>
+            <span className="text-muted-foreground">{(k.monitorTokens as string) ?? 'Tokens'}</span>
             <span className="ml-2 tabular-nums">{(data.application.totalTokens.input + data.application.totalTokens.output).toLocaleString()}</span>
           </div>
           <div>
-            <span className="text-muted-foreground">Files</span>
+            <span className="text-muted-foreground">{(k.monitorFiles as string) ?? 'Files'}</span>
             <span className="ml-2 tabular-nums">{data.knowledgeBase.fileCount} ({formatBytes(data.knowledgeBase.totalSizeBytes)})</span>
           </div>
           <div>
             <span className="text-muted-foreground">MCP</span>
-            <span className="ml-2">{data.mcp.running ? `Running :${data.mcp.port}` : 'Stopped'}</span>
+            <span className="ml-2">{data.mcp.running ? ((k.monitorMcpRunning as (p: number) => string)?.(data.mcp.port) ?? `Running :${data.mcp.port}`) : ((k.monitorMcpStopped as string) ?? 'Stopped')}</span>
           </div>
           <div>
-            <span className="text-muted-foreground">Errors</span>
+            <span className="text-muted-foreground">{(k.monitorErrors as string) ?? 'Errors'}</span>
             <span className="ml-2 tabular-nums">{data.application.errors}</span>
           </div>
         </div>
       )}
 
       {expanded && !data && !loading && (
-        <p className="mt-2 text-xs text-muted-foreground">Failed to load monitoring data</p>
+        <p className="mt-2 text-xs text-muted-foreground">{(k.monitoringFailed as string) ?? 'Failed to load monitoring data'}</p>
       )}
     </div>
   );
