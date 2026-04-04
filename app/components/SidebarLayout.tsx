@@ -43,6 +43,7 @@ import '@/lib/renderers/index'; // client-side renderer registration source of t
 import { useLeftPanel } from '@/hooks/useLeftPanel';
 import { useAskPanel } from '@/hooks/useAskPanel';
 import { useAiOrganize } from '@/hooks/useAiOrganize';
+import { toast } from '@/lib/toast';
 import type { Tab } from './settings/types';
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB per file
@@ -61,9 +62,13 @@ async function quickDropToInbox(
   t: ReturnType<typeof useLocale>['t'],
 ) {
   const payload: Array<{ name: string; content: string; encoding?: string }> = [];
+  let oversizedCount = 0;
 
   for (const file of files) {
-    if (file.size > MAX_FILE_SIZE) continue;
+    if (file.size > MAX_FILE_SIZE) {
+      oversizedCount++;
+      continue;
+    }
     try {
       if (file.name.toLowerCase().endsWith('.pdf')) {
         const buf = await file.arrayBuffer();
@@ -77,7 +82,12 @@ async function quickDropToInbox(
     }
   }
 
-  if (payload.length === 0) return;
+  if (payload.length === 0) {
+    if (oversizedCount > 0) {
+      showQuickDropToast(0, oversizedCount, t);
+    }
+    return;
+  }
 
   try {
     const res = await fetch('/api/inbox', {
@@ -110,17 +120,15 @@ function showQuickDropToast(
   skipped: number,
   t: ReturnType<typeof useLocale>['t'],
 ) {
-  const message = skipped > 0 && saved > 0
-    ? t.inbox.savedWithSkipped(saved, skipped)
-    : saved > 0
-      ? t.inbox.savedToast(saved)
-      : t.inbox.saveFailed;
-
-  window.dispatchEvent(
-    new CustomEvent('mindos:toast', {
-      detail: { message, type: saved > 0 ? 'success' : 'error' },
-    }),
-  );
+  if (saved > 0 && skipped > 0) {
+    toast.success(t.inbox.savedWithSkipped(saved, skipped), 4000);
+  } else if (saved > 0) {
+    toast.success(t.inbox.savedToast(saved), 3000);
+  } else if (skipped > 0) {
+    toast.error(t.inbox.savedWithSkipped(0, skipped), 4000);
+  } else {
+    toast.error(t.inbox.saveFailed, 4000);
+  }
 }
 
 function collectDirPaths(nodes: FileNode[], prefix = ''): string[] {
@@ -195,26 +203,6 @@ export default function SidebarLayout({ fileTree, children }: SidebarLayoutProps
     setHistoryRefreshToken(t => t + 1);
     window.dispatchEvent(new Event('mindos:organize-history-update'));
   }, []);
-
-  // ── Quick Drop toast ──
-  const [quickDropMsg, setQuickDropMsg] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
-
-  useEffect(() => {
-    const handler = (e: Event) => {
-      const detail = (e as CustomEvent).detail;
-      if (detail?.message) {
-        setQuickDropMsg({ text: detail.message, type: detail.type ?? 'success' });
-      }
-    };
-    window.addEventListener('mindos:toast', handler);
-    return () => window.removeEventListener('mindos:toast', handler);
-  }, []);
-
-  useEffect(() => {
-    if (!quickDropMsg) return;
-    const timer = setTimeout(() => setQuickDropMsg(null), 4000);
-    return () => clearTimeout(timer);
-  }, [quickDropMsg]);
 
   // ── Import modal state ──
   const [importModalOpen, setImportModalOpen] = useState(false);
@@ -300,6 +288,8 @@ export default function SidebarLayout({ fileTree, children }: SidebarLayoutProps
         }
         if (attachments.length > 0) {
           aiOrganize.start(attachments, prompt);
+        } else {
+          window.dispatchEvent(new Event('mindos:organize-done'));
         }
       })();
     };
@@ -698,28 +688,6 @@ export default function SidebarLayout({ fileTree, children }: SidebarLayoutProps
           onCancel={() => { aiOrganize.abort(); aiOrganize.reset(); setOrganizeToastVisible(false); }}
           onHistoryUpdate={handleHistoryUpdate}
         />
-      )}
-
-      {/* Quick Drop toast */}
-      {quickDropMsg && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 animate-in fade-in slide-in-from-bottom-2 duration-200">
-          <div className={`flex items-center gap-2 px-4 py-2.5 rounded-lg shadow-lg border ${
-            quickDropMsg.type === 'success'
-              ? 'bg-card border-border text-foreground'
-              : 'bg-card border-error/30 text-error'
-          }`}>
-            {quickDropMsg.type === 'success' && (
-              <span className="w-1.5 h-1.5 rounded-full bg-success shrink-0" />
-            )}
-            <span className="text-sm">{quickDropMsg.text}</span>
-            <button
-              onClick={() => setQuickDropMsg(null)}
-              className="ml-2 p-0.5 rounded text-muted-foreground hover:text-foreground transition-colors"
-            >
-              <X size={12} />
-            </button>
-          </div>
-        </div>
       )}
 
       <style>{`

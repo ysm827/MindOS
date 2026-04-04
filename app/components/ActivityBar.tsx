@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { FolderTree, Search, Settings, RefreshCw, Bot, Compass, ChevronLeft, ChevronRight, Radio, Zap } from 'lucide-react';
 import { useLocale } from '@/lib/LocaleContext';
 import { DOT_COLORS, getStatusLevel } from './SyncStatusBar';
-import type { SyncStatus } from './settings/SyncTab';
+import type { SyncStatus } from './settings/types';
 import Logo from './Logo';
 
 export type PanelId = 'files' | 'search' | 'echo' | 'agents' | 'discover' | 'workflows';

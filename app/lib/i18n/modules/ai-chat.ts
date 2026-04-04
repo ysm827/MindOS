@@ -43,6 +43,9 @@ export const aiChatEn = {
     confirmClear: 'Confirm clear?',
     noSessions: 'No saved sessions.',
     draftingHint: 'AI is still running — you can draft the next step now.',
+    providerCapsule: 'Switch model provider',
+    providerDefault: 'Default',
+    providerNoKey: 'No configured providers',
   },
   changes: {
     unreadBanner: (n: number) => `${n} content change${n === 1 ? '' : 's'} unread`,
@@ -154,6 +157,9 @@ export const aiChatZh = {
     confirmClear: '确认清除？',
     noSessions: '暂无历史对话。',
     draftingHint: 'AI 仍在执行，你可以先输入下一步。',
+    providerCapsule: '切换模型服务商',
+    providerDefault: '默认',
+    providerNoKey: '暂无已配置的服务商',
   },
   changes: {
     unreadBanner: (n: number) => `${n} 条内容变更未读`,

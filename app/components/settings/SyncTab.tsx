@@ -4,10 +4,8 @@ import { useState, useEffect, useCallback } from 'react';
 import { RefreshCw, AlertCircle, CheckCircle2, Loader2, GitBranch, ExternalLink, Eye, EyeOff } from 'lucide-react';
 import { SectionLabel, PrimaryButton, Input } from './Primitives';
 import { apiFetch } from '@/lib/api';
-import type { SyncStatus, SyncTabProps } from './types';
+import type { SyncTabProps } from './types';
 import type { Messages } from '@/lib/i18n';
-
-export { SyncStatus }; // Re-export for backward compatibility
 
 export function timeAgo(iso: string | null | undefined): string {
   if (!iso) return 'never';

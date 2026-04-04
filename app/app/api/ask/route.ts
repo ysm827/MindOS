@@ -19,6 +19,7 @@ import fs from 'fs';
 import path from 'path';
 import { getFileContent, getMindRoot } from '@/lib/fs';
 import { getModelConfig, hasImages } from '@/lib/agent/model';
+import { isProviderId, type ProviderId } from '@/lib/agent/providers';
 import { getRequestScopedTools, getOrganizeTools, getChatTools, WRITE_TOOLS, truncate } from '@/lib/agent/tools';
 import { AGENT_SYSTEM_PROMPT, ORGANIZE_SYSTEM_PROMPT, CHAT_SYSTEM_PROMPT } from '@/lib/agent/prompt';
 import type { AskModeApi } from '@/lib/types';
@@ -321,6 +322,8 @@ export async function POST(req: NextRequest) {
     mode?: AskModeApi;
     /** ACP agent selection: if present, route to ACP instead of MindOS */
     selectedAcpAgent?: { id: string; name: string } | null;
+    /** Per-request provider override from the chat panel capsule */
+    providerOverride?: string;
   };
   try {
     body = await req.json();
@@ -583,7 +586,13 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const { model, modelName, apiKey, provider } = getModelConfig({ hasImages: hasImages(messages) });
+    const provOverride = body.providerOverride && isProviderId(body.providerOverride)
+      ? body.providerOverride as ProviderId
+      : undefined;
+    const { model, modelName, apiKey, provider } = getModelConfig({
+      provider: provOverride,
+      hasImages: hasImages(messages),
+    });
 
     // Convert frontend messages to AgentMessage[]
     const agentMessages = toAgentMessages(messages);

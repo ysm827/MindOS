@@ -30,10 +30,6 @@ export async function GET() {
       };
     }
 
-    // Backward-compatible legacy fields
-    const anthropicCfg = s.ai.providers.anthropic ?? { apiKey: '', model: 'claude-sonnet-4-6' };
-    const openaiCfg = s.ai.providers.openai ?? { apiKey: '', model: 'gpt-5.4', baseUrl: '' };
-
     return NextResponse.json({
       mindRoot: defaultMindRoot,
       homeDir: home,
@@ -43,13 +39,6 @@ export async function GET() {
       authToken: s.authToken ?? '',
       webPassword: s.webPassword ?? '',
       provider: s.ai.provider,
-      // Legacy fields for backward compat
-      anthropicApiKey: maskApiKey(anthropicCfg.apiKey),
-      anthropicModel: anthropicCfg.model,
-      openaiApiKey: maskApiKey(openaiCfg.apiKey),
-      openaiModel: openaiCfg.model,
-      openaiBaseUrl: openaiCfg.baseUrl ?? '',
-      // New dynamic format
       providerConfigs,
       guideState: s.guideState ?? null,
     });

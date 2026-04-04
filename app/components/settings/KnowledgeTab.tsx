@@ -140,11 +140,11 @@ export function KnowledgeTab({ data, setData, t }: KnowledgeTabProps) {
       <SettingCard
         icon={<DatabaseIcon size={15} />}
         title="Knowledge Base"
-        description={k.sopRootHint}
+        description={k.mindRootHint}
       >
         <Field
-          label={<>{k.sopRoot} <EnvBadge overridden={env.MIND_ROOT} /></>}
-          hint={env.MIND_ROOT ? k.envNote : k.sopRootHint}
+          label={<>{k.mindRoot} <EnvBadge overridden={env.MIND_ROOT} /></>}
+          hint={env.MIND_ROOT ? k.envNote : k.mindRootHint}
         >
           <Input
             value={data.mindRoot}

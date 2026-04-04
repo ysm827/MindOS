@@ -11,9 +11,6 @@ import type { McpTabProps, McpStatus, AgentInfo } from './types';
 import AgentInstall from './McpAgentInstall';
 import SkillsSection from './McpSkillsSection';
 
-// Re-export types for backward compatibility
-export type { McpStatus, AgentInfo, SkillInfo, McpTabProps } from './types';
-
 /* ── Main McpTab ───────────────────────────────────────────────── */
 
 export function McpTab({ t }: McpTabProps) {

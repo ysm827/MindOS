@@ -160,29 +160,9 @@ export default function SetupWizard() {
         if (data.homeDir) setHomeDir(data.homeDir);
 
         setState(prev => {
-          // Build providerConfigs from server response (supports both old and new format)
           const provConfigs: Partial<Record<ProviderId, ProviderSetupConfig>> = { ...prev.providerConfigs };
 
-          // Handle legacy flat format from server
-          if (data.anthropicApiKey || data.anthropicModel) {
-            provConfigs.anthropic = {
-              ...provConfigs.anthropic,
-              apiKey: provConfigs.anthropic?.apiKey ?? '',
-              model: data.anthropicModel || provConfigs.anthropic?.model || 'claude-sonnet-4-6',
-              apiKeyMask: data.anthropicApiKey || '',
-            };
-          }
-          if (data.openaiApiKey || data.openaiModel) {
-            provConfigs.openai = {
-              ...provConfigs.openai,
-              apiKey: provConfigs.openai?.apiKey ?? '',
-              model: data.openaiModel || provConfigs.openai?.model || 'gpt-5.4',
-              baseUrl: data.openaiBaseUrl ?? provConfigs.openai?.baseUrl ?? '',
-              apiKeyMask: data.openaiApiKey || '',
-            };
-          }
-
-          // Handle new dynamic providers format from server
+          // Load dynamic providers format from server
           if (data.providerConfigs && typeof data.providerConfigs === 'object') {
             for (const [id, cfg] of Object.entries(data.providerConfigs as Record<string, any>)) {
               if (isProviderId(id) && cfg) {

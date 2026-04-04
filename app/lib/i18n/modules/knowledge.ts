@@ -97,7 +97,9 @@ export const knowledgeEn = {
     agingHint: '7+ days',
     savedToast: (n: number) => `${n} file${n === 1 ? '' : 's'} saved to Inbox`,
     savedWithSkipped: (saved: number, skipped: number) =>
-      `${saved} saved, ${skipped} skipped (unsupported format)`,
+      saved > 0
+        ? `${saved} saved, ${skipped} skipped (unsupported format)`
+        : `${skipped} file${skipped === 1 ? '' : 's'} skipped — unsupported format`,
     organizePrompt: (fileNames: string[]) =>
       `Please organize these files from Inbox into appropriate locations in my knowledge base. Analyze each file's content and move it to the most fitting Space or directory. Create new directories if needed. Here are the files:\n\n${fileNames.map(n => `- Inbox/${n}`).join('\n')}`,
     dropOverlay: 'Drop to save to Inbox',
@@ -437,7 +439,9 @@ export const knowledgeZh = {
     agingHint: '7天+',
     savedToast: (n: number) => `${n} 个文件已保存到收件箱`,
     savedWithSkipped: (saved: number, skipped: number) =>
-      `已保存 ${saved} 个，跳过 ${skipped} 个（格式不支持）`,
+      saved > 0
+        ? `已保存 ${saved} 个，跳过 ${skipped} 个（格式不支持）`
+        : `${skipped} 个文件被跳过（格式不支持）`,
     organizePrompt: (fileNames: string[]) =>
       `请将收件箱中的这些文件整理到知识库的合适位置。分析每个文件的内容，将其移动到最匹配的空间或目录。需要的话可以创建新目录。以下是待整理的文件：\n\n${fileNames.map(n => `- Inbox/${n}`).join('\n')}`,
     dropOverlay: '拖放到收件箱快速保存',

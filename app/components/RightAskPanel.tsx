@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback } from 'react';
+import { useCallback, useRef } from 'react';
 import { AlertCircle } from 'lucide-react';
 import AskContent from '@/components/ask/AskContent';
 import ErrorBoundary from '@/components/ErrorBoundary';
@@ -8,8 +8,7 @@ import { useResizeDrag } from '@/hooks/useResizeDrag';
 
 const DEFAULT_WIDTH = 380;
 const MIN_WIDTH = 300;
-const MAX_WIDTH_ABS = 2400;
-const MAX_WIDTH_RATIO = 0.95;
+const MAX_WIDTH_ABS = 4000;
 const FOCUS_SNAP_THRESHOLD = 80;
 
 import type { AcpAgentSelection } from '@/hooks/useAskModal';
@@ -37,25 +36,49 @@ export default function RightAskPanel({
   width, onWidthChange, onWidthCommit, askMode, onModeSwitch,
   maximized = false, onMaximize, sidebarOffset = 0,
 }: RightAskPanelProps) {
-  const handleResizeEnd = useCallback((w: number) => {
-    const maxAvailable = window.innerWidth - sidebarOffset;
-    if (w >= maxAvailable - FOCUS_SNAP_THRESHOLD && onMaximize && !maximized) {
-      onMaximize();
-    } else {
-      onWidthCommit(w);
-    }
-  }, [sidebarOffset, onMaximize, maximized, onWidthCommit]);
+  const snapFiredRef = useRef(false);
 
-  const handleMouseDown = useResizeDrag({
-    width,
+  const maxAvailable = typeof window !== 'undefined'
+    ? window.innerWidth - sidebarOffset
+    : 1200;
+
+  const handleResize = useCallback((w: number) => {
+    if (snapFiredRef.current) return;
+    const clamped = Math.min(w, maxAvailable);
+    if (maximized && clamped < maxAvailable - FOCUS_SNAP_THRESHOLD && onMaximize) {
+      onMaximize();
+      onWidthChange(clamped);
+      return;
+    }
+    if (!maximized && clamped >= maxAvailable - FOCUS_SNAP_THRESHOLD && onMaximize) {
+      snapFiredRef.current = true;
+      onMaximize();
+      return;
+    }
+    if (!maximized) {
+      onWidthChange(clamped);
+    }
+  }, [maxAvailable, onMaximize, maximized, onWidthChange]);
+
+  const handleResizeEnd = useCallback((w: number) => {
+    if (snapFiredRef.current) return;
+    onWidthCommit(w);
+  }, [onWidthCommit]);
+
+  const rawMouseDown = useResizeDrag({
+    width: maximized ? maxAvailable : width,
     minWidth: MIN_WIDTH,
-    maxWidth: MAX_WIDTH_ABS,
-    maxWidthRatio: MAX_WIDTH_RATIO,
+    maxWidth: maxAvailable,
+    maxWidthRatio: 1,
     direction: 'left',
-    disabled: maximized,
-    onResize: onWidthChange,
+    onResize: handleResize,
     onResizeEnd: handleResizeEnd,
   });
+
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    snapFiredRef.current = false;
+    rawMouseDown(e);
+  }, [rawMouseDown]);
 
   const effectiveWidth = maximized
     ? `calc(100vw - ${sidebarOffset}px)`
@@ -102,15 +125,13 @@ export default function RightAskPanel({
         </div>
       </ErrorBoundary>
 
-      {/* Drag resize handle — LEFT edge (hidden when maximized) */}
-      {!maximized && (
-        <div
-          className="absolute top-0 -left-[3px] w-[6px] h-full cursor-col-resize z-40 group hidden md:block"
-          onMouseDown={handleMouseDown}
-        >
-          <div className="absolute left-[2px] top-0 w-[2px] h-full opacity-0 group-hover:opacity-100 bg-[var(--amber)]/60 transition-opacity" />
-        </div>
-      )}
+      {/* Drag resize handle — LEFT edge */}
+      <div
+        className="absolute top-0 -left-[3px] w-[6px] h-full cursor-col-resize z-40 group hidden md:block"
+        onMouseDown={handleMouseDown}
+      >
+        <div className="absolute left-[2px] top-0 w-[2px] h-full opacity-0 group-hover:opacity-100 bg-[var(--amber)]/60 transition-opacity" />
+      </div>
     </aside>
   );
 }

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { en } from '@/lib/i18n-en';
-import { zh } from '@/lib/i18n-zh';
+import { en } from '@/lib/i18n';
+import { zh } from '@/lib/i18n';
 
 /** Visual polish strings; en/zh must stay in sync (see spec-echo-visual-polish.md). */
 const VISUAL_KEYS = [

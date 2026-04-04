@@ -18,6 +18,8 @@ import SessionHistory from '@/components/ask/SessionHistory';
 import SessionTabBar from '@/components/ask/SessionTabBar';
 import FileChip from '@/components/ask/FileChip';
 import AgentSelectorCapsule from '@/components/ask/AgentSelectorCapsule';
+import ProviderModelCapsule, { getPersistedProvider } from '@/components/ask/ProviderModelCapsule';
+import type { ProviderId } from '@/lib/agent/providers';
 import { consumeUIMessageStream } from '@/lib/agent/stream-consumer';
 import { isRetryableError, retryDelay, sleep } from '@/lib/agent/reconnect';
 import { cn } from '@/lib/utils';
@@ -90,9 +92,11 @@ export default function AskContent({ visible, currentFile, initialMessage, initi
   const [selectedSkill, setSelectedSkill] = useState<SlashItem | null>(null);
   const [selectedAcpAgent, setSelectedAcpAgent] = useState<AcpAgentSelection | null>(null);
   const [chatMode, setChatMode] = useState<AskMode>('agent');
+  const [providerOverride, setProviderOverride] = useState<ProviderId | null>(null);
 
   useEffect(() => {
     setChatMode(getPersistedMode());
+    setProviderOverride(getPersistedProvider());
   }, []);
 
   const session = useAskSession(currentFile);
@@ -353,6 +357,7 @@ export default function AskContent({ visible, currentFile, initialMessage, initi
       })),
       selectedAcpAgent,  // Send structured field instead of text prefix
       mode: chatMode,
+      providerOverride: providerOverride ?? undefined,
     });
 
     const doFetch = async (): Promise<{ finalMessage: Message }> => {
@@ -697,8 +702,8 @@ export default function AskContent({ visible, currentFile, initialMessage, initi
           </div>
         )}
 
-        {/* Mode + Agent selector row */}
-        <div className="flex items-center gap-1.5 px-3 pt-1 pb-0.5">
+        {/* Mode + Agent + Provider selector row */}
+        <div className="flex items-center gap-1.5 px-3 pt-1 pb-0.5 overflow-x-auto">
           <ModeCapsule mode={chatMode} onChange={setChatMode} disabled={isLoading} />
           {mounted && acpDetection.installedAgents.length > 0 && (
             <AgentSelectorCapsule
@@ -706,6 +711,13 @@ export default function AskContent({ visible, currentFile, initialMessage, initi
               onSelect={setSelectedAcpAgent}
               installedAgents={acpDetection.installedAgents}
               loading={acpDetection.loading}
+            />
+          )}
+          {mounted && (
+            <ProviderModelCapsule
+              value={providerOverride}
+              onChange={setProviderOverride}
+              disabled={isLoading}
             />
           )}
         </div>

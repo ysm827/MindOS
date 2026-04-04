@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { en } from '@/lib/i18n-en';
-import { zh } from '@/lib/i18n-zh';
+import { en } from '@/lib/i18n';
+import { zh } from '@/lib/i18n';
 
 describe('i18n explore keys', () => {
   const e = en.explore;

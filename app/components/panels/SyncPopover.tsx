@@ -3,7 +3,7 @@
 import { useEffect, useRef } from 'react';
 import { RefreshCw, CheckCircle2, XCircle, X } from 'lucide-react';
 import { DOT_COLORS, getStatusLevel, getSyncLabel, useSyncAction } from '../SyncStatusBar';
-import type { SyncStatus } from '../settings/SyncTab';
+import type { SyncStatus } from '../settings/types';
 import { PrimaryButton } from '../settings/Primitives';
 
 interface SyncPopoverProps {

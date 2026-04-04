@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { RefreshCw, CheckCircle2, XCircle } from 'lucide-react';
 import { apiFetch } from '@/lib/api';
 import { useLocale } from '@/lib/LocaleContext';
-import type { SyncStatus } from './settings/SyncTab';
+import type { SyncStatus } from './settings/types';
 import { timeAgo } from './settings/SyncTab';
 
 export type StatusLevel = 'synced' | 'unpushed' | 'conflicts' | 'error' | 'off' | 'syncing';

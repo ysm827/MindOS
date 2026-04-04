@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { timeAgo } from '@/components/settings/SyncTab';
 import { getStatusLevel } from '@/components/SyncStatusBar';
-import type { SyncStatus } from '@/components/settings/SyncTab';
+import type { SyncStatus } from '@/components/settings/types';
 
 /* ------------------------------------------------------------------ */
 /*  timeAgo                                                           */
