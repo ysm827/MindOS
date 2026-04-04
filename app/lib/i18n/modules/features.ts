@@ -96,7 +96,7 @@ export const featuresZh = {
     quickStart: {
       title: '快速开始',
       step1Title: '浏览你的知识库',
-      step1Desc: '点击左侧边栏的"空间"图标来浏览你的文件。每个顶级文件夹是一个"空间"——比如 Profile、Notes 或 Projects。',
+      step1Desc: '点击左侧边栏的"空间"图标来浏览你的文件。每个顶级文件夹是一个"空间"——比如个人档案、笔记或项目。',
       step2Title: '和 AI 对话',
       step2Desc: '按 ⌘/（或 Ctrl/）打开 AI 面板。询问任何关于知识库的问题，或使用 @ 附加特定文件作为上下文。',
       step3Title: '连接你的 AI Agent',
@@ -139,7 +139,7 @@ export const featuresZh = {
       title: '常见问题',
       items: [
         { q: '如何切换语言？', a: '前往 设置 → 外观 → 语言。支持中文和英文切换。' },
-        { q: '如何连接 AI Agent？', a: '前往 设置 → MCP & Skills。MindOS 会自动检测已安装的 Agent（Claude Code、Cursor 等），一键即可连接。' },
+        { q: '如何连接 AI Agent？', a: '前往 设置 → MCP 与技能。MindOS 会自动检测已安装的 Agent（Claude Code、Cursor 等），一键即可连接。' },
         { q: '我的数据存储在哪里？', a: '所有数据以纯 Markdown 文件的形式存储在你的本地机器上。MindOS 不会将你的数据上传到任何云服务。数据完全由你掌控。' },
         { q: '如何跨设备同步？', a: '前往 设置 → 同步。MindOS 使用 Git 进行跨设备同步。输入 Git 远程仓库 URL 和访问令牌即可开始同步。' },
         { q: '可以使用自己的 AI 服务商吗？', a: '可以！前往 设置 → AI。支持 OpenAI、Anthropic、Google，或任何 OpenAI 兼容的 API（自定义 Base URL）。' },

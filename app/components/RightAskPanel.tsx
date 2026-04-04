@@ -6,8 +6,8 @@ import AskContent from '@/components/ask/AskContent';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import { useResizeDrag } from '@/hooks/useResizeDrag';
 
-const DEFAULT_WIDTH = 400;
-const MIN_WIDTH = 360;
+const DEFAULT_WIDTH = 420;
+const MIN_WIDTH = 400;
 const MAX_WIDTH_ABS = 4000;
 const FOCUS_SNAP_THRESHOLD = 80;
 
