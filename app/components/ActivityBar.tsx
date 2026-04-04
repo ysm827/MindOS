@@ -118,7 +118,7 @@ export default function ActivityBar({
     if (latest && latest !== dismissed) { setHasUpdate(true); }
     const timer = setTimeout(async () => {
       try {
-        const res = await fetch('/api/update-check');
+        const res = await fetch('/api/update-check', { signal: AbortSignal.timeout(5000) });
         if (!res.ok) return;
         const data = await res.json();
         if (!data.hasUpdate) {

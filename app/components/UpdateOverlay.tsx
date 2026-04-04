@@ -31,7 +31,7 @@ export default function UpdateOverlay() {
             const saved = localStorage.getItem(UPDATE_STATE_KEY);
             if (saved) {
               const { originalVer } = JSON.parse(saved);
-              const data = await fetch('/api/update-check').then(r => r.json());
+              const data = await fetch('/api/update-check', { signal: AbortSignal.timeout(5000) }).then(r => r.json());
               if (data.current && data.current !== originalVer) {
                 setDone(true);
                 localStorage.removeItem(UPDATE_STATE_KEY);

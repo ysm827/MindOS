@@ -32,8 +32,8 @@ export async function GET() {
   for (const url of REGISTRIES) {
     try {
       const res = await fetch(url, {
-        signal: AbortSignal.timeout(3000),
-        next: { revalidate: 300 }, // 5-minute ISR cache
+        signal: AbortSignal.timeout(2000),
+        next: { revalidate: 3600 }, // 1-hour ISR cache (reduce network calls)
       });
       if (res.ok) {
         const data = await res.json();
