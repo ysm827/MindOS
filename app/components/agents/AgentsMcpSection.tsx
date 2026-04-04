@@ -385,14 +385,10 @@ function ByServerView({
   const [reconnectingServer, setReconnectingServer] = useState<string | null>(null);
   const [reconnectMsg, setReconnectMsg] = useState<Record<string, string>>({});
 
-  const isMindosServer = (name: string) => name.toLowerCase().includes('mindos');
-
   const handleAddAgent = useCallback(
-    async (agentKey: string, serverName: string) => {
+    async (agentKey: string, _serverName: string) => {
       setPickerServer(null);
-      if (isMindosServer(serverName)) {
-        await onInstallMindos(agentKey);
-      }
+      await onInstallMindos(agentKey);
     },
     [onInstallMindos],
   );
@@ -442,10 +438,7 @@ function ByServerView({
             .map((name) => allAgents.find((a) => a.name === name))
             .filter(Boolean) as typeof allAgents;
           const orphanNames = srv.agents.filter((name) => !agentDetails.some((a) => a.name === name));
-          const canManage = isMindosServer(srv.serverName);
-          const availableToAdd = canManage
-            ? allAgents.filter((a) => !srv.agents.includes(a.name))
-            : [];
+          const availableToAdd = allAgents.filter((a) => !srv.agents.includes(a.name));
 
           const connectedCount = agentDetails.filter((a) => resolveAgentStatus(a) === 'connected').length;
           const detectedCount = agentDetails.filter((a) => resolveAgentStatus(a) === 'detected').length;
@@ -462,7 +455,7 @@ function ByServerView({
                   <span className="text-sm font-semibold text-foreground truncate">{srv.serverName}</span>
                 </div>
                 <div className="flex items-center gap-1.5 shrink-0">
-                  {canManage && agentDetails.length > 0 && (
+                  {agentDetails.length > 0 && (
                     <ActionButton
                       onClick={() => void handleReconnectAllInServer(srv.serverName, agentDetails)}
                       disabled={reconnectingServer !== null || busyAction !== null}
@@ -471,8 +464,7 @@ function ByServerView({
                       busyLabel={copy.reconnectAllRunning}
                     />
                   )}
-                  {canManage && (
-                    <div className="relative">
+                  <div className="relative">
                       <AddAvatarButton
                         onClick={() => setPickerServer(pickerServer === srv.serverName ? null : srv.serverName)}
                         label={copy.addAgent}
@@ -486,7 +478,6 @@ function ByServerView({
                         onClose={() => setPickerServer(null)}
                       />
                     </div>
-                  )}
                 </div>
               </div>
 
@@ -526,7 +517,7 @@ function ByServerView({
                       <AgentAvatar
                         name={agent.name}
                         status={agentStatus}
-                        onRemove={canManage ? () => setConfirmState({ agentName: agent.name, serverName: srv.serverName }) : undefined}
+                        onRemove={() => setConfirmState({ agentName: agent.name, serverName: srv.serverName })}
                       />
                     </Link>
                   );
