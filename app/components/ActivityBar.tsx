@@ -192,10 +192,10 @@ export default function ActivityBar({
     >
       {/* Content wrapper — overflow-hidden prevents text flash during width transitions */}
       <div className="flex flex-col h-full w-full overflow-hidden">
-        {/* ── Top: Logo — fixed h matches PanelHeader (py-3 + text-xs + py-3 = 40px) ── */}
+        {/* ── Top: Logo — fixed h matches PanelHeader (py-3 + 21px buttons + py-3 = 45px) ── */}
         <Link
           href="/"
-          className={`flex items-center ${expanded ? 'px-3 gap-2' : 'justify-center'} w-full h-[40px] shrink-0 hover:opacity-80 transition-opacity`}
+          className={`flex items-center ${expanded ? 'px-3 gap-2' : 'justify-center'} w-full h-[45px] shrink-0 hover:opacity-80 transition-opacity`}
           aria-label="MindOS Home"
         >
           <Logo id="rail" className="w-7 h-3.5 shrink-0" />

@@ -113,6 +113,7 @@ export interface SkillInfo {
 /** 🟢 MINOR #7: Moved from SyncTab.tsx for consistency */
 export interface SyncStatus {
   enabled: boolean;
+  needsSetup?: boolean;
   provider?: string;
   remote?: string;
   branch?: string;

@@ -304,6 +304,23 @@ export function SyncTab({ t }: SyncTabProps) {
     }
   };
 
+  const handleReset = async () => {
+    setToggling(true);
+    try {
+      await apiFetch('/api/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'reset' }),
+      });
+      await fetchStatus();
+    } catch {
+      setMessage({ type: 'error', text: syncT?.resetFailed ?? 'Failed to reset sync configuration' });
+    } finally {
+      setToggling(false);
+      setTimeout(() => setMessage(null), 3000);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex justify-center py-8">
@@ -314,6 +331,33 @@ export function SyncTab({ t }: SyncTabProps) {
 
   if (!status || !status.enabled) {
     return <SyncEmptyState t={t} onInitComplete={fetchStatus} />;
+  }
+
+  // Broken state: config says enabled but repo/remote is missing
+  if (status.needsSetup) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-start gap-3 p-4 rounded-lg bg-destructive/10">
+          <AlertCircle size={18} className="text-destructive shrink-0 mt-0.5" />
+          <div className="space-y-2">
+            <h3 className="text-sm font-medium text-destructive">
+              {syncT?.brokenTitle ?? 'Sync configuration is broken'}
+            </h3>
+            <p className="text-xs text-destructive/80">
+              {status.lastError || (syncT?.brokenDesc ?? 'The git repository or remote is missing. Reset to re-configure.')}
+            </p>
+            <PrimaryButton
+              onClick={handleReset}
+              disabled={toggling}
+              className="flex items-center gap-2 mt-2"
+            >
+              {toggling && <Loader2 size={14} className="animate-spin" />}
+              {syncT?.resetButton ?? 'Reset & Re-configure'}
+            </PrimaryButton>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   const conflicts = status.conflicts || [];
