@@ -32,7 +32,7 @@ export const MCP_AGENTS = {
     global: '~/.cursor/mcp.json',
     key: 'mcpServers',
     preferredTransport: 'stdio',
-    presenceDirs: ['~/.cursor/'],
+    presenceDirs: ['~/.cursor/extensions/'],
   },
   'windsurf': {
     name: 'Windsurf',

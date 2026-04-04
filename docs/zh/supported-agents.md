@@ -87,3 +87,36 @@ mindos mcp install --transport http --url http://<服务器IP>:8781/mcp --token 
 > 各 Agent 的配置文件路径不同，详见上方表格中的 **MCP 配置文件路径** 列。
 >
 > 维护规则与校对清单：`wiki/refs/agent-config-registry.md`
+
+## 常见问题
+
+### 安装后 Tools 不出现
+
+部分 Agent（Cursor、Windsurf、Trae、Cline）**不会热加载** MCP 配置。运行 `mindos mcp install` 后，必须完全退出并重启该 Agent。
+
+### macOS 下 `mindos` 命令找不到
+
+GUI 类 Agent（Cursor、Windsurf）可能不继承 shell PATH。如果 stdio 传输失败：
+
+1. 查找 mindos 路径：`which mindos`
+2. 在配置中使用完整路径，例如 `"command": "/opt/homebrew/bin/mindos"`
+
+### Windows 下命令启动失败
+
+Windows 上 `npx` 是 `.cmd` 脚本。如果 stdio 传输失败，用 `cmd` 包一层：
+
+```json
+{
+  "mcpServers": {
+    "mindos": {
+      "command": "cmd",
+      "args": ["/c", "mindos", "mcp"],
+      "env": { "MCP_TRANSPORT": "stdio" }
+    }
+  }
+}
+```
+
+### Cursor：Tool 数量限制
+
+Cursor 所有 MCP server 合计最多 ~40 个 tool。如果安装了很多 server，MindOS 的 tool 可能被静默丢弃。禁用不用的 server 来释放名额。

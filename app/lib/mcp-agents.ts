@@ -64,7 +64,7 @@ export const MCP_AGENTS: Record<string, AgentDef> = {
     global: '~/.cursor/mcp.json',
     key: 'mcpServers',
     preferredTransport: 'stdio',
-    presenceDirs: ['~/.cursor/'],
+    presenceDirs: ['~/.cursor/extensions/'],
   },
   'windsurf': {
     name: 'Windsurf',

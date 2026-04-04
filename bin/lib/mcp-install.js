@@ -309,8 +309,8 @@ export async function mcpInstall() {
       continue;
     }
 
-    // read + merge
-    const absPath = expandHome(configPath);
+    // read + merge — resolve to absolute path for cross-platform safety
+    const absPath = resolve(expandHome(configPath));
     let config = {};
     if (existsSync(absPath)) {
       try { config = parseJsonc(readFileSync(absPath, 'utf-8')); } catch {
@@ -331,5 +331,13 @@ export async function mcpInstall() {
     console.log(`${green('✔')} ${existed ? 'Updated' : 'Installed'} MindOS MCP for ${bold(agent.name)} ${dim(`→ ${absPath}`)}`);
   }
 
-  console.log(`\n${green('Done!')} ${agentKeys.length} agent(s) configured.\n`);
+  console.log(`\n${green('Done!')} ${agentKeys.length} agent(s) configured.`);
+
+  // Agents that require manual restart to pick up config changes
+  const needsRestart = new Set(['cursor', 'windsurf', 'trae', 'cline', 'roo-code']);
+  const restartAgents = agentKeys.filter(k => needsRestart.has(k)).map(k => MCP_AGENTS[k].name);
+  if (restartAgents.length > 0) {
+    console.log(`\n${yellow('Tip:')} ${restartAgents.join(', ')} must be restarted to load the new MCP config.`);
+  }
+  console.log();
 }

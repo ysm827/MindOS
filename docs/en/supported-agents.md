@@ -88,3 +88,36 @@ mindos mcp install --transport http --url http://<server-ip>:8781/mcp --token yo
 > Each Agent stores config in a different file — see the **MCP Config Path** column in the table above for exact paths.
 >
 > Maintenance rules and checklist: `wiki/refs/agent-config-registry.md`
+
+## Troubleshooting
+
+### Tools not appearing after install
+
+Some agents (Cursor, Windsurf, Trae, Cline) **do not hot-reload** MCP config. You must fully quit and restart the agent after running `mindos mcp install`.
+
+### `mindos` command not found (macOS)
+
+GUI-based agents (Cursor, Windsurf) may not inherit your shell PATH. If stdio transport fails:
+
+1. Find your mindos path: `which mindos`
+2. Use the full path in config, e.g. `"command": "/opt/homebrew/bin/mindos"`
+
+### Windows: command fails to start
+
+On Windows, `npx` is a `.cmd` script. If stdio transport fails, try wrapping in `cmd`:
+
+```json
+{
+  "mcpServers": {
+    "mindos": {
+      "command": "cmd",
+      "args": ["/c", "mindos", "mcp"],
+      "env": { "MCP_TRANSPORT": "stdio" }
+    }
+  }
+}
+```
+
+### Cursor: tool limit
+
+Cursor has a ~40 tool limit across all MCP servers combined. If you have many servers installed, MindOS tools may be silently dropped. Disable unused servers to free up slots.
