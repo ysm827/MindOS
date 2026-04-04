@@ -37,7 +37,7 @@ MCP_TRANSPORT=stdio mindos mcp   # stdio mode
 | `MINDOS_URL` | `http://localhost:3456` | App server base URL |
 | `AUTH_TOKEN` | — | Optional: bearer token (must match App's `AUTH_TOKEN`) |
 | `MCP_TRANSPORT` | `http` | Transport mode: `http` or `stdio` |
-| `MCP_HOST` | `127.0.0.1` | HTTP bind address (`0.0.0.0` for remote access) |
+| `MCP_HOST` | `0.0.0.0` | HTTP bind address (`127.0.0.1` for local only) |
 | `MCP_PORT` | `8781` | HTTP listen port (configurable via `mindos onboard`) |
 | `MCP_ENDPOINT` | `/mcp` | HTTP endpoint path |
 
