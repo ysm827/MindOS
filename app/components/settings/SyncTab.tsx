@@ -138,7 +138,7 @@ function SyncEmptyState({ t, onInitComplete }: { t: Messages; onInitComplete: ()
           type="text"
           value={remoteUrl}
           onChange={e => { setRemoteUrl(e.target.value); setError(''); }}
-          placeholder="https://github.com/user/my-mind.git"
+          placeholder="git@github.com:user/repo.git"
           className={`font-mono ${remoteUrl.trim() && !isValid ? 'border-destructive' : ''}`}
         />
         {remoteUrl.trim() && !isValid && (
