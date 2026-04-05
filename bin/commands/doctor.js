@@ -105,6 +105,19 @@ export const run = async (_args, flags) => {
     hasError = true;
   }
 
+  // 4c. ~/.mindos/bin in PATH (Desktop CLI shim)
+  const mindosBin = resolve(homedir(), '.mindos', 'bin');
+  const pathDirs = (process.env.PATH || '').split(':');
+  if (pathDirs.some(d => d === mindosBin || d === '$HOME/.mindos/bin' || d === '~/.mindos/bin')) {
+    ok(`~/.mindos/bin is in PATH`);
+  } else if (existsSync(resolve(mindosBin, 'mindos'))) {
+    warn(`~/.mindos/bin/mindos exists but is NOT in PATH — AI Agents cannot find the mindos command`);
+    if (!jsonMode) {
+      console.log(dim('     Fix: Relaunch MindOS Desktop, or add to your shell config:'));
+      console.log(dim('       export PATH="$HOME/.mindos/bin:$PATH"'));
+    }
+  }
+
   const { hasPrebuiltStandalone, needsBuild } = await import('../lib/build.js');
 
   // 5. Build
