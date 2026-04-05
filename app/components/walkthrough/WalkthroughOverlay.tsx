@@ -68,6 +68,17 @@ export default function WalkthroughOverlay() {
     return () => window.removeEventListener('keydown', handler, true);
   }, [skipFn]);
 
+  // If target element doesn't exist (e.g. Echo not enabled), auto-skip this step
+  useEffect(() => {
+    if (!step) return;
+    const el = document.querySelector(`[data-walkthrough="${step.anchor}"]`);
+    if (!el) {
+      // Target not in DOM — skip to next step after a brief delay
+      const timer = setTimeout(() => wt?.next(), 100);
+      return () => clearTimeout(timer);
+    }
+  }, [step, wt]);
+
   if (!wt || !step) return null;
 
   // Mobile: bottom sheet instead of spotlight
@@ -98,6 +109,8 @@ export default function WalkthroughOverlay() {
             if (!inSpotlight) {
               wt.skip();
             }
+          } else {
+            wt.skip();
           }
         }}
       >
