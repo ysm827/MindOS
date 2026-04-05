@@ -181,7 +181,13 @@ export function readSettings(): ServerSettings {
       guideState: parseGuideState(parsed.guideState),
     };
   } catch {
-    return { ...DEFAULTS, ai: { ...DEFAULTS.ai, providers: { ...DEFAULTS.ai.providers } } };
+    // No config file → first run, force setup wizard
+    const configExists = fs.existsSync(SETTINGS_PATH);
+    return {
+      ...DEFAULTS,
+      ai: { ...DEFAULTS.ai, providers: { ...DEFAULTS.ai.providers } },
+      setupPending: configExists ? undefined : true,
+    };
   }
 }
 

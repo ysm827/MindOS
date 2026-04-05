@@ -54,12 +54,16 @@ function getTopLevelDirs(): SpaceInfo[] {
 }
 
 function getExistingFiles(paths: string[]): string[] {
-  const root = getMindRoot();
-  return paths.filter(p => {
-    try {
-      return fs.existsSync(path.join(root, p));
-    } catch { return false; }
-  });
+  try {
+    const root = getMindRoot();
+    return paths.filter(p => {
+      try {
+        return fs.existsSync(path.join(root, p));
+      } catch { return false; }
+    });
+  } catch {
+    return [];
+  }
 }
 
 export default function HomePage() {
