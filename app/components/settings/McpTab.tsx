@@ -20,7 +20,6 @@ export function McpTab({ t }: McpTabProps) {
   const [restarting, setRestarting] = useState(false);
   const [selectedAgent, setSelectedAgent] = useState('');
   const [transport, setTransport] = useState<'stdio' | 'http'>('stdio');
-  const [connectMode, setConnectMode] = useState<'cli' | 'mcp'>('cli');
   const restartPollRef = useRef<ReturnType<typeof setInterval>>(undefined);
 
   useEffect(() => () => clearInterval(restartPollRef.current), []);
@@ -69,16 +68,11 @@ export function McpTab({ t }: McpTabProps) {
 
   return (
     <div className="space-y-6">
-      {/* 1. How to connect — the primary action */}
-      <ConnectGuide status={mcp.status} mode={connectMode} onModeChange={setConnectMode} m={m} />
+      {/* 1. Connect an AI Agent — primary content */}
+      <ConnectGuide status={mcp.status} m={m} />
 
-      {/* 2. Skills */}
-      <CollapsibleSection title={m?.skillsTitle ?? 'Skills'} defaultOpen={false}>
-        <SkillsSection t={t} />
-      </CollapsibleSection>
-
-      {/* 3. MCP Server + Config (only relevant for MCP users) */}
-      <CollapsibleSection title="MCP Server" defaultOpen={false}>
+      {/* 2. MCP Server & Agent Config (collapsed — MCP users only) */}
+      <CollapsibleSection title={m?.serverTitle ?? 'MCP Server & Agent Config'} defaultOpen={false}>
         <div className="space-y-4">
           <McpStatusCard status={mcp.status} restarting={restarting} onRestart={handleRestart} onRefresh={mcp.refresh} m={m} />
           {mcp.agents.length > 0 && (
@@ -99,12 +93,13 @@ export function McpTab({ t }: McpTabProps) {
               m={m}
             />
           )}
+          <AgentInstall agents={mcp.agents} t={t} onRefresh={mcp.refresh} />
         </div>
       </CollapsibleSection>
 
-      {/* 4. Agent Install */}
-      <CollapsibleSection title={m?.agentsTitle ?? 'Agent Configuration'} defaultOpen={false}>
-        <AgentInstall agents={mcp.agents} t={t} onRefresh={mcp.refresh} />
+      {/* 3. Skills management */}
+      <CollapsibleSection title={m?.skillsTitle ?? 'Skills'} defaultOpen={false}>
+        <SkillsSection t={t} />
       </CollapsibleSection>
     </div>
   );
@@ -135,12 +130,11 @@ function CollapsibleSection({ title, defaultOpen = true, children }: {
 
 /* ── Connect Guide — CLI / MCP dual mode ── */
 
-function ConnectGuide({ status, mode, onModeChange, m }: {
+function ConnectGuide({ status, m }: {
   status: McpStatus | null;
-  mode: 'cli' | 'mcp';
-  onModeChange: (m: 'cli' | 'mcp') => void;
   m: Record<string, any> | undefined;
 }) {
+  const [mode, setMode] = useState<'cli' | 'mcp'>('cli');
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const [revealed, setRevealed] = useState(false);
 
@@ -162,7 +156,6 @@ function ConnectGuide({ status, mode, onModeChange, m }: {
   const hasToken = status.authConfigured && !!status.authToken;
   const displayToken = revealed ? (status.authToken ?? '') : (status.maskedToken ?? '');
   const serverUrl = status.endpoint || `http://127.0.0.1:${status.port}/mcp`;
-  // Use server-detected LAN IP for remote access instructions (not localhost)
   const remoteHost = status.localIP || 'localhost';
   const webPort = typeof window !== 'undefined' ? window.location.port || '3456' : '3456';
   const remoteUrl = `http://${remoteHost}:${webPort}`;
@@ -171,109 +164,82 @@ function ConnectGuide({ status, mode, onModeChange, m }: {
   return (
     <div className="rounded-xl border border-border bg-card overflow-hidden">
       {/* Header */}
-      <div className="flex items-center gap-2.5 px-4 pt-4 pb-2">
+      <div className="flex items-center gap-2.5 px-4 pt-4 pb-3">
         <div className="w-7 h-7 rounded-lg bg-[var(--amber-subtle)] flex items-center justify-center shrink-0">
           <Link2 size={14} className="text-[var(--amber)]" />
         </div>
         <div className="flex-1 min-w-0">
           <h3 className="text-sm font-semibold text-foreground">{m?.connectionTitle ?? 'Connect an AI Agent'}</h3>
-          <p className="text-xs text-muted-foreground">{m?.connectionHint ?? 'Choose how your AI agents connect to MindOS.'}</p>
         </div>
       </div>
 
-      {/* Mode toggle */}
-      <div className="px-4 pb-2">
-        <div className="flex items-center rounded-lg border border-border overflow-hidden w-fit">
-          <button
-            onClick={() => onModeChange('cli')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs transition-colors ${
-              mode === 'cli' ? 'bg-muted text-foreground font-medium' : 'text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            <Terminal size={12} /> CLI Skill
-          </button>
-          <button
-            onClick={() => onModeChange('mcp')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs transition-colors ${
-              mode === 'mcp' ? 'bg-muted text-foreground font-medium' : 'text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            <Plug size={12} /> MCP Protocol
-          </button>
-        </div>
+      {/* Tab switcher — CLI vs MCP with descriptions */}
+      <div className="grid grid-cols-2 mx-4 mb-3 rounded-lg border border-border overflow-hidden">
+        <button
+          onClick={() => setMode('cli')}
+          className={`flex flex-col items-start px-3 py-2.5 text-left transition-colors ${
+            mode === 'cli' ? 'bg-muted' : 'hover:bg-muted/50'
+          }`}
+        >
+          <span className="flex items-center gap-1.5">
+            <Terminal size={12} className={mode === 'cli' ? 'text-[var(--amber)]' : 'text-muted-foreground'} />
+            <span className={`text-xs font-semibold ${mode === 'cli' ? 'text-foreground' : 'text-muted-foreground'}`}>CLI</span>
+            <span className="text-2xs px-1 py-0.5 rounded bg-[var(--amber-subtle)] text-[var(--amber-text)] font-medium leading-none">Recommended</span>
+          </span>
+          <span className="text-2xs text-muted-foreground mt-0.5">Claude Code · Gemini CLI · Codex</span>
+        </button>
+        <button
+          onClick={() => setMode('mcp')}
+          className={`flex flex-col items-start px-3 py-2.5 text-left transition-colors border-l border-border ${
+            mode === 'mcp' ? 'bg-muted' : 'hover:bg-muted/50'
+          }`}
+        >
+          <span className="flex items-center gap-1.5">
+            <Plug size={12} className={mode === 'mcp' ? 'text-foreground' : 'text-muted-foreground'} />
+            <span className={`text-xs font-semibold ${mode === 'mcp' ? 'text-foreground' : 'text-muted-foreground'}`}>MCP</span>
+          </span>
+          <span className="text-2xs text-muted-foreground mt-0.5">Claude Desktop · Cursor</span>
+        </button>
       </div>
 
+      {/* Content for selected mode */}
       <div className="px-4 pb-4 space-y-3">
         {mode === 'cli' ? (
-          /* ── CLI Skill mode ── */
           <div className="space-y-3">
             <p className="text-xs text-muted-foreground">
-              {m?.cliSkillHint ?? 'For Claude Code, Gemini CLI, Codex, and any agent with bash. ~90% lower token cost.'}
+              <span className="text-[var(--amber-text)]">~90% lower token cost.</span> Skill included — just install and go.
             </p>
-
-            {/* Install */}
-            <CodeBlock
-              label={m?.cliSkillInstall ?? 'Install'}
-              code="npm install -g @geminilight/mindos"
-              onCopy={handleCopy}
-              copiedField={copiedField}
-              fieldId="cli-install"
-            />
-
-            {/* Remote config */}
+            <CodeBlock label="Install" code="npm install -g @geminilight/mindos" onCopy={handleCopy} copiedField={copiedField} fieldId="cli-install" />
             <div className="space-y-1">
-              <span className="text-2xs font-medium text-muted-foreground uppercase tracking-wider">{m?.cliSkillRemote ?? 'Remote access'}</span>
-              <div className="space-y-1">
-                <CodeBlock code={`mindos config set url ${remoteUrl}`} onCopy={handleCopy} copiedField={copiedField} fieldId="cli-url" compact />
-                <CodeBlock
-                  code={`mindos config set authToken ${hasToken ? maskedAuthToken : '<token>'}`}
-                  onCopy={handleCopy} copiedField={copiedField} fieldId="cli-token" compact
-                />
-              </div>
+              <span className="text-2xs font-medium text-muted-foreground uppercase tracking-wider">Remote</span>
+              <CodeBlock code={`mindos config set url ${remoteUrl}`} onCopy={handleCopy} copiedField={copiedField} fieldId="cli-url" compact />
+              <CodeBlock code={`mindos config set authToken ${hasToken ? maskedAuthToken : '<token>'}`} onCopy={handleCopy} copiedField={copiedField} fieldId="cli-token" compact />
             </div>
-
-            {/* Verify */}
-            <CodeBlock
-              label={m?.cliSkillVerify ?? 'Verify'}
-              code="mindos file list"
-              onCopy={handleCopy}
-              copiedField={copiedField}
-              fieldId="cli-verify"
-            />
+            <CodeBlock label="Verify" code="mindos file list" onCopy={handleCopy} copiedField={copiedField} fieldId="cli-verify" />
           </div>
         ) : (
-          /* ── MCP Protocol mode ── */
           <div className="space-y-3">
             <p className="text-xs text-muted-foreground">
-              {m?.mcpHint ?? 'For Claude Desktop, Cursor, and agents that use MCP tool protocol.'}
+              Requires per-agent MCP config. Install Skill separately via <code className="text-2xs bg-muted px-1 rounded">mindos mcp install</code>.
             </p>
-
-            {/* Server URL */}
             <div className="space-y-1.5">
-              <label className="flex items-center gap-1.5 text-2xs font-medium text-muted-foreground uppercase tracking-wider">
-                <Globe size={11} />
-                {m?.serverUrl ?? 'MCP Server URL'}
-              </label>
-              <div className="flex items-center gap-2">
-                <div className="flex-1 flex items-center px-3 py-2 bg-muted/50 border border-border rounded-lg min-h-[38px]">
-                  <code className="flex-1 text-xs font-mono text-foreground select-all">{serverUrl}</code>
-                </div>
-                <CopyButton onCopy={() => handleCopy(serverUrl, 'mcp-url')} copied={copiedField === 'mcp-url'} title={m?.serverUrlCopy ?? 'Copy URL'} />
+              <span className="text-2xs font-medium text-muted-foreground uppercase tracking-wider">{m?.serverUrl ?? 'MCP Server URL'}</span>
+              <div className="flex items-center gap-2 px-3 py-2 bg-muted/50 border border-border rounded-lg">
+                <code className="flex-1 text-xs font-mono text-foreground select-all truncate">{serverUrl}</code>
+                <CopyButton onCopy={() => handleCopy(serverUrl, 'mcp-url')} copied={copiedField === 'mcp-url'} size="sm" />
               </div>
             </div>
-
-            {/* How-to */}
-            <ol className="ml-1 pl-3 border-l-2 border-border space-y-1.5 text-xs text-muted-foreground list-decimal list-inside">
-              <li>{m?.howToStep1 ?? 'Open your agent\'s MCP settings'}</li>
-              <li>{m?.howToStep2 ?? 'Add MCP server with the URL above'}</li>
+            <ol className="pl-3 border-l-2 border-border/50 space-y-1 text-xs text-muted-foreground list-decimal list-inside">
+              <li>{m?.howToStep1 ?? "Open agent's MCP settings"}</li>
+              <li>{m?.howToStep2 ?? 'Add MCP server with URL above'}</li>
               <li>{m?.howToStep3 ?? 'Set Auth Token as bearer token'}</li>
-              <li>{m?.howToStep4 ?? 'Save and verify the connection'}</li>
+              <li>{m?.howToStep4 ?? 'Save and verify'}</li>
             </ol>
           </div>
         )}
 
-        {/* Auth Token — shared between both modes */}
-        <div className="pt-2 border-t border-border">
+        {/* Shared Auth Token */}
+        <div className="pt-3 border-t border-border">
           <div className="space-y-1.5">
             <label className="flex items-center gap-1.5 text-2xs font-medium text-muted-foreground uppercase tracking-wider">
               <Shield size={11} />
