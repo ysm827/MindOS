@@ -102,13 +102,13 @@ export default function Sidebar({ fileTree, collapsed = false, onCollapse, onExp
         </button>
         {/* Desktop action buttons — trimmed to 4 */}
         <div className="hidden md:flex items-center gap-1">
-          <button onClick={() => setSearchOpen(true)} className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors" title={t.sidebar.searchTitle} aria-label={t.sidebar.searchTitle}>
+          <button onClick={() => setSearchOpen(true)} className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors" title={t.sidebar.searchTitle} aria-hidden="true" tabIndex={-1}>
             <Search size={15} />
           </button>
-          <button onClick={() => setSettingsOpen(true)} className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors" title={t.sidebar.settingsTitle} aria-label={t.sidebar.settingsTitle}>
+          <button onClick={() => setSettingsOpen(true)} className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors" title={t.sidebar.settingsTitle} aria-hidden="true" tabIndex={-1}>
             <Settings size={15} />
           </button>
-          <button onClick={onCollapse} className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors" title={t.sidebar.collapseTitle} aria-label={t.sidebar.collapseTitle}>
+          <button onClick={onCollapse} className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors" title={t.sidebar.collapseTitle} aria-hidden="true" tabIndex={-1}>
             <PanelLeftClose size={15} />
           </button>
         </div>

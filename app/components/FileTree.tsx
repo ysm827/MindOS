@@ -426,7 +426,7 @@ function DirectoryNode({ node, depth, currentPath, onNavigate, maxOpenDepth, onI
           onClick={toggle}
           className="shrink-0 p-1 rounded hover:bg-muted text-muted-foreground transition-colors"
           style={{ marginLeft: `${depth * 12 + 4}px` }}
-          aria-label={open ? 'Collapse' : 'Expand'}
+          aria-label={open ? `Collapse ${node.name}` : `Expand ${node.name}`}
         >
           <span className="block transition-transform duration-150" style={{ transform: open ? 'rotate(0deg)' : 'rotate(-90deg)' }}>
             <ChevronDown size={13} />
