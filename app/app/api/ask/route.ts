@@ -226,6 +226,46 @@ function readKnowledgeFile(filePath: string): { ok: boolean; content: string; tr
 }
 
 /**
+ * Resolve skill file from multiple fallback locations.
+ * Tries in order: app/data/skills → skills → {mindRoot}/.skills → ~/.mindos/skills
+ * Returns { path, result } where result is the file content or error.
+ */
+function resolveSkillFile(
+  skillName: string,
+  projectRoot: string,
+  mindRoot: string,
+): { path: string; result: ReturnType<typeof readAbsoluteFile> } {
+  const locations = [
+    // Primary: bundled location (Desktop/production builds)
+    path.join(projectRoot, 'app', 'data', 'skills', skillName, 'SKILL.md'),
+    // Fallback: repository root (dev/CLI usage)
+    path.join(projectRoot, 'skills', skillName, 'SKILL.md'),
+    // Fallback: knowledge base custom skills
+    path.join(mindRoot, '.skills', skillName, 'SKILL.md'),
+    // Fallback: global user skills
+    path.join(process.env.HOME || '/root', '.mindos', 'skills', skillName, 'SKILL.md'),
+  ];
+
+  for (const absPath of locations) {
+    const result = readAbsoluteFile(absPath);
+    if (result.ok) {
+      return { path: absPath, result };
+    }
+  }
+
+  // All locations failed — return last error
+  return {
+    path: locations[locations.length - 1],
+    result: {
+      ok: false,
+      content: '',
+      truncated: false,
+      error: `Skill not found: tried ${locations.length} locations`,
+    },
+  };
+}
+
+/**
  * In-memory cache for absolute file reads (SKILL.md, etc).
  * Keyed by absPath. Re-reads only when file mtime changes.
  * Avoids redundant disk IO on every agent request (~5-10ms saved per call).
@@ -457,15 +497,21 @@ export async function POST(req: NextRequest) {
     // Auto-load skill + bootstrap context for each request.
     const isZh = serverSettings.disabledSkills?.includes('mindos') ?? false;
     const skillDirName = isZh ? 'mindos-zh' : 'mindos';
-    const appDir = process.env.MINDOS_PROJECT_ROOT
-      ? path.join(process.env.MINDOS_PROJECT_ROOT, 'app')
-      : process.cwd();
-    const skillPath = path.join(appDir, `data/skills/${skillDirName}/SKILL.md`);
-    const skillWritePath = path.join(appDir, `data/skills/${skillDirName}/references/write-supplement.md`);
-    const skill = readAbsoluteFile(skillPath);
+    const projectRoot = process.env.MINDOS_PROJECT_ROOT || path.resolve(process.cwd(), '..');
+    const mindRoot = getMindRoot();
+    
+    // Resolve skill file from multiple fallback locations (handles Core Update scenarios)
+    const skillInfo = resolveSkillFile(skillDirName, projectRoot, mindRoot);
+    const skill = skillInfo.result;
+    
+    // Resolve write-supplement from the same base directory as SKILL.md
+    const skillWriteDir = path.dirname(skillInfo.path);
+    const skillWritePath = path.join(skillWriteDir, 'references', 'write-supplement.md');
     const skillWrite = readAbsoluteFile(skillWritePath);
 
-    console.log(`[ask] SKILL skill=${skill.ok}, write-supplement=${skillWrite.ok}`);
+    console.log(
+      `[ask] SKILL skill=${skill.ok} (${skillInfo.path}), write-supplement=${skillWrite.ok}`
+    );
 
     const userSkillRules = readKnowledgeFile('.mindos/user-preferences.md');
 
