@@ -39,6 +39,8 @@ cp -r app/.next/static "$WORK/app/.next/static"
 # Copy public assets
 mkdir -p "$WORK/app"
 cp -r app/public "$WORK/app/public"
+# Copy skill definitions (not included in standalone output, needed at runtime)
+[ -d app/data/skills ] && cp -r app/data/skills "$WORK/app/data/skills"
 
 # ── MCP server ──
 echo "  Copying MCP..."
@@ -69,6 +71,7 @@ for f in \
   "app/.next/standalone/node_modules" \
   "app/.next/standalone/.next/server" \
   "app/.next/static" \
+  "app/data/skills" \
   "mcp/dist/index.cjs" \
   "package.json"; do
   if [ ! -e "$VERIFY/$f" ]; then
