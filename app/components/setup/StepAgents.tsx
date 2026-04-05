@@ -172,6 +172,14 @@ export default function StepAgents({
               )}
             </div>
           )}
+          {/* CLI Skill hint when no agents selected */}
+          {selectedAgents.size === 0 && (
+            <div className="flex items-center gap-2 px-3 py-2.5 rounded-lg text-xs"
+              style={{ background: 'color-mix(in srgb, var(--amber) 8%, transparent)', color: 'var(--amber)' }}>
+              <Brain size={13} className="shrink-0" />
+              <span>{s.agentNoneSelected}</span>
+            </div>
+          )}
           {/* Skill context + auto-install hint */}
           <div className="space-y-1.5">
             <p className="text-xs" style={{ color: 'var(--muted-foreground)' }}>
