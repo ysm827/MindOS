@@ -85,6 +85,7 @@
 - [x] **AI Organize — 独立 Toast + 全类型撤销 + 操作历史** — Toast bar 独立于 ImportModal（3 分钟自动消失），支持 create 和 update 文件撤销（update 通过快照恢复），新增 Import History 面板记录所有导入操作
 
 - [x] **Desktop：MindOS 运行时择优（代码层）** — `pickMindOsRuntime` + `resolveLocalMindOsProjectRoot` 接入 `startLocalMode`；`config`/`MINDOS_RUNTIME_ROOT`/`MINDOS_DEV_BUNDLED_ROOT`；Desktop `npm test` 覆盖 pick+layout。内置 `extraResources` 产物与三平台冒烟仍待办。[spec](./specs/spec-desktop-bundled-mindos.md)
+- [x] **Desktop：重装静默修复（Boot-time Silent Healing）** — 用户删除 .app 后重装时，`healPreviousInstallation()` 自动清理：停 launchd daemon、清理双 PID 文件（Desktop + CLI）、port-based fallback kill、等待端口释放（5s）、验证私有 Node.js 版本、验证 .next 构建缓存完整性。端口偏移时自动更新 MCP 客户端配置。零 UI，用户无感知。[spec](./specs/spec-desktop-reinstall-healing.md)
 - [x] **Desktop：内置运行时 Next standalone + 精简 prepare** — `app/next.config` `output: 'standalone'`；`prepare-mindos-bundle.mjs` 合并 static/public、拷贝 app 时去掉 `node_modules` / `.next/cache` / `.next/dev`。[spec](./specs/spec-desktop-standalone-runtime.md)
 - [x] **Electron Desktop App（Phase 1）** — 本地+远程双模式桌面端，含系统托盘（模式感知）、自动更新（electron-updater）、IPC 安全桥接、窗口状态持久化、Node.js 自动检测/下载。CI 多平台构建（macOS arm64+x64/Windows/Linux）。30+ 源文件 + 198MB 内置运行时。[spec](./specs/spec-electron-desktop-app.md)
 - [x] **Ask Panel Focus Mode + 宽度扩展** — 拖拽上限从 700px/45% 扩展到 1400px/92%，Maximize 改为 Focus Mode（统一用 width 定位，消除 left 定位跳变）。支持 Esc 退出 Focus，进入/退出平滑过渡。[spec](./specs/spec-ask-panel-focus-mode.md)

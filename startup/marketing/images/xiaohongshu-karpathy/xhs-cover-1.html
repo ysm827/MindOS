@@ -19,11 +19,11 @@
     flex-direction: column;
   }
   .headline {
-    font-size: 78px;
+    font-size: 96px;
     font-weight: 900;
-    line-height: 1.25;
+    line-height: 1.2;
     color: #1a1a1a;
-    margin-bottom: 40px;
+    margin-bottom: 32px;
   }
   .headline .highlight {
     color: #c8873a;
@@ -32,33 +32,33 @@
     width: 80px;
     height: 5px;
     background: #c8873a;
-    margin-bottom: 36px;
+    margin-bottom: 28px;
   }
   .subtitle {
     font-size: 34px;
     color: #555;
     line-height: 1.6;
-    margin-bottom: 44px;
+    margin-bottom: 36px;
   }
   .compare-section {
     background: #f7f5f2;
     border-radius: 20px;
-    padding: 36px 40px;
-    margin-bottom: 40px;
+    padding: 28px 32px;
+    margin-bottom: 36px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px 28px;
   }
   .compare-row {
     display: flex;
     align-items: center;
-    font-size: 30px;
-    line-height: 1.5;
-    margin-bottom: 14px;
+    font-size: 26px;
+    line-height: 1.4;
     color: #333;
   }
-  .compare-row:last-child { margin-bottom: 0; }
-  .compare-row .icon { margin-right: 12px; font-size: 28px; font-family: 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif; }
-  .compare-row .x { color: #e55; font-weight: 900; font-size: 32px; margin-right: 12px; }
-  .compare-row .check { color: #5dba5d; font-weight: 900; font-size: 32px; margin-right: 12px; }
-  .compare-row .arrow { margin: 0 14px; color: #999; }
+  .compare-row .x { color: #e55; font-weight: 900; font-size: 28px; margin-right: 8px; }
+  .compare-row .check { color: #5dba5d; font-weight: 900; font-size: 28px; margin-right: 8px; }
+  .compare-row .arrow { margin: 0 10px; color: #999; font-size: 22px; }
   .compare-row .good { color: #c8873a; font-weight: 700; }
   .ui-preview {
     flex: 1;
@@ -66,7 +66,6 @@
     overflow: hidden;
     box-shadow: 0 8px 32px rgba(0,0,0,0.12), 0 2px 8px rgba(0,0,0,0.06);
     border: 2px solid #e8e0d8;
-    margin-bottom: 0;
     position: relative;
   }
   .ui-preview img {
@@ -109,22 +108,22 @@
     <div class="compare-row">
       <span class="x">✗</span> 手建目录
       <span class="arrow">→</span>
-      <span class="check">✓</span> <span class="good">一键导入笔记</span>
+      <span class="check">✓</span> <span class="good">一键导入</span>
     </div>
     <div class="compare-row">
       <span class="x">✗</span> 手动编译
       <span class="arrow">→</span>
-      <span class="check">✓</span> <span class="good">AI 自动记住偏好</span>
+      <span class="check">✓</span> <span class="good">自动沉淀</span>
     </div>
     <div class="compare-row">
       <span class="x">✗</span> 学 Obsidian
       <span class="arrow">→</span>
-      <span class="check">✓</span> <span class="good">内置界面，打开就用</span>
+      <span class="check">✓</span> <span class="good">内置界面</span>
     </div>
     <div class="compare-row">
       <span class="x">✗</span> 单个 LLM
       <span class="arrow">→</span>
-      <span class="check">✓</span> <span class="good">所有 AI 共享知识库</span>
+      <span class="check">✓</span> <span class="good">多 AI 共享</span>
     </div>
   </div>
   <div class="ui-preview">

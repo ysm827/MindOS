@@ -87,7 +87,7 @@ npm i -g @geminilight/mindos && mindos onboard
 `mindos onboard` 会引导你选择 AI 提供商、要连接的 Agent、连接模式（CLI / MCP），选完自动配好。
 
 GitHub：https://github.com/GeminiLight/MindOS
-官网：https://tianfuwang.tech/MindOS
+官网：https://mindos.you
 
 ---
 
