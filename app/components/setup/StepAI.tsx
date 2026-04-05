@@ -59,6 +59,7 @@ export default function StepAI({ state, update, s, onCopyToken, webPortStatus, m
         value={state.provider}
         onChange={id => update('provider', id)}
         showSkip
+        compact
         configuredProviders={configuredProviders}
       />
 
