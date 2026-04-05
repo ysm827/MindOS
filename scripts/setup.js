@@ -55,8 +55,8 @@ const T = {
   // step labels
   step:           { en: (n, total) => `Step ${n}/${total}`, zh: (n, total) => `步骤 ${n}/${total}` },
   stepTitles:     {
-    en: ['Knowledge Base', 'AI Provider', 'Ports', 'Auth Token', 'Web Password', 'Start Mode', 'Agent Tools'],
-    zh: ['知识库',         'AI 服务商',    '端口',   'Auth Token', 'Web 密码',     '启动方式',    'Agent 工具'],
+    en: ['Knowledge Base', 'AI Provider', 'Ports', 'Auth Token', 'Web Password', 'Start Mode', 'Agent Connection'],
+    zh: ['知识库',         'AI 服务商',    '端口',   'Auth Token', 'Web 密码',     '启动方式',    'Agent 连接'],
   },
 
   // path
@@ -125,9 +125,18 @@ const T = {
   syncSetup:      { en: 'Set up cross-device sync via Git?', zh: '是否配置 Git 跨设备同步？' },
   syncLater:      { en: '  → Run `mindos sync init` anytime to set up sync later.', zh: '  → 随时运行 `mindos sync init` 配置同步。' },
 
+  // mode selection step (Step 7a)
+  modeSelectTitle:  { en: 'Agent Connection', zh: 'Agent 连接' },
+  modeSelectHint:   { en: 'Connection mode (Space to toggle, Enter to confirm):', zh: '连接方式（空格切换，Enter 确认）：' },
+  modeCli:          { en: 'CLI    Operate KB via command line', zh: 'CLI    通过命令行操作知识库' },
+  modeCliHint:      { en: 'recommended, more token-efficient', zh: '推荐，更省 token' },
+  modeMcp:          { en: 'MCP    Connect via MCP protocol', zh: 'MCP    通过 MCP 协议连接' },
+  modeMcpHint:      { en: 'optional, may consume more tokens', zh: '可选，可能消耗更多 token' },
+  modeNoneError:    { en: 'Please select at least one mode.', zh: '请至少选择一种模式。' },
+
   // mcp install step
   mcpStepTitle:   { en: 'Agent Tools (MCP)', zh: 'Agent 工具 (MCP)' },
-  mcpStepHint:    { en: 'Select AI agents to configure with MindOS MCP (Space to toggle, A for all, Enter to confirm).\nAgents not yet installed can be pre-configured — they will work once you install the app.', zh: '选择要配置 MindOS MCP 的 AI Agent（空格切换，A 全选，Enter 确认）。\n未安装的 Agent 可以预先配置，安装应用后即可生效。' },
+  mcpStepHint:    { en: 'Select AI agents to configure (Space to toggle, A for all, Enter to confirm).\nAgents not yet installed can be pre-configured — they will work once you install the app.', zh: '选择要配置的 AI Agent（空格切换，A 全选，Enter 确认）。\n未安装的 Agent 可以预先配置，安装应用后即可生效。' },
   mcpInstalling:  { en: (n) => `⏳ Configuring ${n} agent(s)...`, zh: (n) => `⏳ 正在配置 ${n} 个 Agent...` },
   mcpInstallOk:   { en: (name, path) => `  ${c.green('✔')} ${name}  ${c.dim('→ ' + path)}`, zh: (name, path) => `  ${c.green('✔')} ${name}  ${c.dim('→ ' + path)}` },
   mcpInstallFail: { en: (name, msg) => `  ${c.red('✘')} ${name}  ${c.dim(msg)}`, zh: (name, msg) => `  ${c.red('✘')} ${name}  ${c.dim(msg)}` },
@@ -622,14 +631,79 @@ function isAgentInstalled(agentKey) {
 }
 
 /**
- * Step 8: interactive multi-select of agents to configure, then install.
- * Uses the same interactiveMultiSelect as mcp-install.js (re-implemented inline
- * because this script uses its own raw-mode helpers).
+ * Step 7a: mode selection — CLI (default-on) vs MCP (default-off).
+ * Returns { cli: boolean, mcp: boolean }.
  */
-async function runMcpInstallStep(mcpPort, authToken) {
+async function runModeSelect() {
+  const modes = [
+    { key: 'cli', label: t('modeCli'), hint: t('modeCliHint'), preselect: true },
+    { key: 'mcp', label: t('modeMcp'), hint: t('modeMcpHint'), preselect: false },
+  ];
+
+  return new Promise((resolve) => {
+    let cursor = 0;
+    const chosen = new Set(modes.map((m, i) => m.preselect ? i : -1).filter(i => i >= 0));
+
+    const render = (first = false, errMsg = '') => {
+      if (!first) write(`\x1b[${modes.length + (errMsg ? 3 : 2)}A\x1b[J`);
+      write(`${c.bold(t('modeSelectHint'))}\n`);
+      for (let i = 0; i < modes.length; i++) {
+        const m = modes[i];
+        const check   = chosen.has(i) ? c.green('✔') : c.dim('○');
+        const pointer = i === cursor  ? c.cyan('❯') : ' ';
+        const label   = i === cursor  ? (chosen.has(i) ? c.green(m.label) : c.cyan(m.label)) : (chosen.has(i) ? c.green(m.label) : m.label);
+        write(`  ${pointer} ${check} ${label}  ${c.dim('(' + m.hint + ')')}\n`);
+      }
+      if (errMsg) {
+        write(`  ${c.yellow('⚠ ' + errMsg)}\n`);
+      }
+      write(c.dim(`  ${chosen.size} ${uiLang === 'zh' ? '已选' : 'selected'}\n`));
+    };
+
+    write('\n');
+    render(true);
+
+    process.stdin.setRawMode(true);
+    process.stdin.resume();
+    process.stdin.setEncoding('utf8');
+
+    const onKey = (key) => {
+      if (key === '\x03') { cleanup(); process.exit(1); }
+      if (key === `${ESC}[A`) { cursor = (cursor - 1 + modes.length) % modes.length; render(); }
+      else if (key === `${ESC}[B`) { cursor = (cursor + 1) % modes.length; render(); }
+      else if (key === ' ') {
+        if (chosen.has(cursor)) chosen.delete(cursor); else chosen.add(cursor);
+        render();
+      } else if (key === '\r' || key === '\n') {
+        if (chosen.size === 0) {
+          render(false, t('modeNoneError'));
+          return;
+        }
+        cleanup();
+        resolve({
+          cli: chosen.has(0),
+          mcp: chosen.has(1),
+        });
+      }
+    };
+
+    const cleanup = () => {
+      process.stdin.removeListener('data', onKey);
+      process.stdin.setRawMode(false);
+      process.stdin.pause();
+    };
+
+    process.stdin.on('data', onKey);
+  });
+}
+
+/**
+ * Agent multi-select UI — shared by both CLI-only and MCP modes.
+ * Returns array of selected agent keys.
+ */
+async function runAgentSelect() {
   const keys = Object.keys(MCP_AGENTS);
 
-  // Build options with installed/detected status shown as hint
   const options = keys.map(k => {
     const installed = isAgentInstalled(k);
     const present = detectAgentPresence(k);
@@ -641,84 +715,86 @@ async function runMcpInstallStep(mcpPort, authToken) {
     };
   });
 
-  // Sort: configured > detected > not found (stable within each group)
   options.sort((a, b) => {
     const rank = (o) => o.hint.includes('configured') || o.hint.includes('已配置') ? 0 : o.preselect ? 1 : 2;
     return rank(a) - rank(b);
   });
 
-  // Multi-select using raw mode
-  const selected = await (async () => {
-    return new Promise((resolveSelected) => {
-      let cursor = 0;
-      const chosen = new Set(options.map((o, i) => o.preselect ? i : -1).filter(i => i >= 0));
+  const selected = await new Promise((resolveSelected) => {
+    let cursor = 0;
+    const chosen = new Set(options.map((o, i) => o.preselect ? i : -1).filter(i => i >= 0));
 
-      const render = (first = false) => {
-        if (!first) write(`\x1b[${options.length + 2}A\x1b[J`);
-        write(`${c.bold(uiLang === 'zh' ? '选择 Agent：' : 'Select agents:')}  ${c.dim(uiLang === 'zh' ? '(↑↓ 移动  空格 切换  D 已检测  A 全选  Enter 确认)' : '(↑↓ move  Space toggle  D detected  A all  Enter confirm)')}\n`);
-        for (let i = 0; i < options.length; i++) {
-          const o = options[i];
-          const check   = chosen.has(i) ? c.green('✔') : c.dim('○');
-          const pointer = i === cursor  ? c.cyan('❯') : ' ';
-          const label   = i === cursor  ? (chosen.has(i) ? c.green(o.label) : c.cyan(o.label)) : (chosen.has(i) ? c.green(o.label) : o.label);
-          write(`  ${pointer} ${check} ${label}  ${c.dim('(' + o.hint + ')')}\n`);
-        }
-        write(c.dim(`  ${chosen.size} ${uiLang === 'zh' ? '已选' : 'selected'}\n`));
-      };
+    const render = (first = false) => {
+      if (!first) write(`\x1b[${options.length + 2}A\x1b[J`);
+      write(`${c.bold(uiLang === 'zh' ? '选择 Agent：' : 'Select agents:')}  ${c.dim(uiLang === 'zh' ? '(↑↓ 移动  空格 切换  D 已检测  A 全选  Enter 确认)' : '(↑↓ move  Space toggle  D detected  A all  Enter confirm)')}\n`);
+      for (let i = 0; i < options.length; i++) {
+        const o = options[i];
+        const check   = chosen.has(i) ? c.green('✔') : c.dim('○');
+        const pointer = i === cursor  ? c.cyan('❯') : ' ';
+        const label   = i === cursor  ? (chosen.has(i) ? c.green(o.label) : c.cyan(o.label)) : (chosen.has(i) ? c.green(o.label) : o.label);
+        write(`  ${pointer} ${check} ${label}  ${c.dim('(' + o.hint + ')')}\n`);
+      }
+      write(c.dim(`  ${chosen.size} ${uiLang === 'zh' ? '已选' : 'selected'}\n`));
+    };
 
-      write('\n');
-      render(true);
+    write('\n');
+    render(true);
 
-      process.stdin.setRawMode(true);
-      process.stdin.resume();
-      process.stdin.setEncoding('utf8');
+    process.stdin.setRawMode(true);
+    process.stdin.resume();
+    process.stdin.setEncoding('utf8');
 
-      const onKey = (key) => {
-        if (key === '\x03') { cleanup(); process.exit(1); }
-        if (key === `${ESC}[A`) { cursor = (cursor - 1 + options.length) % options.length; render(); }
-        else if (key === `${ESC}[B`) { cursor = (cursor + 1) % options.length; render(); }
-        else if (key === ' ') {
-          if (chosen.has(cursor)) chosen.delete(cursor); else chosen.add(cursor);
-          render();
-        } else if (key === 'a' || key === 'A') {
-          if (chosen.size === options.length) chosen.clear();
-          else options.forEach((_, i) => chosen.add(i));
-          render();
-        } else if (key === 'd' || key === 'D') {
-          // Select only detected/configured agents
-          chosen.clear();
-          options.forEach((o, i) => { if (o.preselect) chosen.add(i); });
-          render();
-        } else if (key === '\r' || key === '\n') {
-          cleanup();
-          resolveSelected([...chosen].sort().map(i => options[i].value));
-        }
-      };
+    const onKey = (key) => {
+      if (key === '\x03') { cleanup(); process.exit(1); }
+      if (key === `${ESC}[A`) { cursor = (cursor - 1 + options.length) % options.length; render(); }
+      else if (key === `${ESC}[B`) { cursor = (cursor + 1) % options.length; render(); }
+      else if (key === ' ') {
+        if (chosen.has(cursor)) chosen.delete(cursor); else chosen.add(cursor);
+        render();
+      } else if (key === 'a' || key === 'A') {
+        if (chosen.size === options.length) chosen.clear();
+        else options.forEach((_, i) => chosen.add(i));
+        render();
+      } else if (key === 'd' || key === 'D') {
+        chosen.clear();
+        options.forEach((o, i) => { if (o.preselect) chosen.add(i); });
+        render();
+      } else if (key === '\r' || key === '\n') {
+        cleanup();
+        resolveSelected([...chosen].sort().map(i => options[i].value));
+      }
+    };
 
-      const cleanup = () => {
-        process.stdin.removeListener('data', onKey);
-        process.stdin.setRawMode(false);
-        process.stdin.pause();
-      };
+    const cleanup = () => {
+      process.stdin.removeListener('data', onKey);
+      process.stdin.setRawMode(false);
+      process.stdin.pause();
+    };
 
-      process.stdin.on('data', onKey);
-    });
-  })();
+    process.stdin.on('data', onKey);
+  });
 
   if (selected.length === 0) {
     write(c.dim(t('mcpSkipped') + '\n'));
-    return [];
   }
+  return selected;
+}
+
+/**
+ * Install MCP config to selected agents.
+ * Separated from agent selection so CLI-only mode can skip this.
+ */
+async function runMcpInstallStep(mcpPort, authToken) {
+  const selected = await runAgentSelect();
+  if (selected.length === 0) return [];
 
   write('\n' + c.dim(tf('mcpInstalling', selected.length) + '\n'));
 
-  // stdio entry (same as mcp-install.js)
   const entry = { type: 'stdio', command: 'mindos', args: ['mcp'], env: { MCP_TRANSPORT: 'stdio' } };
   let okCount = 0;
 
   for (const agentKey of selected) {
     const agent = MCP_AGENTS[agentKey];
-    // prefer global scope; fall back to project
     const cfgPath = agent.global || agent.project;
     if (!cfgPath) {
       write(tf('mcpInstallFail', agent.name, 'no config path') + '\n');
@@ -1230,17 +1306,34 @@ async function main() {
   // ── Skill rules are now built into SKILL.md — no install needed ──────────
   // .mindos/user-preferences.md will be created on first preference capture or via `mindos init-skills`.
 
-  // ── Step 7: MCP Agent Install ──────────────────────────────────────────────
+  // ── Step 7: Agent Connection ────────────────────────────────────────────────
   write('\n');
   stepHeader(7);
-  write(c.dim(tf('mcpStepHint') + '\n\n'));
 
-  const selectedAgents = await runMcpInstallStep(mcpPort, authToken);
+  // 7a: Mode selection (CLI default-on, MCP default-off)
+  const modes = await runModeSelect();
 
-  // ── Skill auto-install ────────────────────────────────────────────────────
-  if (selectedAgents && selectedAgents.length > 0) {
-    write('\n');
-    runSkillInstallStep(selectedTemplate, selectedAgents);
+  // 7b: Agent multi-select + conditional install
+  write('\n' + c.dim(tf('mcpStepHint') + '\n\n'));
+
+  if (modes.mcp) {
+    // MCP mode: run full MCP install (config + agent selection)
+    const selectedAgents = await runMcpInstallStep(mcpPort, authToken);
+    // Also install SKILL.md for CLI knowledge
+    if (selectedAgents && selectedAgents.length > 0) {
+      write('\n');
+      runSkillInstallStep(selectedTemplate, selectedAgents);
+    }
+  } else {
+    // CLI-only: run agent selection but skip MCP config, only install SKILL.md
+    const selectedAgents = await runAgentSelect();
+    if (selectedAgents && selectedAgents.length > 0) {
+      write('\n');
+      runSkillInstallStep(selectedTemplate, selectedAgents);
+      write(c.dim(uiLang === 'zh'
+        ? '  → 如需启用 MCP 模式，随时运行 `mindos mcp install`。\n'
+        : '  → To enable MCP mode later, run `mindos mcp install`.\n'));
+    }
   }
 
   // ── Sync setup (optional) ──────────────────────────────────────────────────
