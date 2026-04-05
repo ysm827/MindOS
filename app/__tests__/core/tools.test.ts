@@ -57,12 +57,12 @@ describe('tools: list_files', () => {
     seedFile('data.csv', 'a,b,c');
   });
 
-  it('lists all files with default params (excluding system files)', async () => {
+  it('lists all files with default params', async () => {
     const result = await callTool('list_files', {});
     expect(result).toContain('Profile/');
     expect(result).toContain('Identity.md');
     expect(result).toContain('Goals.md');
-    expect(result).not.toContain('README.md'); // System file hidden from Agent
+    expect(result).toContain('README.md'); // System files now included in tree
     expect(result).toContain('data.csv');
     expect(result).not.toContain('Error:');
   });
@@ -71,15 +71,13 @@ describe('tools: list_files', () => {
     const result = await callTool('list_files', { path: 'Profile' });
     expect(result).toContain('Identity.md');
     expect(result).toContain('Goals.md');
-    expect(result).not.toContain('README.md');
     expect(result).not.toContain('data.csv');
   });
 
-  it('respects depth parameter (hides system files)', async () => {
+  it('respects depth parameter', async () => {
     const result = await callTool('list_files', { depth: 1 });
     expect(result).toContain('Profile/');
     expect(result).toContain('...');
-    expect(result).not.toContain('README.md'); // System file hidden
   });
 
   it('returns error message for non-existent directory', async () => {
@@ -91,7 +89,6 @@ describe('tools: list_files', () => {
   it('handles nested subdirectory path', async () => {
     const result = await callTool('list_files', { path: 'Projects/Products' });
     expect(result).toContain('ProductA.md');
-    expect(result).not.toContain('README.md');
   });
 
   it('returns (empty directory) for dir with no allowed files', async () => {

@@ -284,9 +284,6 @@ function buildFileTree(dirPath: string, rootOverride?: string): FileNode[] {
         nodes.push(node);
       }
     } else if (entry.isFile()) {
-      // Filter out system files at root level
-      if (dirPath === root && SYSTEM_FILES.has(entry.name)) continue;
-      
       const ext = path.extname(entry.name).toLowerCase();
       if (ALLOWED_EXTENSIONS.has(ext)) {
         nodes.push({ name: entry.name, path: relativePath, type: 'file', extension: ext });
@@ -323,9 +320,6 @@ function buildAllFiles(dirPath: string): string[] {
       if (IGNORED_DIRS.has(entry.name)) continue;
       files.push(...buildAllFiles(fullPath));
     } else if (entry.isFile()) {
-      // Filter out system files at root level
-      if (dirPath === root && SYSTEM_FILES.has(entry.name)) continue;
-      
       const ext = path.extname(entry.name).toLowerCase();
       if (ALLOWED_EXTENSIONS.has(ext)) {
         files.push(path.relative(root, fullPath));
