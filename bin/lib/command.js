@@ -1,57 +1,26 @@
 /**
- * Lightweight command registry — zero dependencies.
+ * Lightweight CLI utilities — zero dependencies beyond lib/.
  *
- * Each command exports: { meta, run }
- *   meta.name        — primary name
- *   meta.aliases     — optional alias names
- *   meta.group       — help group (Core, Knowledge, MCP, Sync, Gateway, Config)
- *   meta.summary     — one-line description
- *   meta.usage       — usage string (optional)
- *   meta.flags       — { flag: description } (optional)
- *   run(args, flags) — async handler
+ * Exports used by cli.js and bin/commands/*.js:
+ *   parseArgs(argv)          — parse process.argv into { command, args, flags }
+ *   printCommandHelp(cmd)    — auto-generate --help output from cmd.meta
+ *   output(data, flags)      — print human-readable or JSON
+ *   isJsonMode(flags)        — check --json flag
+ *   EXIT                     — standardized exit codes
  */
 
-import { bold, dim, cyan, green, red } from './colors.js';
-import { ROOT } from './constants.js';
-import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { bold, dim, cyan } from './colors.js';
 
 // ── Exit codes ────────────────────────────────────────────────────────────────
-// Standardized exit codes for CLI commands. Use these instead of raw numbers.
 export const EXIT = {
-  OK:        0,  // Success
-  ERROR:     1,  // General error
-  ARGS:      2,  // Invalid arguments or usage
-  CONNECT:   3,  // Connection refused / service not running
-  NOT_FOUND: 4,  // Resource not found (file, agent, etc.)
+  OK:        0,
+  ERROR:     1,
+  ARGS:      2,
+  CONNECT:   3,
+  NOT_FOUND: 4,
 };
 
-/** @type {Map<string, { meta: object, run: function }>} */
-const registry = new Map();
-
-/** @type {Map<string, string>} alias → primary name */
-const aliases = new Map();
-
-export function register(command) {
-  const { meta, run } = command;
-  registry.set(meta.name, { meta, run });
-  if (meta.aliases) {
-    for (const alias of meta.aliases) {
-      aliases.set(alias, meta.name);
-    }
-  }
-}
-
-export function resolve_command(name) {
-  if (registry.has(name)) return registry.get(name);
-  const primary = aliases.get(name);
-  if (primary) return registry.get(primary);
-  return null;
-}
-
-export function getAllCommands() {
-  return [...registry.values()];
-}
+// ── Arg parsing ───────────────────────────────────────────────────────────────
 
 /** Parse process.argv into { command, args, flags } */
 export function parseArgs(argv = process.argv.slice(2)) {
@@ -63,7 +32,6 @@ export function parseArgs(argv = process.argv.slice(2)) {
     const arg = argv[i];
     if (arg.startsWith('--')) {
       const key = arg.slice(2);
-      // Check if next arg is a value (not a flag)
       if (i + 1 < argv.length && !argv[i + 1].startsWith('-')) {
         flags[key] = argv[i + 1];
         i += 2;
@@ -72,8 +40,14 @@ export function parseArgs(argv = process.argv.slice(2)) {
         i++;
       }
     } else if (arg.startsWith('-') && arg.length === 2) {
-      flags[arg.slice(1)] = true;
-      i++;
+      const key = arg.slice(1);
+      if (i + 1 < argv.length && !argv[i + 1].startsWith('-')) {
+        flags[key] = argv[i + 1];
+        i += 2;
+      } else {
+        flags[key] = true;
+        i++;
+      }
     } else {
       args.push(arg);
       i++;
@@ -83,12 +57,12 @@ export function parseArgs(argv = process.argv.slice(2)) {
   return { command: args[0] || null, args: args.slice(1), flags };
 }
 
-/** Check if --json flag is set */
+// ── Output helpers ────────────────────────────────────────────────────────────
+
 export function isJsonMode(flags) {
   return flags.json === true;
 }
 
-/** Output helper: human-readable or JSON */
 export function output(data, flags) {
   if (isJsonMode(flags)) {
     console.log(JSON.stringify(data, null, 2));
@@ -99,56 +73,17 @@ export function output(data, flags) {
   }
 }
 
-/** Print global help */
-export function printHelp() {
-  const pkgVersion = (() => {
-    try {
-      return JSON.parse(readFileSync(resolve(ROOT, 'package.json'), 'utf-8')).version;
-    } catch { return '?'; }
-  })();
+// ── Command-specific help (auto-generated from meta) ──────────────────────────
 
-  const row = (c, d) => `  ${cyan(c.padEnd(38))}${dim(d)}`;
-
-  const groups = {};
-  for (const { meta } of registry.values()) {
-    const group = meta.group || 'Other';
-    if (!groups[group]) groups[group] = [];
-    const usage = meta.usage || `mindos ${meta.name}`;
-    groups[group].push(row(usage, meta.summary));
-  }
-
-  const sections = [];
-  const groupOrder = ['Core', 'Knowledge', 'MCP', 'Sync', 'Gateway', 'Config'];
-  for (const g of groupOrder) {
-    if (groups[g]) {
-      sections.push(`${bold(`${g}:`)}\n${groups[g].join('\n')}`);
-    }
-  }
-  // Any remaining groups
-  for (const [g, items] of Object.entries(groups)) {
-    if (!groupOrder.includes(g)) {
-      sections.push(`${bold(`${g}:`)}\n${items.join('\n')}`);
-    }
-  }
-
-  console.log(`
-${bold('MindOS CLI')} ${dim(`v${pkgVersion}`)}
-
-${sections.join('\n\n')}
-
-${bold('Global Flags:')}
-  ${cyan('--json'.padEnd(38))}${dim('Output in JSON format (for agents)')}
-  ${cyan('--help, -h'.padEnd(38))}${dim('Show help')}
-  ${cyan('--version, -v'.padEnd(38))}${dim('Show version')}
-`);
-}
-
-/** Print command-specific help */
 export function printCommandHelp(cmd) {
   const { meta } = cmd;
   const usage = meta.usage || `mindos ${meta.name}`;
-  console.log(`\n${bold(usage)}\n`);
+  console.log(`\n${bold('USAGE')}`);
+  console.log(`  ${cyan(usage)}\n`);
   console.log(`  ${meta.summary}\n`);
+  if (meta.aliases && meta.aliases.length > 0) {
+    console.log(`${bold('Aliases:')} ${meta.aliases.join(', ')}\n`);
+  }
   if (meta.flags) {
     console.log(`${bold('Flags:')}`);
     for (const [flag, desc] of Object.entries(meta.flags)) {
