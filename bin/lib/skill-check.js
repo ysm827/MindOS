@@ -1,5 +1,5 @@
-import { existsSync, readFileSync, copyFileSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { existsSync, readFileSync, writeFileSync, copyFileSync, mkdirSync } from 'node:fs';
+import { resolve, dirname } from 'node:path';
 import { homedir } from 'node:os';
 import { createInterface } from 'node:readline';
 import { ROOT } from './constants.js';
@@ -7,11 +7,10 @@ import { bold, dim, cyan, green, yellow, isTTY } from './colors.js';
 
 const SKILLS = ['mindos', 'mindos-zh'];
 const INSTALLED_BASE = resolve(homedir(), '.agents', 'skills');
+const CONFIG_PATH = resolve(homedir(), '.mindos', 'config.json');
 
 /**
  * Simple semver "a > b" comparison (major.minor.patch only).
- * Intentionally inlined (same as update-check.js) to keep this module
- * self-contained — no cross-module dependency for a 10-line function.
  */
 function semverGt(a, b) {
   const pa = a.split('.').map(Number);
@@ -37,53 +36,149 @@ export function extractSkillVersion(filePath) {
   }
 }
 
+/* ── Config helpers (read/write installedSkillAgents) ─────────── */
+
+/**
+ * Read config.json, best-effort.
+ */
+function readConfig() {
+  try {
+    return JSON.parse(readFileSync(CONFIG_PATH, 'utf-8'));
+  } catch {
+    return {};
+  }
+}
+
+/**
+ * Merge fields into config.json (preserves all existing fields).
+ */
+function mergeConfig(patch) {
+  const config = readConfig();
+  Object.assign(config, patch);
+  const dir = dirname(CONFIG_PATH);
+  if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
+  writeFileSync(CONFIG_PATH, JSON.stringify(config, null, 2) + '\n', 'utf-8');
+}
+
+/**
+ * Read the installed-skill-agents list from config.
+ * @returns {Array<{ agent: string, skill: string, path: string }>}
+ */
+export function getInstalledSkillAgents() {
+  const config = readConfig();
+  return Array.isArray(config.installedSkillAgents) ? config.installedSkillAgents : [];
+}
+
+/**
+ * Record that a skill was installed to a specific agent.
+ * Idempotent — updates existing entry if agent+skill already recorded.
+ */
+export function recordSkillInstall(agentKey, skillName, installPath) {
+  const list = getInstalledSkillAgents();
+  const idx = list.findIndex(e => e.agent === agentKey && e.skill === skillName);
+  const entry = { agent: agentKey, skill: skillName, path: installPath };
+  if (idx >= 0) {
+    list[idx] = entry;
+  } else {
+    list.push(entry);
+  }
+  mergeConfig({ installedSkillAgents: list });
+}
+
+/**
+ * Remove a skill record for an agent.
+ */
+export function removeSkillRecord(agentKey, skillName) {
+  const list = getInstalledSkillAgents();
+  const filtered = list.filter(e => !(e.agent === agentKey && e.skill === skillName));
+  if (filtered.length !== list.length) {
+    mergeConfig({ installedSkillAgents: filtered });
+  }
+}
+
+/* ── Version checking ─────────────────────────────────────────── */
+
 /**
  * Compare installed vs bundled skill versions.
- * @param {string} [root] — package root to read bundled skills from.
- *   Defaults to the static ROOT (fine for startup). Pass the post-update
- *   root when called from `mindos update` so we read the NEW package's skills.
- * Returns array of mismatches where bundled > installed.
+ * Checks both the default ~/.agents/skills/ path AND all agent-specific
+ * paths recorded in config.installedSkillAgents.
+ *
+ * @param {string} [root] — package root (defaults to ROOT)
+ * @returns {Array<{ name, installed, bundled, installPath, bundledPath, agent? }>}
  */
 export function checkSkillVersions(root) {
   const base = root || ROOT;
   const mismatches = [];
+  const seen = new Set(); // dedup by installPath
+
+  // 1. Check default ~/.agents/skills/ (legacy path)
   for (const name of SKILLS) {
     const installPath = resolve(INSTALLED_BASE, name, 'SKILL.md');
     const bundledPath = resolve(base, 'skills', name, 'SKILL.md');
-
-    if (!existsSync(installPath)) continue;
-    if (!existsSync(bundledPath)) continue;
-
+    if (!existsSync(installPath) || !existsSync(bundledPath)) continue;
     const installed = extractSkillVersion(installPath);
     const bundled = extractSkillVersion(bundledPath);
-
     if (!installed || !bundled) continue;
     if (semverGt(bundled, installed)) {
       mismatches.push({ name, installed, bundled, installPath, bundledPath });
     }
+    seen.add(installPath);
   }
+
+  // 2. Check agent-specific paths from config
+  const agentRecords = getInstalledSkillAgents();
+  for (const record of agentRecords) {
+    const installPath = record.path;
+    if (!installPath || seen.has(installPath)) continue;
+    seen.add(installPath);
+
+    const skillName = record.skill || 'mindos';
+    const bundledPath = resolve(base, 'skills', skillName, 'SKILL.md');
+    if (!existsSync(bundledPath)) continue;
+
+    if (!existsSync(installPath)) {
+      // Path no longer exists — clean up stale record silently
+      removeSkillRecord(record.agent, skillName);
+      continue;
+    }
+
+    const installed = extractSkillVersion(installPath);
+    const bundled = extractSkillVersion(bundledPath);
+    if (!installed || !bundled) continue;
+    if (semverGt(bundled, installed)) {
+      mismatches.push({
+        name: skillName,
+        installed,
+        bundled,
+        installPath,
+        bundledPath,
+        agent: record.agent,
+      });
+    }
+  }
+
   return mismatches;
 }
 
 /**
  * Copy bundled SKILL.md over the installed version.
+ * Creates parent directory if needed.
  */
 export function updateSkill(bundledPath, installPath) {
+  const dir = dirname(installPath);
+  if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
   copyFileSync(bundledPath, installPath);
 }
 
 /**
  * Print skill update hints and optionally prompt user to update.
- *
- * - TTY + not daemon: interactive readline prompt (default Y)
- * - Non-TTY / daemon / MINDOS_NO_SKILL_CHECK=1: one-line hint, no block
  */
 export async function promptSkillUpdate(mismatches) {
   if (!mismatches || mismatches.length === 0) return;
 
-  // Print mismatch info
   for (const m of mismatches) {
-    console.log(`\n  ${yellow('⬆')}  Skill ${bold(m.name)}: ${dim(`v${m.installed}`)} → ${cyan(`v${m.bundled}`)}`);
+    const agentLabel = m.agent ? ` (${m.agent})` : '';
+    console.log(`\n  ${yellow('⬆')}  Skill ${bold(m.name)}${agentLabel}: ${dim(`v${m.installed}`)} → ${cyan(`v${m.bundled}`)}`);
   }
 
   // Non-interactive mode: just print hint
@@ -92,15 +187,14 @@ export async function promptSkillUpdate(mismatches) {
     return;
   }
 
-  // Interactive prompt (10s timeout to avoid blocking startup indefinitely)
+  // Interactive prompt (10s timeout)
   return new Promise((res) => {
     let done = false;
     const finish = () => { if (!done) { done = true; res(); } };
 
     const rl = createInterface({ input: process.stdin, output: process.stdout });
     const timer = setTimeout(() => { rl.close(); finish(); }, 10_000);
-
-    rl.on('close', finish); // handles broken pipe / EOF
+    rl.on('close', finish);
 
     rl.question(`     Update skill${mismatches.length > 1 ? 's' : ''}? ${dim('(Y/n)')} `, (answer) => {
       clearTimeout(timer);
@@ -110,7 +204,8 @@ export async function promptSkillUpdate(mismatches) {
         for (const m of mismatches) {
           try {
             updateSkill(m.bundledPath, m.installPath);
-            console.log(`  ${green('✓')} ${dim(`Updated ${m.name} → v${m.bundled}`)}`);
+            const agentLabel = m.agent ? ` (${m.agent})` : '';
+            console.log(`  ${green('✓')} ${dim(`Updated ${m.name}${agentLabel} → v${m.bundled}`)}`);
           } catch (err) {
             console.log(`  ${yellow('!')} ${dim(`Failed to update ${m.name}: ${err.message}`)}`);
           }

@@ -1,11 +1,12 @@
 ---
 name: mindos-zh
 description: >
-  操作 MindOS 知识库：更新笔记, 搜索知识库, 整理文件, 执行SOP/工作流, 复盘, 追加CSV, 跨Agent交接,
-  路由非结构化输入到对应文件, 提炼经验, 同步关联文档. update notes, search knowledge base, organize,
-  SOP, retrospective, CSV, handoff, route notes, distill experience.
-  仅 mindRoot 知识库内任务。不用于：改代码仓库/项目文档/KB 外路径。
+  操作 MindOS 知识库：更新笔记、搜索知识库、整理文件、执行SOP/工作流、复盘、追加CSV、跨Agent交接、
+  路由非结构化输入到对应文件、提炼经验、同步关联文档。
+  仅 mindRoot 知识库内任务。不用于：改代码仓库、项目文档、KB 外路径。
   核心概念：空间、指令(INSTRUCTION.md)、技能(SKILL.md)；笔记可承载指令与技能。
+  触发词：帮我记下来、搜一下我的笔记、更新知识库、整理文件、执行工作流、保存到知识库、
+  记录一下、整理笔记、复盘、提炼经验。
 ---
 
 # MindOS 技能

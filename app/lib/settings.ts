@@ -214,6 +214,38 @@ export function writeSettings(settings: ServerSettings): void {
   fs.writeFileSync(SETTINGS_PATH, JSON.stringify(merged, null, 2) + '\n', 'utf-8');
 }
 
+/* ── Skill install tracking ────────────────────────────────────── */
+
+export interface SkillInstallRecord {
+  agent: string;
+  skill: string;
+  path: string;
+}
+
+/**
+ * Record that a skill was installed to a specific agent path.
+ * Stored in config.json → installedSkillAgents[].
+ * Idempotent — updates existing entry if agent+skill match.
+ */
+export function recordSkillInstall(agentKey: string, skillName: string, installPath: string): void {
+  let config: Record<string, unknown> = {};
+  try { config = JSON.parse(fs.readFileSync(SETTINGS_PATH, 'utf-8')); } catch { /* fresh */ }
+
+  const list: SkillInstallRecord[] = Array.isArray(config.installedSkillAgents)
+    ? (config.installedSkillAgents as SkillInstallRecord[])
+    : [];
+
+  const entry: SkillInstallRecord = { agent: agentKey, skill: skillName, path: installPath };
+  const idx = list.findIndex(e => e.agent === agentKey && e.skill === skillName);
+  if (idx >= 0) list[idx] = entry;
+  else list.push(entry);
+
+  config.installedSkillAgents = list;
+  const dir = path.dirname(SETTINGS_PATH);
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(SETTINGS_PATH, JSON.stringify(config, null, 2) + '\n', 'utf-8');
+}
+
 /** Effective AI config — unified interface for all providers.
  *  Resolves: saved config → env var → preset default, in that priority order.
  *  When `providerOverride` is given, resolves that provider's config instead. */

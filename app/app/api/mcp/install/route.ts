@@ -2,8 +2,8 @@ export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
-import { MCP_AGENTS, expandHome } from '@/lib/mcp-agents';
-import { readSettings } from '@/lib/settings';
+import { MCP_AGENTS, expandHome, resolveSkillWorkspaceProfile } from '@/lib/mcp-agents';
+import { readSettings, recordSkillInstall } from '@/lib/settings';
 
 /** Parse JSONC — strips comments before JSON.parse. Returns {} for empty/whitespace-only input. */
 function parseJsonc(text: string): Record<string, unknown> {
@@ -203,6 +203,17 @@ export async function POST(req: NextRequest) {
         }
 
         const result: typeof results[number] = { agent: key, status: 'ok', path: configPath, transport: effectiveTransport };
+
+        // Record skill install path for auto-update on future version bumps
+        try {
+          const skillProfile = resolveSkillWorkspaceProfile(key);
+          const settings = readSettings();
+          const activeSkill = settings.disabledSkills?.includes('mindos') ? 'mindos-zh' : 'mindos';
+          const skillPath = path.join(skillProfile.workspacePath, activeSkill, 'SKILL.md');
+          if (fs.existsSync(skillPath)) {
+            recordSkillInstall(key, activeSkill, skillPath);
+          }
+        } catch { /* best-effort, don't fail the install */ }
 
         // Verify http connections
         if (effectiveTransport === 'http') {

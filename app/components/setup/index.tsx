@@ -216,7 +216,7 @@ export default function SetupWizard() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step]);
 
-  // Load agents when entering Agents step
+  // Load agents when entering Agents step (exclude builtin — MindOS itself)
   useEffect(() => {
     if (step === STEP_AGENTS && !agentsLoaded && !agentsLoading) {
       setAgentsLoading(true);
@@ -224,9 +224,10 @@ export default function SetupWizard() {
         .then(r => r.json())
         .then(data => {
           if (data.agents) {
-            setAgents(data.agents);
+            const externalAgents = (data.agents as AgentEntry[]).filter(a => a.scope !== 'builtin');
+            setAgents(externalAgents);
             setSelectedAgents(new Set(
-              (data.agents as AgentEntry[]).filter(a => a.installed || a.present).map(a => a.key)
+              externalAgents.filter(a => a.installed || a.present).map(a => a.key)
             ));
           }
           setAgentsLoaded(true);

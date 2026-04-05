@@ -48,6 +48,7 @@ export interface AgentEntry {
   name: string;
   present: boolean;
   installed: boolean;
+  scope?: string;
   hasProjectScope: boolean;
   hasGlobalScope: boolean;
   preferredTransport: 'stdio' | 'http';

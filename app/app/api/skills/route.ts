@@ -32,7 +32,7 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     const { action, name, description, content, enabled, sourcePath } = body as {
-      action: 'create' | 'update' | 'delete' | 'toggle' | 'read' | 'read-native';
+      action: 'create' | 'update' | 'delete' | 'toggle' | 'read' | 'read-native' | 'record-install';
       name?: string;
       description?: string;
       content?: string;
@@ -128,6 +128,19 @@ export async function POST(req: NextRequest) {
         const nativeContent = fs.readFileSync(nativeSkillFile, 'utf-8');
         const { description: nativeDesc } = parseSkillMd(nativeContent);
         return NextResponse.json({ content: nativeContent, description: nativeDesc });
+      }
+
+      case 'record-install': {
+        // Record that a skill was installed to a specific agent (for auto-update tracking)
+        const agentKey = (body as { agentKey?: string }).agentKey;
+        const skillName = name;
+        const installPath = (body as { installPath?: string }).installPath;
+        if (!agentKey || !skillName || !installPath) {
+          return NextResponse.json({ error: 'agentKey, name, and installPath are required' }, { status: 400 });
+        }
+        const { recordSkillInstall } = await import('@/lib/settings');
+        recordSkillInstall(agentKey, skillName, installPath);
+        return NextResponse.json({ ok: true });
       }
 
       default:

@@ -3,14 +3,13 @@ name: mindos
 description: >
   Operate a MindOS knowledge base: update notes, search, organize files, execute SOPs/workflows,
   retrospective, append CSV, cross-agent handoff, route unstructured input to the right files,
-  distill experience, sync related docs. 更新笔记, 搜索知识库, 整理, 执行SOP, 复盘, 追加CSV, 交接, 路由到文件, 提炼经验.
+  distill experience, sync related docs.
   Use when the task targets files inside the user's MindOS KB (mindRoot).
   NOT for editing app source, project docs, or paths outside the KB.
   Core concepts: Space, Instruction (INSTRUCTION.md), Skill (SKILL.md); notes can embody both.
   Trigger when user asks to: save or record a note, search their knowledge base, update or edit
   a file, organize notes, run a workflow or SOP, capture decisions from a session, append rows
-  to a table or CSV, hand off context to another agent — or says "帮我记下来" / "搜一下我的笔记" /
-  "更新知识库" / "整理文件" / "执行工作流".
+  to a table or CSV, hand off context to another agent.
 ---
 
 # MindOS Skill
@@ -115,9 +114,9 @@ User request
 ## Judgment heuristics
 
 **Save intent boundary:**
-- "帮我记下来" / "保存" = write
-- "搜一下" / "总结" = read-only
-- "整理一下" → ask: display only, or write back?
+- "save this" / "record" / "write down" = write
+- "search" / "summarize" / "look up" = read-only
+- "organize" → ask: display only, or write back?
 
 **File location uncertainty:**
 - Can't decide in 5 seconds → use nearest existing directory, inform user
