@@ -63,6 +63,16 @@ export const run = async (args, flags) => {
   const isVerbose = Boolean(flags.verbose);
   const extra = args.join(' ');
 
+  // Ensure `mindos` CLI is in PATH (silent, best-effort, dev installs only)
+  try {
+    execSync('command -v mindos', { stdio: 'ignore' });
+  } catch {
+    const isDesktop = !!(process.env.ELECTRON_RUN_AS_NODE || process.env.MINDOS_DESKTOP);
+    if (!isDesktop && existsSync(resolve(ROOT, '.git'))) {
+      try { execSync('npm link', { cwd: ROOT, stdio: 'ignore' }); } catch { /* best effort */ }
+    }
+  }
+
   // Check for incomplete setup
   if (existsSync(CONFIG_PATH)) {
     try {

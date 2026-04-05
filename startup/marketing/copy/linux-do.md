@@ -11,7 +11,7 @@
 
 1. **可选前缀**：`【开源】`（Linux.do 常见，一眼标明性质；不强制）
 2. **产品名**：MindOS（第一次发帖建议带上，方便搜）
-3. **核心机制**：本地 Markdown / 知识库 + MCP（技术读者筛选用）
+3. **核心机制**：本地 Markdown / 知识库 + 多 Agent 共享（Agent 连法：CLI 推荐，MCP 可选；技术读者筛选用）
 4. **场景或痛点**（二选一）：多 Agent、上下文搬运、Claude/Cursor/OpenClaw
 5. **差异化一词**（可选）：回响、桌面端、Agent Inspector、MIT
 6. **可信度尾巴**（可选，须属实）：`（含桌面端）` `（v0.5.x，自用）` `（MIT）`
@@ -20,16 +20,16 @@
 
 ### 可直接用的标题示例
 
-- 【开源】MindOS：MCP 共享本地 Markdown，Claude / Cursor / OpenClaw 读同一库（MIT）
-- 【开源】多 Agent 上下文搬累了，做了 MindOS：本地库 + MCP + 内向面板「回响」
-- MindOS：本地优先知识库，MCP 接入；带桌面端与「回响」（开源 MIT）
-- 同时用多个 AI 别再拷上下文：MindOS 用 MCP 统一本地 Markdown（【开源】）
-- 【开源】MindOS（MCP）：笔记当指令、Inspector 可审计，另有一块「回响」给日常自省
+- 【开源】MindOS：多 Agent 共享本地 Markdown，Claude / Cursor / OpenClaw 读同一库（MIT）
+- 【开源】多 Agent 上下文搬累了，做了 MindOS：本地库 + CLI/MCP + 内向面板「回响」
+- MindOS：本地优先知识库，CLI 或 MCP 接入；带桌面端与「回响」（开源 MIT）
+- 同时用多个 AI 别再拷上下文：MindOS 统一本地 Markdown，各 Agent 共享同一库（【开源】）
+- 【开源】MindOS：笔记当指令、Inspector 可审计，另有一块「回响」给日常自省
 
 ### 与正文气质对齐
 
-- 正文偏「真人吐槽 + 机制说明」→ 标题用 **具体名词**（MCP、Markdown、回响）比堆大词安全。
-- 分类 **开发调优** 时，标题里出现 **MCP / Agent / 本地** 之一即可，不必全写。
+- 正文偏「真人吐槽 + 机制说明」→ 标题用 **具体名词**（共享、CLI/MCP、Markdown、回响）比堆大词安全。
+- 分类 **开发调优** 时，标题里出现 **共享 / CLI / MCP / Agent / 本地** 之一即可，不必全写。
 
 ---
 
@@ -40,7 +40,7 @@
 ```
 做一个新项目时，多半是这种节奏：ChatGPT 查资料，Claude Code 写代码，偶尔再开个 OpenClaw 跑自动化。每换一个工具，都要重新搬一遍上下文。踩出来的坑、刚理顺的套路，对话框一关，像没发生过。每个 Agent 各自把你记在看不见的黑箱里，记了啥不好查、不好管。记忆割裂、不透明，对话里的经验难沉淀。
 
-为了解决这些，我开源了 MindOS：一个同时面向人和 AI 的本地知识库。所有 Agent 通过 MCP 读写同一份库，读写有记录，GUI 里可对照（Agent Inspector）。知识库里有「空间」等结构，根上可以用 INSTRUCTION.md 一类文件约定规则，Agent 按协议整理、关联内容。对话里成型的东西可以收成 Skill / 写回工作流，笔记也能当指令用；省多少重复解释因人而异，我这里不一概而论。
+为了解决这些，我开源了 MindOS：一个同时面向人和 AI 的本地知识库。所有 Agent 读写同一份库（日常推荐 CLI 接入，更省 token；需要协议化对接时也可用 MCP），读写有记录，GUI 里可对照（Agent Inspector）。知识库里有「空间」等结构，根上可以用 INSTRUCTION.md 一类文件约定规则，Agent 按协议整理、关联内容。对话里成型的东西可以收成 Skill / 写回工作流，笔记也能当指令用；省多少重复解释因人而异，我这里不一概而论。
 
 MindOS 也不只是工具。它是人思考的地方，Agent 执行的起点。我们更在意人先把问题想清楚、判断做完，再把跑腿交给 Agent；在 MindOS 里除了管知识、管 Agents，还有一块「回响」面板，给日常自省用：轻量写一行、看线索、可选短见解，和主对话拆开，不强行变成第二个聊天窗。
 
@@ -80,7 +80,7 @@ GitHub：https://github.com/GeminiLight/MindOS
 ```
 一个日常的场景：ChatGPT 查资料，Claude Code 写代码，偶尔再开个 OpenClaw 跑自动化。每换一个工具，都要重新搬一遍上下文。踩出来的坑、刚理顺的套路，对话框一关，像没发生过。每个 Agent 各自把你记在看不见的黑箱里，记了啥不好查、不好管。记忆割裂、不透明，对话里的经验难沉淀。
 
-为了解决这些问题，于是开源了 MindOS，一个同时面向人和 AI 的本地知识库。所有 Agent 都通过 MCP 读写同一份记忆，每一次操作都透明可控。知识库中独有空间的概念，Agent 像人整理自己思绪一样，根据 INSTRUCTION.md 来自动管理知识库。每次和AI对话的经验都可以自动沉淀到MindOS当成下一次的工作流，笔记即指令，这次做一天，下次只一个小时。
+为了解决这些问题，于是开源了 MindOS，一个同时面向人和 AI 的本地知识库。所有 Agent 读写同一份记忆（CLI 为主、MCP 可选），每一次操作都透明可控。知识库中独有空间的概念，Agent 像人整理自己思绪一样，根据 INSTRUCTION.md 来自动管理知识库。每次和AI对话的经验都可以自动沉淀到MindOS当成下一次的工作流，笔记即指令，这次做一天，下次只一个小时。
 
 MindOS，也不只是工具。他是人思考的地方，Agent执行的起点。在 AI 焦虑蔓延的时代，我们更关注人的成长：让人回归思考，Agent 流畅执行。想清楚问题、做好判断、快速实践、攒下属于自己的认知。在MindOS中，你不止可以管理知识、Agents，还可以与自我对话。MindOS的回响面板，让你的每次思考和成长都更加有迹可循。
 
@@ -109,16 +109,16 @@ GitHub：https://github.com/GeminiLight/MindOS
 愿景与回响进入正文后，建议 **5 张齐上**，每张图下仍只贴 **一行说明**：
 
 1. **mindos-vision**：官网首屏——对应「人思考 / Agent 行动」的定位一句话。
-2. **mindos-flow**：从记录到归档、再到多 Agent 经 MCP 协作的链路（示意图）。
+2. **mindos-flow**：从记录到归档、再到多 Agent 经同一知识库协作的链路（示意图）。
 3. **mindos-space**：Space 与指令类 Markdown——「笔记即协议」、目录长什么样。
 4. **mindos-echo**：回响内容页——内向面：今日一行、所见 / 见解、与主对话分流。
-5. **mindos-agent**：Agents 页——MCP、stdio 连接、工具数量，工程向收尾。
+5. **mindos-agent**：Agents 页——CLI / MCP、stdio 连接、工具数量，工程向收尾。
 
 ---
 
 ## 写作结构（与新版正文对齐）
 
-1. 痛点 → 一句话产品定义（本地库 + MCP）→ **尽早给安装命令** 若担心流失可把 `npm i -g` 段再上移一行（当前新版把愿景、回响放在中间，更适合「先建立为什么再做工具」的叙事）。
+1. 痛点 → 一句话产品定义（本地库 + 多 Agent 共享；CLI 推荐、MCP 可选）→ **尽早给安装命令** 若担心流失可把 `npm i -g` 段再上移一行（当前新版把愿景、回响放在中间，更适合「先建立为什么再做工具」的叙事）。
 2. **愿景**：黑箱 vs 可审计、人思考 Agent 执行、知识库指向「我」、敏感本地——避免空洞形容词，用你正文里那种具体对比。
 3. **回响**：内向 vs 引导/探索、五块各一句、所见/见解/Agent 继续、与 Ask 分流——**不写成功能清单口气**，用「干什么用」说人话。
 4. 工程能力点到为止 → 技术栈一行指 GitHub → 诚实早期 + 链接。
@@ -131,7 +131,7 @@ GitHub：https://github.com/GeminiLight/MindOS
 
 - **人群**：开发者、运维、自建服务爱好者多；习惯命令行、Git、自托管，对「云端黑盒」敏感；开源协议与可复现安装比官网视觉更有说服力。
 - **反感点**：标题党、堆 emoji、软文腔（「颠覆」「赋能」等）；更吃**有代码/有架构/主动说局限**的写法。
-- **语气与证据**：个人场景 + 技术事实；截图每张配**一句说明**（这张图在证明什么：MCP、目录结构、多环境连接等），避免纯物料堆叠。
+- **语气与证据**：个人场景 + 技术事实；截图每张配**一句说明**（这张图在证明什么：CLI/MCP、目录结构、多环境连接等），避免纯物料堆叠。
 - **CTA**：偏弱更稳——「看代码 / 提 issue」优于注册领资料、加群转化等漏斗话术；主链放 **GitHub**，官网作补充；少用可疑短链、过重 UTM（有人会介意）。
 - **讨论预期**：楼里常会追问实现细节、与「纯文件夹 / Obsidian」等方案的差异——**准备好被深挖**；被质疑时用事实回应，避免销售式防御。
 - **渠道定位**：相对付费投放漏斗，这里更像**社区有机 TOFU**；心里指标偏向讨论质量、Star、issue、潜在贡献者，而不是 CPL/CAC。
@@ -157,7 +157,7 @@ GitHub：https://github.com/GeminiLight/MindOS
 
 忍了一段时间之后写了 MindOS，开源的，MIT。干的事情就是让所有 Agent 共享同一份本地知识库。
 
-原理不复杂：通过 MCP 协议，Claude Code、Cursor、OpenClaw 读写你本地的 Markdown 文件。数据在你电脑上，Git 管版本，人和 AI 的每次编辑都有记录。AI 读写日志在 GUI 的 Agent Inspector 里能看到，想审计随时看。
+原理不复杂：各 Agent 通过 CLI（推荐，更省 token）或 MCP 连上同一套库，Claude Code、Cursor、OpenClaw 读写你本地的 Markdown 文件。数据在你电脑上，Git 管版本，人和 AI 的每次编辑都有记录。AI 读写日志在 GUI 的 Agent Inspector 里能看到，想审计随时看。
 
 说几个我自己用着觉得还行的点：
 
@@ -166,7 +166,7 @@ GitHub：https://github.com/GeminiLight/MindOS
 安装：
 npm i -g @geminilight/mindos && mindos onboard
 
-技术栈 Next.js 16 + TipTap + MCP SDK，stdio 和 HTTP 两种传输，完整 MCP 工具集，11 个渲染器（TODO Board、CSV Views、Wiki Graph 这些）。翻 GitHub 能看到更多。
+技术栈 Next.js 16 + TipTap；Agent 连接：CLI 模式（推荐）+ MCP（可选），stdio/HTTP 双传输，完整 MCP 工具集，11 个渲染器（TODO Board、CSV Views、Wiki Graph 这些）。翻 GitHub 能看到更多。
 
 ---
 
@@ -194,7 +194,7 @@ GitHub：https://github.com/GeminiLight/MindOS
 
 ### 楼里常被问（沿用）
 
-- **和 Obsidian / 纯文件夹有啥区别**：是否 MCP 一等公民、多 Agent 工具链、Inspector/工作流是否为你这类场景省事（如实说，别贬竞品）。
+- **和 Obsidian / 纯文件夹有啥区别**：是否把「多 Agent 共享同一库」当一等公民（日常推荐 CLI 连库；MCP 适合要挂进已有 MCP 生态的工具）、Inspector/工作流是否为你这类场景省事（如实说，别贬竞品）。
 - **必须上 npm 吗 / 能否纯离线**：按你产品实情答（桌面端、本地优先等）。
 - **数据安全**：本地、Git、审计日志——正文已有；回响里「今日一行」等当前在浏览器 localStorage 的也可如实说明（与知识库 Git 是不同层）。
 

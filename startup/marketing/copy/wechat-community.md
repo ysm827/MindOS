@@ -52,7 +52,7 @@ npm i -g @geminilight/mindos && mindos onboard
 
 **发送节奏：**
 1. 第一条破冰
-2. 间隔 5 分钟，发第二条 + 紧跟一条 2 分钟 demo 视频（录屏：onboard → 写笔记 → Claude Code 通过 MCP 读取）
+2. 间隔 5 分钟，发第二条 + 紧跟一条 2 分钟 demo 视频（录屏：onboard → 写笔记 → Claude Code 读取你的知识库）
 3. 隔天发第三条互动引导
 
 ---
@@ -74,7 +74,7 @@ npm i -g @geminilight/mindos && mindos onboard
 ```
 群公告曝光 → 安装试用 → 完成 onboarding → 连接第一个 Agent → 持续使用（7 天回访）
      ↓           ↓              ↓                    ↓                    ↓
-   追踪：     npm install    mindos onboard      MCP 首次读写         7d 留存率
+   追踪：     npm install    mindos onboard      Agent 首次读写         7d 留存率
    群消息阅读    下载量          完成率              激活率              留存率
 ```
 
@@ -90,7 +90,7 @@ npm i -g @geminilight/mindos && mindos onboard
 ## 待办
 
 - [x] 定稿群公告文案
-- [ ] 录制 2 分钟 demo 视频（onboard → 写笔记 → Claude Code 通过 MCP 读取）
+- [ ] 录制 2 分钟 demo 视频（onboard → 写笔记 → Claude Code 读取你的知识库）
 - [ ] 发送群公告 + demo 视频
 - [ ] 一周后统计安装转化率，收集反馈
 

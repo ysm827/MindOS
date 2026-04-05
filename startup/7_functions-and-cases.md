@@ -24,7 +24,7 @@
 
 | 功能 | 一句话 | 状态 |
 |------|--------|------|
-| **MCP Server** | 24 个工具，Agent 通过标准协议读写知识库 | ✅ |
+| **MCP Server** | CLI 为推荐默认接入；可选 MCP。24 个工具，Agent 读写同一知识库 | ✅ |
 | **ACP/A2A 协议** | Agent 间通信、发现、协作 | ✅ |
 | **Agent Inspector** | 查看 Agent 读写记录，操作留痕 | ✅ |
 | **Bootstrap** | 新 Agent 连接时自动注入用户上下文 | ✅ |
@@ -68,7 +68,7 @@
 
 | 场景 | 怎么用 | 涉及功能 |
 |------|--------|---------|
-| **项目记忆** | 每个项目一个 Space，架构决策、技术选型、会议记录都存这里。切 Agent 不用重新讲背景 | Space + MCP + Bootstrap |
+| **项目记忆** | 每个项目一个 Space，架构决策、技术选型、会议记录都存这里。切 Agent 不用重新讲背景 | Space + CLI/MCP 连接 + Bootstrap |
 | **读书/学习笔记** | 读完一本书或课程，把核心收获整理成 Markdown。Agent 以后回答问题时会引用你的笔记 | 知识库 + 搜索 + 反向链接 |
 | **日记/周报** | 用 Echo Daily 每天记一条。月底回顾时，AI 帮你发现趋势和模式 | Echo + Daily |
 | **个人 Wiki** | 把散落在各处的知识（技术栈、工具链、联系人、流程）集中管理 | 知识库 + Graph + Backlinks |
@@ -78,31 +78,31 @@
 
 | 场景 | 怎么用 | 涉及功能 |
 |------|--------|---------|
-| **编码规范统一** | 把代码风格、命名规范、错误处理标准写成 Instruction。Cursor 和 Claude Code 都遵守同一套标准 | Instruction + MCP + 多 Agent |
-| **架构决策记录（ADR）** | 每个重要的技术决策记一条：为什么选 PostgreSQL 而不是 MongoDB？Agent 以后写代码时参考 | Space + MCP |
+| **编码规范统一** | 把代码风格、命名规范、错误处理标准写成 Instruction。Cursor 和 Claude Code 都遵守同一套标准 | Instruction + CLI/MCP 连接 + 多 Agent |
+| **架构决策记录（ADR）** | 每个重要的技术决策记一条：为什么选 PostgreSQL 而不是 MongoDB？Agent 以后写代码时参考 | Space + CLI/MCP 连接 |
 | **Bug 修复知识库** | 遇到的坑和解法存起来。下次 Agent 遇到类似问题，自动引用你的经验 | 知识库 + 搜索 |
-| **代码审查标准** | 把 CR 标准写成 Skill，Agent 按你的标准审查代码 | Skills + MCP |
-| **多 Agent 协作** | Claude Code 写后端，Cursor 写前端，两者读同一套 Instruction，API 接口定义一致 | MCP + Instruction + ACP |
+| **代码审查标准** | 把 CR 标准写成 Skill，Agent 按你的标准审查代码 | Skills + CLI/MCP 连接 |
+| **多 Agent 协作** | Claude Code 写后端，Cursor 写前端，两者读同一套 Instruction，API 接口定义一致 | CLI/MCP 连接 + Instruction + ACP |
 | **项目 Onboarding** | 新项目的技术栈、架构图、规范全在 Space 里。新团队成员的 Agent 一连就能上手 | Space + Bootstrap |
-| **自动化工作流** | 定义 YAML 工作流：代码提交→自动审查→生成 changelog→更新文档 | Workflow + MCP |
+| **自动化工作流** | 定义 YAML 工作流：代码提交→自动审查→生成 changelog→更新文档 | Workflow + CLI/MCP 连接 |
 
 ### C. 创始人 / 产品经理
 
 | 场景 | 怎么用 | 涉及功能 |
 |------|--------|---------|
-| **产品战略沉淀** | 把战略文档、竞品分析、用户反馈存在知识库。和任何 AI 讨论产品时都有完整上下文 | Space + MCP + 一键导入 |
+| **产品战略沉淀** | 把战略文档、竞品分析、用户反馈存在知识库。和任何 AI 讨论产品时都有完整上下文 | Space + CLI/MCP 连接 + 一键导入 |
 | **用户访谈记录** | 每次访谈记关键词，AI 自动整理成结构化笔记，归档到对应主题 | 一键导入 + AI Organize |
 | **决策日志** | 为什么做 A 不做 B？三个月后回看决策逻辑，不后悔也不重复 | Echo Past You + Git 历史 |
-| **会议→行动** | 开会时敲关键词，Agent 主动调研、生成报告（Aha Moment #2） | 知识库 + MCP + Agent 主动执行 |
+| **会议→行动** | 开会时敲关键词，Agent 主动调研、生成报告（Aha Moment #2） | 知识库 + CLI/MCP 连接 + Agent 主动执行 |
 | **竞品监控** | 把竞品信息存在专门 Space，Agent 帮你做对比分析 | Space + 搜索 |
-| **融资准备** | 战略、BP、pitch deck、财务预测全在一个知识库。和 AI 准备 Q&A 时自动引用 | Space + MCP |
+| **融资准备** | 战略、BP、pitch deck、财务预测全在一个知识库。和 AI 准备 Q&A 时自动引用 | Space + CLI/MCP 连接 |
 
 ### D. 内容创作者
 
 | 场景 | 怎么用 | 涉及功能 |
 |------|--------|---------|
 | **写作风格规范** | 把你的文风偏好写成规则：用短句、不用"赋能"、段落不超过 3 句。所有 AI 写文章时遵守 | Instruction + Skills |
-| **素材库** | 收集的金句、案例、数据存在知识库。AI 写文章时自动引用 | 知识库 + 搜索 + MCP |
+| **素材库** | 收集的金句、案例、数据存在知识库。AI 写文章时自动引用 | 知识库 + 搜索 + CLI/MCP 连接 |
 | **系列文章管理** | 用 CSV 看板视图管理文章状态：选题→草稿→审校→已发布 | CSV 看板视图 |
 | **多平台发布** | 同一内容用 Workflow 自动适配不同平台格式（公众号/小红书/Twitter） | Workflow + Skills |
 
@@ -113,7 +113,7 @@
 | **文献管理** | 每篇论文一个 Markdown，核心观点+自己的评注。双链图谱展示论文间关系 | 知识库 + Graph + Backlinks |
 | **研究日志** | 每天实验记录用 Echo Daily，累积后 AI 帮你发现研究趋势 | Echo Daily |
 | **方法论沉淀** | 把研究方法写成 Skill：数据清洗流程、统计分析步骤、论文写作规范 | Skills |
-| **导师-学生知识传递** | 导师的方法论 Space 共享给学生的 Agent，学生的 AI 按导师标准工作 | Space + MCP + Team（远期） |
+| **导师-学生知识传递** | 导师的方法论 Space 共享给学生的 Agent，学生的 AI 按导师标准工作 | Space + CLI/MCP 连接 + Team（远期） |
 
 ### F. 团队协作（远期 P3）
 

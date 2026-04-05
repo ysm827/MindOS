@@ -37,7 +37,7 @@
 >
 > 起因很简单：我每天同时用 Claude Code、Cursor 和 Gemini CLI，最烦的事情是每换一个工具就要把项目背景重新讲一遍。
 >
-> 于是做了 MindOS——一个本地知识库，通过 MCP 协议让所有 AI 工具直接读取你的项目记忆。写一次，全都知道。
+> 于是做了 MindOS——一个本地知识库，让所有 AI 工具共享同一份项目记忆；推荐用 CLI 接入（更省 token），也支持可选的 MCP。写一次，全都知道。
 >
 > 还很早期，bug 不少，但核心流程跑通了。如果你也在同时用多个 AI 工具，欢迎试试给我反馈：
 > github.com/GeminiLight/mindos-dev
@@ -86,7 +86,7 @@
 >
 > **怎么解决的**
 >
-> MindOS 是一个本地知识库，通过 MCP 协议让所有 AI 工具直接读取。你在知识库里写一次项目背景、代码规范、个人偏好，所有工具自动读取。
+> MindOS 是一个本地知识库，让所有 AI 工具共享同一份项目记忆。你在知识库里写一次项目背景、代码规范、个人偏好，各工具通过 CLI（推荐，更省 token）或可选 MCP 即可读取。
 >
 > 技术栈：Next.js + MCP Server（stdio + HTTP）+ 纯 Markdown 存储 + Git 自动同步
 >
@@ -122,7 +122,7 @@
 
 ### Tweet 1：首次介绍（单条）
 
-> I've been building MindOS — an open-source local knowledge base that lets all your AI tools share the same project context through MCP.
+> I've been building MindOS — an open-source local knowledge base so all your AI agents share one project context. CLI is the recommended connection (more token-efficient); MCP is optional.
 >
 > Write your decisions once. Claude Code, Cursor, Gemini CLI all read it automatically.
 >
@@ -147,7 +147,7 @@
 >
 > 2/ The insight: The fix isn't better memory in each tool. It's a shared context layer that all tools can read. Like a project wiki, but for AI agents.
 >
-> 3/ How it works: MindOS is a local knowledge base. You write your project decisions, coding standards, and preferences in Markdown. All AI tools connect via MCP protocol and read it automatically.
+> 3/ How it works: MindOS is a local knowledge base. You write your project decisions, coding standards, and preferences in Markdown. All agents read the same store—CLI first (token-efficient); MCP is optional when you want it.
 >
 > 4/ Current state: v0.5.70, supports 10+ agents, has GUI + CLI + desktop app. MIT open source. Still early — bugs exist. But the core flow works.
 >
@@ -184,18 +184,18 @@
 
 | Subreddit | 帖子标题 | 注意 |
 |-----------|---------|------|
-| **r/ClaudeAI** | "I built an open-source tool to share project context across Claude Code, Cursor, and other MCP agents" | 最精准，强调 MCP |
-| **r/LocalLLaMA** | "MindOS: local-first knowledge base that all your AI agents can read via MCP" | 强调 local-first |
+| **r/ClaudeAI** | "I built an open-source tool to share project context across Claude Code, Cursor, and other AI agents" | 最精准，强调多 Agent 共享 |
+| **r/LocalLLaMA** | "MindOS: local-first knowledge base so all your AI agents share one context (CLI-first; MCP optional)" | 强调 local-first |
 | **r/SideProject** | "Show my side project: MindOS — shared brain for AI coding agents" | 侧重项目展示 |
-| **r/selfhosted** | "Self-hosted knowledge base for multi-agent workflows (MCP-native, Markdown, Git sync)" | 强调自托管 |
+| **r/selfhosted** | "Self-hosted knowledge base for multi-agent workflows (CLI-first, optional MCP, Markdown, Git sync)" | 强调自托管 |
 
 ### Reddit 通用帖子模板
 
-> **What it is:** MindOS is an open-source, local-first knowledge base that lets all your AI tools (Claude Code, Cursor, Gemini CLI, etc.) share the same project context through MCP protocol.
+> **What it is:** MindOS is an open-source, local-first knowledge base so all your AI tools (Claude Code, Cursor, Gemini CLI, etc.) share the same project context—CLI is the recommended hook (token-efficient); MCP is optional.
 >
 > **Why I built it:** I use 3+ AI coding tools daily and got tired of re-explaining project context to each one. Corrections get lost between sessions. There's no shared memory layer across tools.
 >
-> **How it works:** You write project decisions, coding standards, and preferences in Markdown. AI tools connect via MCP and read automatically. Everything stays local, pure text, zero lock-in.
+> **How it works:** You write project decisions, coding standards, and preferences in Markdown. Agents read from that shared store over CLI (recommended) or optional MCP. Everything stays local, pure text, zero lock-in.
 >
 > **Current state:** v0.5.70, early preview. Supports 10+ agents. GUI + CLI + desktop app. MIT open source. Bugs exist — core flow is stable.
 >
@@ -228,7 +228,7 @@
 >
 > **产品**
 >
-> MindOS 是一个开源的本地知识库，通过 MCP 协议让所有 AI 工具直接读取你的项目记忆。一次写入，全部复用。
+> MindOS 是一个开源的本地知识库，让所有 AI 工具共享同一份项目记忆；推荐 CLI 接入（更省 token），MCP 可选。一次写入，全部复用。
 >
 > **当前数据**
 >
@@ -267,7 +267,7 @@
 ```markdown
 ## MindOS
 
-- [MindOS](https://github.com/GeminiLight/mindos-dev) - Personal Context OS for multi-agent users. Local-first knowledge base that all AI agents can read and write through MCP. Supports Claude Code, Cursor, Gemini CLI, and 10+ agents.
+- [MindOS](https://github.com/GeminiLight/mindos-dev) - Personal Context OS for multi-agent users. Local-first knowledge base so all agents share one Markdown store; CLI-first (token-efficient), optional MCP server. Supports Claude Code, Cursor, Gemini CLI, and 10+ agents.
 ```
 
 ### awesome-selfhosted PR
@@ -275,7 +275,7 @@
 ```markdown
 ## MindOS
 
-- [MindOS](https://github.com/GeminiLight/mindos-dev) - Self-hosted knowledge base for multi-agent workflows. Local Markdown files, MCP-native, Git auto-sync, GUI + CLI + desktop app. `MIT` `Nodejs`
+- [MindOS](https://github.com/GeminiLight/mindos-dev) - Self-hosted knowledge base for multi-agent workflows. Local Markdown files, CLI-first with optional MCP, Git auto-sync, GUI + CLI + desktop app. `MIT` `Nodejs`
 ```
 
 ### 目标列表

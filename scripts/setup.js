@@ -1314,8 +1314,36 @@ async function main() {
     console.log(c.dim(t('syncLater')));
   }
 
+  // ── Register CLI globally if not already in PATH ────────────────────────────
+  ensureCliInPath();
+
   const installDaemon = startMode === 'daemon' || process.argv.includes('--install-daemon');
   finish(mindDir, config.startMode, config.mcpPort, config.authToken, installDaemon, needsRestart, resumeCfg.port ?? 3456);
+}
+
+function ensureCliInPath() {
+  try {
+    execSync('command -v mindos', { stdio: 'ignore' });
+    return; // already in PATH (npm -g install or previous link)
+  } catch { /* not found */ }
+
+  // Only auto-register for source/dev installations.
+  // Desktop (Electron) manages its own process; npx is ephemeral.
+  const isDesktop = !!(process.env.ELECTRON_RUN_AS_NODE || process.env.MINDOS_DESKTOP);
+  const isDevInstall = existsSync(resolve(ROOT, '.git'));
+  if (isDesktop || !isDevInstall) return;
+
+  write('\n');
+  try {
+    execSync('npm link', { cwd: ROOT, stdio: 'ignore' });
+    write(c.green(uiLang === 'zh'
+      ? '  ✔ mindos CLI 已注册到全局路径\n'
+      : '  ✔ mindos CLI registered globally\n'));
+  } catch {
+    write(c.yellow(uiLang === 'zh'
+      ? '  ⚠ 无法自动注册 CLI，请手动运行：npm link\n'
+      : '  ⚠ Could not register CLI automatically. Run manually: npm link\n'));
+  }
 }
 
 function getLocalIP() {
