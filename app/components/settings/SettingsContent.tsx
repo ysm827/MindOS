@@ -124,6 +124,7 @@ export default function SettingsContent({ visible, initialTab, variant, onClose 
         body: JSON.stringify({ ai: d.ai, agent: d.agent, mindRoot: d.mindRoot, webPassword: d.webPassword, authToken: d.authToken }),
       });
       setStatus('saved');
+      window.dispatchEvent(new Event('mindos:settings-changed'));
       setTimeout(() => setStatus('idle'), 2500);
     } catch {
       setStatus('error');

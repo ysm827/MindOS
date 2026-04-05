@@ -95,8 +95,10 @@ export default function ProviderModelCapsule({
     };
     doFetch();
     const onVisible = () => { if (document.visibilityState === 'visible') doFetch(); };
+    const onSettingsChanged = () => doFetch();
     document.addEventListener('visibilitychange', onVisible);
-    return () => { cancelled = true; document.removeEventListener('visibilitychange', onVisible); };
+    window.addEventListener('mindos:settings-changed', onSettingsChanged);
+    return () => { cancelled = true; document.removeEventListener('visibilitychange', onVisible); window.removeEventListener('mindos:settings-changed', onSettingsChanged); };
   }, []);
 
   const defaultProvider = (settingsData?.ai?.provider && isProviderId(settingsData.ai.provider))
