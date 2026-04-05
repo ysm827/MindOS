@@ -137,8 +137,9 @@ export function checkSkillVersions(root) {
     if (!existsSync(bundledPath)) continue;
 
     if (!existsSync(installPath)) {
-      // Path no longer exists — clean up stale record silently
-      removeSkillRecord(record.agent, skillName);
+      // Path doesn't exist — skill not installed yet or was removed.
+      // Don't clean up the record: user may install the skill later,
+      // and we want to auto-update it when they do.
       continue;
     }
 
