@@ -23,6 +23,12 @@ export const EXIT = {
 // ── Arg parsing ───────────────────────────────────────────────────────────────
 
 /** Parse process.argv into { command, args, flags } */
+function looksLikeFlag(s) {
+  if (!s || s.length < 2) return false;
+  if (s.startsWith('--')) return true;
+  return s.length === 2 && s[0] === '-' && /[a-zA-Z]/.test(s[1]);
+}
+
 export function parseArgs(argv = process.argv.slice(2)) {
   const flags = {};
   const args = [];
@@ -32,16 +38,16 @@ export function parseArgs(argv = process.argv.slice(2)) {
     const arg = argv[i];
     if (arg.startsWith('--')) {
       const key = arg.slice(2);
-      if (i + 1 < argv.length && !argv[i + 1].startsWith('-')) {
+      if (i + 1 < argv.length && !looksLikeFlag(argv[i + 1])) {
         flags[key] = argv[i + 1];
         i += 2;
       } else {
         flags[key] = true;
         i++;
       }
-    } else if (arg.startsWith('-') && arg.length === 2) {
+    } else if (arg.startsWith('-') && arg.length === 2 && /[a-zA-Z]/.test(arg[1])) {
       const key = arg.slice(1);
-      if (i + 1 < argv.length && !argv[i + 1].startsWith('-')) {
+      if (i + 1 < argv.length && !looksLikeFlag(argv[i + 1])) {
         flags[key] = argv[i + 1];
         i += 2;
       } else {

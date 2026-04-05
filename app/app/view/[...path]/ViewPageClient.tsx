@@ -58,8 +58,8 @@ export default function ViewPageClient({
   );
 
   const [useRaw, setUseRaw] = useRendererState<boolean>('_raw', filePath, false);
-  // Global graph mode — shared across all md files (not per-file)
-  const [graphMode, setGraphMode] = useRendererState<boolean>('_graphMode', '_global', false);
+  // Graph mode — per-view, resets when navigating to a different file
+  const [graphMode, setGraphMode] = useState(false);
   const router = useRouter();
   const [editing, setEditing] = useState(initialEditing || content === '');
   const [editContent, setEditContent] = useState(content);
@@ -167,7 +167,7 @@ export default function ViewPageClient({
     setGraphMode(prev => !prev);
   }, [setGraphMode]);
 
-  const effectiveGraphMode = hydrated ? graphMode : false;
+  const effectiveGraphMode = graphMode;
 
   // Resolve renderer: for md files, graph mode overrides normal resolution
   const registryRenderer = resolveRenderer(filePath, extension);
