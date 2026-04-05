@@ -18,6 +18,7 @@ function Section({ id, icon, title, defaultOpen = false, children }: {
 
   return (
     <div id={id} className="bg-card border border-border rounded-lg overflow-hidden scroll-mt-4">
+      <h2 className="sr-only">{title}</h2>
       <button
         onClick={() => setOpen(v => !v)}
         className="w-full flex items-center gap-3 px-5 py-4 text-left hover:bg-muted/50 transition-colors focus-visible:ring-2 focus-visible:ring-ring"
