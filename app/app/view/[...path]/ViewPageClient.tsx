@@ -448,14 +448,6 @@ export default function ViewPageClient({
                   <Star size={16} className={pinned ? 'fill-[var(--amber)] text-[var(--amber)]' : ''} />
                 </button>
                 <button
-                  type="button"
-                  onClick={() => setExportOpen(true)}
-                  className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-                  title={t.fileTree.export}
-                >
-                  <Download size={16} />
-                </button>
-                <button
                   ref={moreRef}
                   type="button"
                   onClick={() => setMoreOpen(v => !v)}
@@ -475,6 +467,9 @@ export default function ViewPageClient({
                         {effectiveGraphMode ? (t.view?.switchToDoc ?? 'Document view') : (t.view?.switchToGraph ?? 'Wiki Graph')}
                       </button>
                     )}
+                    <button className="w-full flex items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-muted transition-colors text-left" onClick={() => { setMoreOpen(false); setExportOpen(true); }}>
+                      <Download size={14} className="shrink-0" /> {t.fileTree?.export ?? 'Export'}
+                    </button>
                     <button className="w-full flex items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-muted transition-colors text-left" onClick={handleCopyPath}>
                       <Copy size={14} className="shrink-0" /> {t.view?.copyPath ?? t.fileTree?.copyPath ?? 'Copy Path'}
                     </button>
