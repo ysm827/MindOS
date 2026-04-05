@@ -13,6 +13,7 @@ import {
   type ToolDefinition,
   SessionManager,
   SettingsManager,
+  bashTool,
 } from '@mariozechner/pi-coding-agent';
 import { NextRequest, NextResponse } from 'next/server';
 import fs from 'fs';
@@ -316,7 +317,7 @@ function toPiCustomToolDefinitions(tools: AgentTool<any>[]): ToolDefinition<any,
           params: args,
           result: outputText.startsWith('Error:') ? 'error' : 'ok',
           message: outputText.slice(0, 200),
-          agentName: 'MindOS Ask',
+          agentName: 'MindOS',
         });
       } catch {
         // logging must never kill the stream
@@ -669,7 +670,7 @@ export async function POST(req: NextRequest) {
       resourceLoader,
       sessionManager: SessionManager.inMemory(),
       settingsManager,
-      tools: [],
+      tools: askMode === 'agent' ? [bashTool] : [],
       customTools,
     });
 

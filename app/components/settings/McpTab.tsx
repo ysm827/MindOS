@@ -114,6 +114,42 @@ export function McpTab({ t }: McpTabProps) {
         <SkillsSection t={t} />
       </div>
 
+      {/* CLI Skill */}
+      <div>
+        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">{m?.cliSkillTitle ?? 'CLI Skill'}</p>
+        <div className="rounded-xl border border-border bg-card p-4 space-y-3">
+          <p className="text-xs text-muted-foreground">{m?.cliSkillHint ?? 'For agents with bash — lower token cost, no MCP needed.'}</p>
+          <div className="space-y-2">
+            <div>
+              <span className="text-2xs font-medium text-muted-foreground uppercase tracking-wider">{m?.cliSkillInstall ?? 'Install:'}</span>
+              <div className="mt-1 flex items-center gap-2 px-3 py-2 bg-muted/50 border border-border rounded-lg">
+                <code className="flex-1 text-xs font-mono text-foreground select-all">{m?.cliSkillInstallCmd ?? 'npm install -g @geminilight/mindos'}</code>
+              </div>
+            </div>
+            {mcp.status?.endpoint && (
+              <div>
+                <span className="text-2xs font-medium text-muted-foreground uppercase tracking-wider">{m?.cliSkillRemote ?? 'Remote access:'}</span>
+                <div className="mt-1 space-y-1">
+                  {['mindos config set url ' + (mcp.status.endpoint?.replace('/mcp', '') || 'http://localhost:3456'),
+                    'mindos config set authToken ' + (mcp.status.authToken ? '••••••' : '<token>'),
+                  ].map((cmd, i) => (
+                    <div key={i} className="flex items-center gap-2 px-3 py-1.5 bg-muted/50 border border-border rounded-lg">
+                      <code className="flex-1 text-xs font-mono text-foreground">{cmd}</code>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            <div>
+              <span className="text-2xs font-medium text-muted-foreground uppercase tracking-wider">{m?.cliSkillVerify ?? 'Verify:'}</span>
+              <div className="mt-1 flex items-center gap-2 px-3 py-2 bg-muted/50 border border-border rounded-lg">
+                <code className="flex-1 text-xs font-mono text-foreground select-all">{m?.cliSkillVerifyCmd ?? 'mindos file list'}</code>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* Batch Agent Install */}
       <div>
         <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">{m?.agentsTitle ?? 'Agent Configuration'}</p>

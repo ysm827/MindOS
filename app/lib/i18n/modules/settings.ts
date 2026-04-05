@@ -285,6 +285,14 @@ export const settingsEn = {
       howToStep2: 'Add a new MCP server with the URL above',
       howToStep3: 'Set the Auth Token as the bearer token',
       howToStep4: 'Save and verify the connection',
+      // CLI Skill
+      cliSkillTitle: 'CLI Skill',
+      cliSkillHint: 'For agents with bash (Claude Code, Gemini CLI, Codex) — lower token cost, no MCP needed.',
+      cliSkillInstall: 'Install:',
+      cliSkillInstallCmd: 'npm install -g @geminilight/mindos',
+      cliSkillRemote: 'Remote access:',
+      cliSkillVerify: 'Verify:',
+      cliSkillVerifyCmd: 'mindos file list',
     },
     monitoring: {
       system: 'System',
@@ -691,6 +699,14 @@ export const settingsZh = {
       howToStep2: '添加一个新的 MCP 服务，填入上方地址',
       howToStep3: '将认证令牌设为 Bearer Token',
       howToStep4: '保存并验证连接',
+      // CLI Skill
+      cliSkillTitle: 'CLI 技能',
+      cliSkillHint: '适用于支持 bash 的 Agent（Claude Code、Gemini CLI、Codex）——更省 token，无需 MCP。',
+      cliSkillInstall: '安装：',
+      cliSkillInstallCmd: 'npm install -g @geminilight/mindos',
+      cliSkillRemote: '远程访问：',
+      cliSkillVerify: '验证：',
+      cliSkillVerifyCmd: 'mindos file list',
     },
     monitoring: {
       system: '系统',

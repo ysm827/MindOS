@@ -339,6 +339,9 @@ function ByAgentView({
                         variant="primary"
                       />
                     )}
+                    {!agent.installed && (
+                      <span className="text-2xs text-muted-foreground/60">or CLI Skill</span>
+                    )}
                   </div>
                 </div>
 
