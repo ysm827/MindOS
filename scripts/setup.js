@@ -1314,7 +1314,10 @@ async function main() {
   const modes = await runModeSelect();
 
   // 7b: Agent multi-select + conditional install
-  write('\n' + c.dim(tf('mcpStepHint') + '\n\n'));
+  const agentHint = modes.mcp ? tf('mcpStepHint') : (uiLang === 'zh'
+    ? '选择要安装 CLI Skill 的 AI Agent（空格切换，A 全选，Enter 确认）。'
+    : 'Select AI agents to install CLI Skill (Space to toggle, A for all, Enter to confirm).');
+  write('\n' + c.dim(agentHint + '\n\n'));
 
   if (modes.mcp) {
     // MCP mode: run full MCP install (config + agent selection)

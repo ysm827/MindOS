@@ -364,7 +364,7 @@ function fileAppend(root, filePath, flags) {
   }
 
   const stat = statSync(full);
-  let separator = '\n';
+  let separator = '';
   if (stat.size > 0) {
     const readLen = Math.min(8, stat.size);
     const fd = openSync(full, 'r');
@@ -372,7 +372,7 @@ function fileAppend(root, filePath, flags) {
       const buf = Buffer.alloc(readLen);
       readSync(fd, buf, 0, readLen, Math.max(0, stat.size - readLen));
       const tail = buf.toString('utf-8');
-      separator = tail.endsWith('\n\n') ? '' : tail.endsWith('\n') ? '' : '\n';
+      separator = tail.endsWith('\n') ? '' : '\n';
     } finally {
       closeSync(fd);
     }
@@ -469,7 +469,12 @@ function fileAppendCsv(root, filePath, flags) {
     process.exit(EXIT.ERROR);
   }
   const full = resolvePath(root, filePath);
-  const values = typeof rowStr === 'string' ? rowStr.split(',').map(v => v.trim()) : [String(rowStr)];
+  let values;
+  if (typeof rowStr === 'string' && rowStr.startsWith('[')) {
+    try { values = JSON.parse(rowStr); } catch { values = rowStr.split(',').map(v => v.trim()); }
+  } else {
+    values = typeof rowStr === 'string' ? rowStr.split(',').map(v => v.trim()) : [String(rowStr)];
+  }
   const line = escapeCsvRow(values) + '\n';
 
   mkdirSync(dirname(full), { recursive: true });
@@ -578,17 +583,17 @@ function fileHistory(root, filePath, flags) {
     process.exit(EXIT.ERROR);
   }
 
-  let output_text = '';
+  let gitOutput = '';
   try {
-    output_text = execFileSync(
+    gitOutput = execFileSync(
       'git',
       ['log', '--follow', '--format=%H%x00%aI%x00%s%x00%an', '-n', String(limit), '--', full],
       { cwd: root, encoding: 'utf-8', stdio: ['pipe', 'pipe', 'pipe'] }
     ).trim();
   } catch { /* no commits or git error */ }
 
-  const entries = output_text
-    ? output_text.split('\n').map(line => {
+  const entries = gitOutput
+    ? gitOutput.split('\n').map(line => {
         const [hash, date, message, author] = line.split('\0');
         return { hash, date, message, author };
       })
