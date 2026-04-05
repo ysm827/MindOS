@@ -204,15 +204,15 @@ export async function POST(req: NextRequest) {
 
         const result: typeof results[number] = { agent: key, status: 'ok', path: configPath, transport: effectiveTransport };
 
-        // Record skill install path for auto-update on future version bumps
+        // Record skill install path for auto-update on future version bumps.
+        // Always record — even if skill file doesn't exist yet (user may install
+        // it later via `npx skills add`). skill-check gracefully skips missing paths.
         try {
           const skillProfile = resolveSkillWorkspaceProfile(key);
           const settings = readSettings();
           const activeSkill = settings.disabledSkills?.includes('mindos') ? 'mindos-zh' : 'mindos';
           const skillPath = path.join(skillProfile.workspacePath, activeSkill, 'SKILL.md');
-          if (fs.existsSync(skillPath)) {
-            recordSkillInstall(key, activeSkill, skillPath);
-          }
+          recordSkillInstall(key, activeSkill, skillPath);
         } catch { /* best-effort, don't fail the install */ }
 
         // Verify http connections
