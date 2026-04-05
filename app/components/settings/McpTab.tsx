@@ -69,40 +69,40 @@ export function McpTab({ t }: McpTabProps) {
 
   return (
     <div className="space-y-6">
-      {/* 1. Server status */}
-      <McpStatusCard status={mcp.status} restarting={restarting} onRestart={handleRestart} onRefresh={mcp.refresh} m={m} />
-
-      {/* 2. How to connect — dual mode */}
+      {/* 1. How to connect — the primary action */}
       <ConnectGuide status={mcp.status} mode={connectMode} onModeChange={setConnectMode} m={m} />
 
-      {/* 3. MCP Config (collapsible) */}
-      {mcp.agents.length > 0 && (
-        <CollapsibleSection title="MCP" defaultOpen={false}>
-          <AgentConfigViewer
-            connectedAgents={connectedAgents}
-            detectedAgents={detectedAgents}
-            notFoundAgents={notFoundAgents}
-            currentAgent={currentAgent ?? null}
-            mcpStatus={mcp.status}
-            selectedAgent={effectiveSelected}
-            onSelectAgent={(key) => setSelectedAgent(key)}
-            transport={transport}
-            onTransportChange={setTransport}
-            onCopy={async (snippet) => {
-              const ok = await copyToClipboard(snippet);
-              if (ok) toast.copy();
-            }}
-            m={m}
-          />
-        </CollapsibleSection>
-      )}
-
-      {/* 4. Skills */}
+      {/* 2. Skills */}
       <CollapsibleSection title={m?.skillsTitle ?? 'Skills'} defaultOpen={false}>
         <SkillsSection t={t} />
       </CollapsibleSection>
 
-      {/* 5. Agent Install */}
+      {/* 3. MCP Server + Config (only relevant for MCP users) */}
+      <CollapsibleSection title="MCP Server" defaultOpen={false}>
+        <div className="space-y-4">
+          <McpStatusCard status={mcp.status} restarting={restarting} onRestart={handleRestart} onRefresh={mcp.refresh} m={m} />
+          {mcp.agents.length > 0 && (
+            <AgentConfigViewer
+              connectedAgents={connectedAgents}
+              detectedAgents={detectedAgents}
+              notFoundAgents={notFoundAgents}
+              currentAgent={currentAgent ?? null}
+              mcpStatus={mcp.status}
+              selectedAgent={effectiveSelected}
+              onSelectAgent={(key) => setSelectedAgent(key)}
+              transport={transport}
+              onTransportChange={setTransport}
+              onCopy={async (snippet) => {
+                const ok = await copyToClipboard(snippet);
+                if (ok) toast.copy();
+              }}
+              m={m}
+            />
+          )}
+        </div>
+      </CollapsibleSection>
+
+      {/* 4. Agent Install */}
       <CollapsibleSection title={m?.agentsTitle ?? 'Agent Configuration'} defaultOpen={false}>
         <AgentInstall agents={mcp.agents} t={t} onRefresh={mcp.refresh} />
       </CollapsibleSection>
