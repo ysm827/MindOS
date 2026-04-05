@@ -27,11 +27,12 @@ export default function StepAI({ state, update, s, onCopyToken, webPortStatus, m
   const { locale } = useLocale();
   const [portsOpen, setPortsOpen] = useState(false);
 
+  // Only auto-open Advanced if there's an unresolved port issue the user needs to see
   useEffect(() => {
-    if (!portsOpen && (webPortStatus.available === false || mcpPortStatus.available === false || portConflict)) {
+    if (!portsOpen && portConflict) {
       setPortsOpen(true);
     }
-  }, [webPortStatus.available, mcpPortStatus.available, portConflict, portsOpen]);
+  }, [portConflict, portsOpen]);
 
   const currentProvider = state.provider !== 'skip' && isProviderId(state.provider) ? state.provider : null;
   const currentPreset = currentProvider ? PROVIDER_PRESETS[currentProvider] : null;

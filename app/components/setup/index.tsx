@@ -207,11 +207,11 @@ export default function SetupWizard() {
       });
   }, []);
 
-  // Auto-check ports when entering AI step (ports are in Advanced section)
+  // Auto-check ports when entering AI step — auto-resolve occupied ports
   useEffect(() => {
     if (step === STEP_AI) {
-      checkPort(state.webPort, 'web');
-      checkPort(state.mcpPort, 'mcp');
+      checkPort(state.webPort, 'web', true);
+      checkPort(state.mcpPort, 'mcp', true);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step]);
@@ -259,7 +259,7 @@ export default function SetupWizard() {
     });
   }, [state.authToken]);
 
-  const checkPort = useCallback(async (port: number, which: 'web' | 'mcp') => {
+  const checkPort = useCallback(async (port: number, which: 'web' | 'mcp', autoResolve = false) => {
     if (port < 1024 || port > 65535) return;
     const setStatus = which === 'web' ? setWebPortStatus : setMcpPortStatus;
     setStatus({ checking: true, available: null, isSelf: false, suggestion: null });
@@ -270,7 +270,17 @@ export default function SetupWizard() {
         body: JSON.stringify({ port }),
       });
       const data = await res.json();
-      setStatus({ checking: false, available: data.available ?? null, isSelf: !!data.isSelf, suggestion: data.suggestion ?? null });
+      const available = data.available ?? null;
+      const suggestion = data.suggestion ?? null;
+      setStatus({ checking: false, available, isSelf: !!data.isSelf, suggestion });
+
+      // Auto-resolve: if port is occupied and a suggestion is available, use it silently
+      if (autoResolve && available === false && suggestion) {
+        const key = which === 'web' ? 'webPort' : 'mcpPort';
+        setState(prev => ({ ...prev, [key]: suggestion }));
+        // Re-check the suggested port
+        setTimeout(() => checkPort(suggestion, which, false), 0);
+      }
     } catch (e) {
       console.warn('[SetupWizard] checkPort failed:', e);
       setStatus({ checking: false, available: null, isSelf: false, suggestion: null });
@@ -380,23 +390,28 @@ export default function SetupWizard() {
   }, [agents, agentScope, agentTransport, state.mcpPort, state.authToken]);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto"
+    <div className="fixed inset-0 z-50 flex flex-col overflow-y-auto"
       role="dialog" aria-modal="true" aria-labelledby="setup-title"
       style={{ background: 'var(--background)' }}>
-      <div className="w-full max-w-xl mx-auto px-6 py-12">
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center gap-2 mb-2">
-            <Sparkles size={18} style={{ color: 'var(--amber)' }} />
-            <h1 id="setup-title" className="text-2xl font-semibold tracking-tight font-display" style={{ color: 'var(--foreground)' }}>
-              MindOS
-            </h1>
+      {/* Sticky header: logo + step dots */}
+      <div className="sticky top-0 z-10 pt-6 pb-3 px-6" style={{ background: 'var(--background)' }}>
+        <div className="max-w-xl mx-auto">
+          <div className="text-center mb-3">
+            <div className="inline-flex items-center gap-2">
+              <Sparkles size={18} style={{ color: 'var(--amber)' }} />
+              <h1 id="setup-title" className="text-2xl font-semibold tracking-tight font-display" style={{ color: 'var(--foreground)' }}>
+                MindOS
+              </h1>
+            </div>
+          </div>
+          <div className="flex justify-center">
+            <StepDots step={step} setStep={setStep} stepTitles={s.stepTitles} disabled={submitting || completed} numberedSteps={STEP_REVIEW} />
           </div>
         </div>
+      </div>
 
-        <div className="flex justify-center">
-          <StepDots step={step} setStep={setStep} stepTitles={s.stepTitles} disabled={submitting || completed} numberedSteps={STEP_REVIEW} />
-        </div>
-
+      {/* Scrollable content */}
+      <div className="flex-1 w-full max-w-xl mx-auto px-6 pb-8">
         <h2 className="text-lg font-semibold mb-5" style={{ color: 'var(--foreground)' }}>
           {step === STEP_REVIEW ? `✓ ${s.stepTitles[step]}` : s.stepTitles[step]}
         </h2>
