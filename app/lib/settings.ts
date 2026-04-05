@@ -181,12 +181,11 @@ export function readSettings(): ServerSettings {
       guideState: parseGuideState(parsed.guideState),
     };
   } catch {
-    // No config file → first run, force setup wizard
-    const configExists = fs.existsSync(SETTINGS_PATH);
+    // Config file missing or corrupt → force setup wizard
     return {
       ...DEFAULTS,
       ai: { ...DEFAULTS.ai, providers: { ...DEFAULTS.ai.providers } },
-      setupPending: configExists ? undefined : true,
+      setupPending: true,
     };
   }
 }
