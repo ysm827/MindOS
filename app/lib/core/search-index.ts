@@ -1,10 +1,38 @@
 import fs from 'fs';
 import path from 'path';
+import os from 'os';
+import { execFileSync } from 'child_process';
 import { collectAllFiles } from './tree';
 import { readFile } from './fs-ops';
+import { resolveSafe } from './security';
 import { CJK_CHAR_REGEX } from './cjk';
 
 const MAX_CONTENT_LENGTH = 50_000;
+
+/**
+ * Extract text from a PDF file for search indexing.
+ * Spawns extract-pdf.cjs in a child process to avoid Turbopack/pdfjs-dist worker conflicts.
+ * Returns extracted text, or empty string if extraction fails.
+ */
+function extractPdfTextForIndex(absolutePath: string): string {
+  try {
+    const appDir = process.env.MINDOS_PROJECT_ROOT
+      ? path.join(process.env.MINDOS_PROJECT_ROOT, 'app')
+      : path.resolve(process.cwd());
+    const scriptPath = path.join(appDir, 'scripts', 'extract-pdf.cjs');
+    if (!fs.existsSync(scriptPath)) return '';
+
+    const stdout = execFileSync('node', [scriptPath, absolutePath], {
+      encoding: 'utf-8',
+      timeout: 15_000,
+      maxBuffer: 5 * 1024 * 1024,
+    });
+    const result = JSON.parse(stdout) as { text: string; pages: number };
+    return result.text || '';
+  } catch {
+    return '';
+  }
+}
 
 // Intl.Segmenter for proper CJK word segmentation (available in Node 16+)
 const zhSegmenter = typeof Intl !== 'undefined' && Intl.Segmenter
@@ -111,10 +139,23 @@ export class SearchIndex {
 
     for (const filePath of allFiles) {
       let content: string;
-      try {
-        content = readFile(mindRoot, filePath);
-      } catch {
-        continue;
+      const ext = path.extname(filePath).toLowerCase();
+
+      if (ext === '.pdf') {
+        // PDF: extract text from binary via pdfjs-dist child process
+        try {
+          const resolved = resolveSafe(mindRoot, filePath);
+          content = extractPdfTextForIndex(resolved);
+          if (!content) continue;
+        } catch {
+          continue;
+        }
+      } else {
+        try {
+          content = readFile(mindRoot, filePath);
+        } catch {
+          continue;
+        }
       }
 
       // Store original length for BM25 before truncation
@@ -191,7 +232,16 @@ export class SearchIndex {
     if (!this.invertedIndex) return;
 
     let content: string;
-    try { content = readFile(mindRoot, filePath); } catch { return; }
+    const ext = path.extname(filePath).toLowerCase();
+    if (ext === '.pdf') {
+      try {
+        const resolved = resolveSafe(mindRoot, filePath);
+        content = extractPdfTextForIndex(resolved);
+        if (!content) return;
+      } catch { return; }
+    } else {
+      try { content = readFile(mindRoot, filePath); } catch { return; }
+    }
 
     // Update BM25 stats
     this.docLengths.set(filePath, content.length);
