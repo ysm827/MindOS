@@ -1,9 +1,14 @@
 import { notFound } from 'next/navigation';
-import { getFileContent, saveFileContent, isDirectory, getDirEntries, createFile, getFileTree, getSpacePreview } from '@/lib/fs';
+import fs from 'fs';
+import { getFileContent, saveFileContent, isDirectory, getDirEntries, createFile, getFileTree, getSpacePreview, getMindRoot } from '@/lib/fs';
+import { resolveSafe } from '@/lib/core/security';
 import type { FileNode } from '@/lib/types';
 import ViewPageClient from './ViewPageClient';
 import DirView from '@/components/DirView';
 import Papa from 'papaparse';
+
+/** Extensions handled as binary (not read as UTF-8 text) */
+const BINARY_EXTENSIONS = new Set(['pdf']);
 
 interface PageProps {
   params: Promise<{ path: string[] }>;
@@ -51,6 +56,27 @@ export default async function ViewPage({ params }: PageProps) {
   async function createDraftAction(targetPath: string, draftContent: string) {
     'use server';
     createFile(targetPath, draftContent);
+  }
+
+  // Binary files (PDF, etc.) are rendered by their own viewer via iframe/API.
+  // Skip UTF-8 text reading — just verify the file exists.
+  if (BINARY_EXTENSIONS.has(extension)) {
+    let binaryExists = false;
+    try {
+      const resolved = resolveSafe(getMindRoot(), filePath);
+      binaryExists = fs.existsSync(resolved);
+    } catch { /* path traversal → not found */ }
+
+    if (!binaryExists) notFound();
+
+    return (
+      <ViewPageClient
+        filePath={filePath}
+        content=""
+        extension={extension}
+        saveAction={saveAction}
+      />
+    );
   }
 
   let content = '';

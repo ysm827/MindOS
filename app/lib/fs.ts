@@ -48,7 +48,7 @@ export function getMindRoot(): string {
 }
 
 const IGNORED_DIRS = new Set(['.git', 'node_modules', 'app', '.next', '.DS_Store']);
-const ALLOWED_EXTENSIONS = new Set(['.md', '.csv', '.json']);
+const ALLOWED_EXTENSIONS = new Set(['.md', '.csv', '.json', '.pdf']);
 const SYSTEM_FILES = new Set(['INSTRUCTION.md', 'README.md', 'CONFIG.json', 'CHANGELOG.md']);
 
 // ─── In-memory cache ──────────────────────────────────────────────────────────
