@@ -96,6 +96,7 @@ export default function WikiHomePanel({ fileTree, active, maximized, onMaximize 
   const { t } = useLocale();
   const [recentFiles, setRecentFiles] = useState<RecentFile[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState<'recent' | 'name' | 'fileCount'>('recent');
   const [showAllSpaces, setShowAllSpaces] = useState(false);
 
@@ -106,24 +107,47 @@ export default function WikiHomePanel({ fileTree, active, maximized, onMaximize 
   useEffect(() => {
     if (!active) return;
 
+    const abortController = new AbortController();
+    let isMounted = true;
+
     const fetchRecent = async () => {
       try {
-        const res = await fetch('/api/recent-files?limit=20');
+        const res = await fetch('/api/recent-files?limit=20', { signal: abortController.signal });
         if (res.ok) {
           const data = await res.json();
-          setRecentFiles(Array.isArray(data) ? data : []);
+          if (isMounted) {
+            setRecentFiles(Array.isArray(data) ? data : []);
+            setError(null);
+            setLoading(false);
+          }
+        } else if (isMounted) {
+          setError('Failed to load recent files');
+          setLoading(false);
         }
       } catch (err) {
-        console.warn('[WikiHomePanel] Failed to fetch recent files:', err);
-      } finally {
-        setLoading(false);
+        if (err instanceof Error && err.name !== 'AbortError') {
+          console.warn('[WikiHomePanel] Failed to fetch recent files:', err);
+          if (isMounted) {
+            setError('Failed to load recent files');
+            setLoading(false);
+          }
+        }
       }
     };
 
     fetchRecent();
-    const handler = fetchRecent;
-    window.addEventListener('mindos:files-changed', handler);
-    return () => window.removeEventListener('mindos:files-changed', handler);
+
+    const handleFileChange = () => {
+      fetchRecent();
+    };
+
+    window.addEventListener('mindos:files-changed', handleFileChange);
+
+    return () => {
+      isMounted = false;
+      abortController.abort();
+      window.removeEventListener('mindos:files-changed', handleFileChange);
+    };
   }, [active]);
 
   // Sort spaces based on sortBy state
@@ -166,7 +190,7 @@ export default function WikiHomePanel({ fileTree, active, maximized, onMaximize 
         <div className="mb-8">
           <div className="flex items-center gap-2 mb-3">
             <Brain size={16} className="text-[var(--amber)]" />
-            <h1 className="text-sm font-semibold font-display text-foreground">Wiki</h1>
+            <h1 className="text-sm font-semibold text-foreground">Wiki</h1>
           </div>
           <p className="text-xs text-muted-foreground pl-6 mb-4">
             Your knowledge spaces, organized.
@@ -179,11 +203,11 @@ export default function WikiHomePanel({ fileTree, active, maximized, onMaximize 
             <span className="text-[var(--amber)]">
               <FolderOpen size={13} />
             </span>
-            <h2 className="text-xs font-semibold font-display text-foreground">
+            <h2 className="text-xs font-semibold text-foreground">
               Your Spaces
             </h2>
             {spaces.length > 0 && (
-              <span className="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 text-2xs font-semibold rounded-full bg-[var(--amber)]/15 text-[var(--amber)] tabular-nums font-display">
+              <span className="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 text-2xs font-semibold rounded-full bg-[var(--amber)]/15 text-[var(--amber)] tabular-nums">
                 {spaces.length}
               </span>
             )}
@@ -201,6 +225,18 @@ export default function WikiHomePanel({ fileTree, active, maximized, onMaximize 
               </div>
             )}
           </div>
+
+          {error && (
+            <div className="rounded-lg border border-error/50 bg-error/5 px-3 py-2 mb-3">
+              <p className="text-2xs text-error">{error}</p>
+              <button
+                onClick={() => setError(null)}
+                className="text-2xs text-error hover:underline mt-1"
+              >
+                Retry
+              </button>
+            </div>
+          )}
 
           {spaces.length === 0 ? (
             /* Empty state */
@@ -240,7 +276,7 @@ export default function WikiHomePanel({ fileTree, active, maximized, onMaximize 
                         <FolderOpen size={14} className="shrink-0 text-[var(--amber)] mt-0.5" />
                       )}
                       <div className="min-w-0 flex-1">
-                        <span className="text-xs font-semibold truncate block text-foreground font-display">
+                        <span className="text-xs font-semibold truncate block text-foreground">
                           {label}
                         </span>
                         {space.description && (

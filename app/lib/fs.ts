@@ -471,10 +471,17 @@ export function getFileContent(filePath: string): string {
   const root = getMindRoot();
   if (path.extname(filePath).toLowerCase() === '.pdf') {
     const resolved = resolveSafe(root, filePath);
+    if (!fs.existsSync(resolved)) {
+      throw new MindOSError(
+        ErrorCodes.FILE_NOT_FOUND,
+        `File not found: ${filePath}`,
+        { filePath },
+      );
+    }
     const text = extractPdfText(resolved);
     if (!text) {
       throw new MindOSError(
-        ErrorCodes.FILE_NOT_FOUND,
+        ErrorCodes.INTERNAL_ERROR,
         `Could not extract text from PDF: ${filePath}`,
         { filePath },
       );
