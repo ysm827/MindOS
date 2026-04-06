@@ -53,6 +53,11 @@ export interface ServerSettings {
   acpAgents?: Record<string, import('./acp/agent-descriptors').AcpAgentOverride>;
   /** Proxy compatibility cache: keyed by baseUrl, value is detected mode. */
   baseUrlCompat?: Record<string, 'streaming' | 'non-streaming'>;
+  /** User's connection mode preference: CLI always on, MCP is optional */
+  connectionMode?: {
+    cli: boolean;   // Always true (CLI is mandatory)
+    mcp: boolean;   // User's explicit choice during onboarding
+  };
 }
 
 const DEFAULTS: ServerSettings = {
@@ -164,6 +169,24 @@ function parseGuideState(raw: unknown): GuideState | undefined {
   };
 }
 
+/** Infer connectionMode from old config: if mcpPort is set and has agents configured, assume MCP was enabled */
+function inferConnectionMode(parsed: Record<string, unknown>): { cli: boolean; mcp: boolean } {
+  // If already has explicit connectionMode, return it
+  if (parsed.connectionMode && typeof parsed.connectionMode === 'object') {
+    const obj = parsed.connectionMode as Record<string, unknown>;
+    if (typeof obj.cli === 'boolean' && typeof obj.mcp === 'boolean') {
+      return { cli: obj.cli, mcp: obj.mcp };
+    }
+  }
+  // Fallback inference for old configs: MCP was in use if mcpPort was set to non-default
+  const mcpPort = typeof parsed.mcpPort === 'number' ? parsed.mcpPort : undefined;
+  const mcpPortConfigured = !!(mcpPort && mcpPort > 0 && mcpPort !== 8781); // 8781 is default
+  return {
+    cli: true, // CLI is always on
+    mcp: mcpPortConfigured, // Only assume MCP if port was explicitly configured
+  };
+}
+
 export function readSettings(): ServerSettings {
   try {
     const raw = fs.readFileSync(SETTINGS_PATH, 'utf-8');
@@ -190,6 +213,7 @@ export function readSettings(): ServerSettings {
         }
         return Object.keys(result).length > 0 ? result : undefined;
       })(),
+      connectionMode: inferConnectionMode(parsed),
     };
   } catch {
     // Config file missing or corrupt → force setup wizard
@@ -197,6 +221,7 @@ export function readSettings(): ServerSettings {
       ...DEFAULTS,
       ai: { ...DEFAULTS.ai, providers: { ...DEFAULTS.ai.providers } },
       setupPending: true,
+      connectionMode: { cli: true, mcp: false },
     };
   }
 }
@@ -218,6 +243,7 @@ export function writeSettings(settings: ServerSettings): void {
   if (settings.guideState !== undefined) merged.guideState = settings.guideState;
   if (settings.acpAgents !== undefined) merged.acpAgents = settings.acpAgents;
   if (settings.baseUrlCompat !== undefined) merged.baseUrlCompat = settings.baseUrlCompat;
+  if (settings.connectionMode !== undefined) merged.connectionMode = settings.connectionMode;
   // setupPending: false/undefined → remove the field (cleanup); true → set it
   if ('setupPending' in settings) {
     if (settings.setupPending) merged.setupPending = true;
