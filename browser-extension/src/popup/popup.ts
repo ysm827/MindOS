@@ -2,9 +2,11 @@
 
 import TurndownService from 'turndown';
 import { loadConfig, saveConfig, isConfigured } from '../lib/storage';
-import { testConnection, saveToInbox } from '../lib/api';
+import { testConnection, listSpaces, saveToInbox, createFile } from '../lib/api';
 import { toClipDocument } from '../lib/markdown';
-import type { ClipperConfig, PageContent } from '../lib/types';
+import type { ClipperConfig, PageContent, MindOSSpace } from '../lib/types';
+
+const INBOX_VALUE = '__inbox__';
 
 /* ── DOM refs ── */
 
@@ -25,6 +27,7 @@ const btnConnect = $<HTMLButtonElement>('btn-connect');
 const clipTitle = $<HTMLInputElement>('clip-title');
 const clipSite = $<HTMLSpanElement>('clip-site');
 const clipWords = $<HTMLSpanElement>('clip-words');
+const clipSpace = $<HTMLSelectElement>('clip-space');
 const clipError = $<HTMLDivElement>('clip-error');
 const btnSave = $<HTMLButtonElement>('btn-save');
 const btnSettings = $<HTMLButtonElement>('btn-settings');
@@ -38,6 +41,7 @@ const btnClipAnother = $<HTMLButtonElement>('btn-clip-another');
 
 let config: ClipperConfig;
 let extractedContent: PageContent | null = null;
+let spaces: MindOSSpace[] = [];
 
 /* ── View switching ── */
 
@@ -124,13 +128,14 @@ async function init() {
   let extractionError = '';
 
   try {
-    [extractedContent] = await Promise.all([
+    [extractedContent, spaces] = await Promise.all([
       extractContent(),
+      listSpaces(config),
     ]);
   } catch (err) {
-    // Content extraction failed — show clip view with error
     extractionError = err instanceof Error ? err.message : 'Cannot read this page';
     extractedContent = null;
+    spaces = await listSpaces(config).catch(() => []);
   }
 
   showClipView(extractionError);
@@ -164,7 +169,21 @@ function showClipView(errorMsg?: string) {
     clipWords.textContent = '';
   }
 
-  // Space selector no longer needed since we save to Inbox
+  populateSpaces(spaces);
+}
+
+/** Populate the space dropdown — Inbox first, then all user spaces */
+function populateSpaces(spaceList: MindOSSpace[]) {
+  // Keep Inbox option, remove the rest
+  while (clipSpace.options.length > 1) clipSpace.remove(1);
+  for (const s of spaceList) {
+    const opt = document.createElement('option');
+    opt.value = s.path;
+    opt.textContent = s.name;
+    clipSpace.appendChild(opt);
+  }
+  // Default to Inbox
+  clipSpace.value = INBOX_VALUE;
 }
 
 /* ── Event Handlers ── */
@@ -203,11 +222,13 @@ btnConnect.addEventListener('click', async () => {
   showView(viewLoading);
 
   try {
-    [extractedContent] = await Promise.all([
+    [extractedContent, spaces] = await Promise.all([
       extractContent(),
+      listSpaces(config),
     ]);
   } catch (err) {
     extractedContent = null;
+    spaces = [];
     showClipView(err instanceof Error ? err.message : 'Cannot read this page');
     return;
   }
@@ -227,12 +248,15 @@ btnSave.addEventListener('click', async () => {
 
   // Override title if user edited
   const content = { ...extractedContent, title: clipTitle.value.trim() || extractedContent.title };
+  const selectedSpace = clipSpace.value;
+  const isInbox = selectedSpace === INBOX_VALUE;
 
-  // Create markdown (no space prefix since going to Inbox)
-  const doc = toClipDocument(content, '', (html) => turndown.turndown(html));
+  const doc = toClipDocument(content, isInbox ? '' : selectedSpace, (html) => turndown.turndown(html));
 
-  // Save to Inbox directly
-  const result = await saveToInbox(config, doc.fileName, doc.markdown);
+  // Route to Inbox API or File API based on user choice
+  const result = isInbox
+    ? await saveToInbox(config, doc.fileName, doc.markdown)
+    : await createFile(config, selectedSpace, doc.fileName, doc.markdown);
 
   setButtonLoading(btnSave, false);
 
@@ -242,7 +266,8 @@ btnSave.addEventListener('click', async () => {
   }
 
   // Success!
-  successDetail.textContent = `Inbox/${doc.fileName}`;
+  const displayPath = isInbox ? `Inbox/${doc.fileName}` : `${selectedSpace}/${doc.fileName}`;
+  successDetail.textContent = displayPath;
   showView(viewSuccess);
 });
 

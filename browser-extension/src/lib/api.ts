@@ -80,14 +80,34 @@ export async function saveToInbox(
     const res = await apiFetch(config, '/api/inbox', {
       method: 'POST',
       body: JSON.stringify({
-        files: [
-          {
-            name: fileName,
-            content: markdown,
-            encoding: 'text',
-          },
-        ],
+        files: [{ name: fileName, content: markdown, encoding: 'text' }],
       }),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      return { error: data.error ?? `Server error (${res.status})` };
+    }
+    return { ok: true };
+  } catch (err) {
+    if (err instanceof DOMException && err.name === 'AbortError') {
+      return { error: 'Request timed out' };
+    }
+    return { error: 'Cannot reach MindOS — is it running?' };
+  }
+}
+
+/** Create file in a specific space */
+export async function createFile(
+  config: ClipperConfig,
+  space: string,
+  fileName: string,
+  content: string,
+): Promise<FileApiResponse> {
+  const path = space ? `${space}/${fileName}` : fileName;
+  try {
+    const res = await apiFetch(config, '/api/file', {
+      method: 'POST',
+      body: JSON.stringify({ op: 'create_file', path, content, source: 'user' }),
     });
     const data = await res.json();
     if (!res.ok) {
