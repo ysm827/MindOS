@@ -29,7 +29,7 @@ interface DropdownPos {
 interface SettingsData {
   ai?: {
     provider?: string;
-    providers?: Record<string, { apiKey?: string; model?: string }>;
+    providers?: Record<string, { apiKey?: string; model?: string; baseUrl?: string }>;
   };
   envOverrides?: Record<string, boolean>;
 }
@@ -55,7 +55,8 @@ export function persistProvider(provider: ProviderId | null): void {
 
 /**
  * Determine which providers are configured (have an API key set via settings or env).
- * Providers with apiKeyFallback (e.g. Ollama) are always considered configured.
+ * Providers with apiKeyFallback (e.g. Ollama) only appear if the user has explicitly
+ * configured them — having an API key, env var, or a saved model/baseUrl entry.
  */
 function getConfiguredProviders(data: SettingsData): ProviderId[] {
   const result: ProviderId[] = [];
@@ -67,7 +68,19 @@ function getConfiguredProviders(data: SettingsData): ProviderId[] {
     const hasSettingsKey = providers[id]?.apiKey === '***set***';
     const envVar = getApiKeyEnvVar(id);
     const hasEnvKey = envVar ? !!env[envVar] : false;
-    if (hasSettingsKey || hasEnvKey || preset.apiKeyFallback) result.push(id);
+
+    if (hasSettingsKey || hasEnvKey) {
+      result.push(id);
+    } else if (preset.apiKeyFallback) {
+      // Local providers (Ollama etc.): only show if user has explicitly configured
+      // them (selected as default, or saved a model/baseUrl), not just because
+      // a fallback key exists and they haven't been touched.
+      const isDefault = data.ai?.provider === id;
+      const cfg = providers[id];
+      if (isDefault || (cfg && (cfg.model || cfg.baseUrl))) {
+        result.push(id);
+      }
+    }
   }
   return result;
 }
