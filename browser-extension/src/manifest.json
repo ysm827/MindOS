@@ -21,16 +21,10 @@
     "service_worker": "background/service-worker.js",
     "type": "module"
   },
-  "content_scripts": [
-    {
-      "matches": ["<all_urls>"],
-      "js": ["content/extractor.js"],
-      "run_at": "document_idle"
-    }
-  ],
   "permissions": [
     "storage",
     "activeTab",
+    "scripting",
     "contextMenus"
   ],
   "host_permissions": [

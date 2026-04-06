@@ -1,11 +1,10 @@
 /* ── Content Script — Extracts page content via Readability ── */
-/* Injected into every page; only activates when popup sends EXTRACT_CONTENT */
+/* Injected on demand by popup via chrome.scripting.executeScript() */
 
 import { Readability } from '@mozilla/readability';
-import type { PageContent, ClipperMessage } from '../lib/types';
 
 /** Extract article content from the current page */
-function extractPageContent(): PageContent {
+function extractPageContent() {
   // Clone document so Readability mutations don't affect the live page
   const docClone = document.cloneNode(true) as Document;
 
@@ -33,21 +32,5 @@ function extractPageContent(): PageContent {
   };
 }
 
-/** Listen for extraction requests from popup or background */
-chrome.runtime.onMessage.addListener(
-  (message: ClipperMessage, _sender, sendResponse) => {
-    if (message.type !== 'EXTRACT_CONTENT') return false;
-
-    try {
-      const content = extractPageContent();
-      sendResponse({ type: 'CONTENT_EXTRACTED', payload: content });
-    } catch (err) {
-      sendResponse({
-        type: 'EXTRACTION_FAILED',
-        error: err instanceof Error ? err.message : 'Extraction failed',
-      });
-    }
-
-    return true; // keep channel open for async response
-  },
-);
+// Return result to executeScript caller
+extractPageContent();

@@ -4,7 +4,7 @@ import TurndownService from 'turndown';
 import { loadConfig, saveConfig, isConfigured } from '../lib/storage';
 import { testConnection, listSpaces, createFile } from '../lib/api';
 import { toClipDocument } from '../lib/markdown';
-import type { ClipperConfig, PageContent, MindOSSpace, ClipperMessage } from '../lib/types';
+import type { ClipperConfig, PageContent, MindOSSpace } from '../lib/types';
 
 /* ── DOM refs ── */
 
@@ -89,24 +89,23 @@ async function extractContent(): Promise<PageContent> {
     throw new Error('Cannot clip browser internal pages');
   }
 
-  let response: any;
+  // Inject content script on demand (not always-on — saves memory on every page)
+  let results: chrome.scripting.InjectionResult[];
   try {
-    response = await chrome.tabs.sendMessage(tab.id, {
-      type: 'EXTRACT_CONTENT',
-    } as ClipperMessage);
+    results = await chrome.scripting.executeScript({
+      target: { tabId: tab.id },
+      files: ['content/extractor.js'],
+    });
   } catch {
     throw new Error('Cannot read this page — try refreshing first');
   }
 
-  if (response?.type === 'EXTRACTION_FAILED') {
-    throw new Error(response.error || 'Extraction failed');
+  const result = results?.[0]?.result;
+  if (!result || typeof result !== 'object') {
+    throw new Error('Content extraction returned empty result');
   }
 
-  if (response?.type === 'CONTENT_EXTRACTED') {
-    return response.payload as PageContent;
-  }
-
-  throw new Error('No response from content script');
+  return result as PageContent;
 }
 
 /* ── Populate spaces dropdown ── */
