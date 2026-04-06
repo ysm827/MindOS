@@ -94,7 +94,7 @@ export default function Sidebar({ fileTree, collapsed = false, onCollapse, onExp
       <div className="flex items-center justify-between px-4 py-4 border-b border-border shrink-0">
         <Link href="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
           <Logo id="desktop" />
-          <span className="font-semibold text-foreground text-sm tracking-wide font-display">MindOS</span>
+          <span className="text-foreground text-sm font-brand">MindOS</span>
         </Link>
         {/* Mobile close */}
         <button onClick={() => setMobileOpen(false)} className="md:hidden p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors">

@@ -382,7 +382,7 @@ export default function SidebarLayout({ fileTree, children }: SidebarLayoutProps
       {/* Skip link */}
       <a
         href="#main-content"
-        className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[60] focus:px-4 focus:py-2 focus:rounded-lg focus:text-sm focus:font-medium focus:font-display bg-[var(--amber)] text-[var(--amber-foreground)]"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[60] focus:px-4 focus:py-2 focus:rounded-lg focus:text-sm focus:font-medium bg-[var(--amber)] text-[var(--amber-foreground)]"
       >
         Skip to main content
       </a>

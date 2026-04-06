@@ -131,7 +131,7 @@ export default function OnboardingView() {
       </div>
 
       {/* Import hint */}
-      <p className="text-center text-xs leading-relaxed max-w-sm mx-auto font-display text-muted-foreground opacity-60">
+      <p className="text-center text-xs leading-relaxed max-w-sm mx-auto text-muted-foreground/60">
         {ob.importHint}
       </p>
       <p className="text-center mt-2">
