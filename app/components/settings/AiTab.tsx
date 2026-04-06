@@ -179,6 +179,7 @@ export function AiTab({ data, updateAi, updateAgent, t }: AiTabProps) {
               <ApiKeyInput
                 value={currentConfig.apiKey}
                 onChange={v => patchProvider(provider, { apiKey: v })}
+                labels={{ change: t.settings.ai.keyChange, cancel: t.settings.ai.keyCancel }}
               />
               {preset.signupUrl && !currentConfig.apiKey && !activeEnvKey && (
                 <a

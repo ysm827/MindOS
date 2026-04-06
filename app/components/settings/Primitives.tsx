@@ -195,22 +195,103 @@ export function Toggle({ checked, onChange, size = 'md', disabled, title, onClic
   );
 }
 
-export function ApiKeyInput({ value, onChange, placeholder, disabled }: {
+export function ApiKeyInput({ value, onChange, placeholder, disabled, labels }: {
   value: string;
   onChange: (v: string) => void;
   placeholder?: string;
   disabled?: boolean;
+  labels?: { change?: string; cancel?: string };
 }) {
   const isMasked = value === '***set***';
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState('');
+  const inputRef = useRef<HTMLInputElement>(null);
+  const prevValueRef = useRef(value);
+
+  // Reset editing when the masked value identity changes (e.g. provider switch)
+  useEffect(() => {
+    if (prevValueRef.current !== value) {
+      prevValueRef.current = value;
+      setEditing(false);
+      setDraft('');
+    }
+  }, [value]);
+
+  const commitDraft = useCallback(() => {
+    if (draft.trim()) {
+      onChange(draft);
+    }
+    setEditing(false);
+    setDraft('');
+  }, [draft, onChange]);
+
+  const cancelEdit = useCallback(() => {
+    setEditing(false);
+    setDraft('');
+  }, []);
+
+  const changeLabel = labels?.change ?? 'Change';
+  const cancelLabel = labels?.cancel ?? 'Cancel';
+
+  // Masked state: show dots + "Change" button. No clearing on click.
+  if (isMasked && !editing) {
+    return (
+      <div className="flex items-center gap-2">
+        <div className="flex-1 px-3 py-2 text-sm bg-muted/50 border border-border rounded-lg text-muted-foreground select-none tracking-widest">
+          ••••••••••••
+        </div>
+        <button
+          type="button"
+          onClick={() => {
+            setDraft('');
+            setEditing(true);
+            requestAnimationFrame(() => inputRef.current?.focus());
+          }}
+          disabled={disabled}
+          className="shrink-0 px-3 py-2 text-xs font-medium rounded-lg border border-border text-muted-foreground hover:text-foreground hover:bg-muted transition-colors disabled:opacity-50"
+        >
+          {changeLabel}
+        </button>
+      </div>
+    );
+  }
+
+  // Edit mode (replacing masked key) — uses local draft, commits on Enter/blur
+  if (editing) {
+    return (
+      <div className="flex items-center gap-2">
+        <input
+          ref={inputRef}
+          type="password"
+          value={draft}
+          onChange={e => setDraft(e.target.value)}
+          onKeyDown={e => { if (e.key === 'Enter') commitDraft(); }}
+          onBlur={commitDraft}
+          placeholder={placeholder ?? 'sk-...'}
+          disabled={disabled}
+          className="flex-1 px-3 py-2 text-sm bg-background border border-border rounded-lg text-foreground placeholder:text-muted-foreground outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:opacity-50"
+        />
+        <button
+          type="button"
+          onMouseDown={e => e.preventDefault()}
+          onClick={cancelEdit}
+          className="shrink-0 px-3 py-2 text-xs font-medium rounded-lg border border-border text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+        >
+          {cancelLabel}
+        </button>
+      </div>
+    );
+  }
+
+  // Normal (no masked key) — direct editing
   return (
     <input
       type="password"
-      value={isMasked ? '••••••••••••••••' : value}
+      value={value}
       onChange={e => onChange(e.target.value)}
       placeholder={placeholder ?? 'sk-...'}
       disabled={disabled}
       className="w-full px-3 py-2 text-sm bg-background border border-border rounded-lg text-foreground placeholder:text-muted-foreground outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:opacity-50"
-      onFocus={() => { if (isMasked) onChange(''); }}
     />
   );
 }
