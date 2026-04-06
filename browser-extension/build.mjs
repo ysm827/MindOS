@@ -2,6 +2,7 @@ import { build, context } from 'esbuild';
 import { cpSync, mkdirSync } from 'fs';
 
 const isWatch = process.argv.includes('--watch');
+const OUT = 'extension';
 
 /** @type {import('esbuild').BuildOptions} */
 const shared = {
@@ -12,16 +13,16 @@ const shared = {
 };
 
 async function run() {
-  mkdirSync('dist/popup', { recursive: true });
-  mkdirSync('dist/background', { recursive: true });
-  mkdirSync('dist/content', { recursive: true });
-  mkdirSync('dist/icons', { recursive: true });
+  mkdirSync(`${OUT}/popup`, { recursive: true });
+  mkdirSync(`${OUT}/background`, { recursive: true });
+  mkdirSync(`${OUT}/content`, { recursive: true });
+  mkdirSync(`${OUT}/icons`, { recursive: true });
 
   // Copy static assets
-  cpSync('src/manifest.json', 'dist/manifest.json');
-  cpSync('src/popup/popup.html', 'dist/popup/popup.html');
-  cpSync('src/popup/popup.css', 'dist/popup/popup.css');
-  cpSync('src/icons', 'dist/icons', { recursive: true });
+  cpSync('src/manifest.json', `${OUT}/manifest.json`);
+  cpSync('src/popup/popup.html', `${OUT}/popup/popup.html`);
+  cpSync('src/popup/popup.css', `${OUT}/popup/popup.css`);
+  cpSync('src/icons', `${OUT}/icons`, { recursive: true });
 
   // ESM entries (popup + service worker)
   const esmOptions = {
@@ -31,7 +32,7 @@ async function run() {
       { in: 'src/popup/popup.ts', out: 'popup/popup' },
       { in: 'src/background/service-worker.ts', out: 'background/service-worker' },
     ],
-    outdir: 'dist',
+    outdir: OUT,
   };
 
   // Content script must be IIFE — executeScript needs it to return
@@ -40,7 +41,7 @@ async function run() {
     ...shared,
     format: 'iife',
     entryPoints: ['src/content/extractor.ts'],
-    outfile: 'dist/content/extractor.js',
+    outfile: `${OUT}/content/extractor.js`,
   };
 
   if (isWatch) {
