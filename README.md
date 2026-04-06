@@ -55,7 +55,7 @@ MindOS is where you think, and where your AI agents act — a local-first knowle
   </tr>
   <tr>
     <td align="center"><em>Home — Knowledge base overview</em></td>
-    <td align="center"><em>AI Agent — Execute tasks grounded in your knowledge</em></td>
+    <td align="center"><em>AI Agent — Proactively understand intent and execute tasks from your knowledge</em></td>
   </tr>
   <tr>
     <td width="50%">
