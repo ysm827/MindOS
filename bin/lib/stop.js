@@ -5,6 +5,19 @@ import { loadPids, clearPids } from './pid.js';
 import { CONFIG_PATH } from './constants.js';
 
 /**
+ * Portable synchronous sleep using SharedArrayBuffer + Atomics.wait.
+ * Falls back to execSync('sleep N') on platforms without SharedArrayBuffer.
+ */
+function syncSleep(ms) {
+  try {
+    const sab = new SharedArrayBuffer(4);
+    Atomics.wait(new Int32Array(sab), 0, 0, ms);
+  } catch {
+    try { execSync(`sleep ${Math.ceil(ms / 1000)}`, { stdio: 'ignore' }); } catch {}
+  }
+}
+
+/**
  * Kill processes listening on the given port.
  * Tries lsof first, then falls back to parsing `ss` output.
  * Returns number of processes killed.
@@ -52,6 +65,19 @@ export function killByPort(port) {
   for (const pid of pidsToKill) {
     try { process.kill(pid, 'SIGTERM'); killed++; } catch {}
   }
+
+  // SIGKILL fallback: if processes survive SIGTERM, force-kill after 2s.
+  // Next.js workers can ignore SIGTERM during request handling.
+  if (killed > 0) {
+    syncSleep(2000);
+    for (const pid of pidsToKill) {
+      try {
+        process.kill(pid, 0); // check if still alive
+        process.kill(pid, 'SIGKILL'); // force kill
+      } catch { /* already dead, good */ }
+    }
+  }
+
   return killed;
 }
 
@@ -60,10 +86,20 @@ export function killByPort(port) {
  */
 function killTree(pid) {
   // Try to kill the entire process group first
-  try { process.kill(-pid, 'SIGTERM'); return true; } catch {}
-  // Fallback: kill individual process
-  try { process.kill(pid, 'SIGTERM'); return true; } catch {}
-  return false;
+  try { process.kill(-pid, 'SIGTERM'); } catch {}
+  // Also kill individual process
+  try { process.kill(pid, 'SIGTERM'); } catch {}
+
+  // Wait briefly then SIGKILL if still alive
+  syncSleep(2000);
+
+  let alive = false;
+  try { process.kill(pid, 0); alive = true; } catch {}
+  if (alive) {
+    try { process.kill(-pid, 'SIGKILL'); } catch {}
+    try { process.kill(pid, 'SIGKILL'); } catch {}
+  }
+  return true;
 }
 
 /**

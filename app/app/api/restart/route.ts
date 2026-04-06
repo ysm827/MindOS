@@ -3,31 +3,36 @@ import { NextResponse } from 'next/server';
 import { spawn } from 'node:child_process';
 import { resolve } from 'node:path';
 
+/**
+ * Strip ALL MINDOS_ and MIND_ prefixed env vars so the restart child
+ * process re-derives paths from its own installation root.
+ * Preserves old port values via MINDOS_OLD_ for cleanup.
+ */
+function cleanEnvForRestart(): { env: NodeJS.ProcessEnv; oldWebPort?: string; oldMcpPort?: string } {
+  const cleaned = { ...process.env };
+  const oldWebPort = cleaned.MINDOS_WEB_PORT;
+  const oldMcpPort = cleaned.MINDOS_MCP_PORT;
+  for (const key of Object.keys(cleaned)) {
+    if (key.startsWith('MINDOS_') || key.startsWith('MIND_')) {
+      delete cleaned[key];
+    }
+  }
+  delete cleaned.AUTH_TOKEN;
+  delete cleaned.WEB_PASSWORD;
+  delete cleaned.NODE_OPTIONS;
+  // Pass old ports so restart command can clean up stale listeners
+  if (oldWebPort) cleaned.MINDOS_OLD_WEB_PORT = oldWebPort;
+  if (oldMcpPort) cleaned.MINDOS_OLD_MCP_PORT = oldMcpPort;
+  return { env: cleaned, oldWebPort, oldMcpPort };
+}
+
 export async function POST() {
   try {
+    // Resolve CLI path BEFORE cleaning env (we still need current vars)
     const cliPath = process.env.MINDOS_CLI_PATH || resolve(process.env.MINDOS_PROJECT_ROOT || process.cwd(), '..', 'bin', 'cli.js');
     const nodeBin = process.env.MINDOS_NODE_BIN || process.execPath;
-    // Use 'restart' (stop all → wait for ports free → start) instead of bare
-    // 'start' which would fail assertPortFree because the current process and
-    // its MCP child are still holding the ports.
-    //
-    // IMPORTANT: Strip MINDOS_* env vars so the child's loadConfig() reads
-    // the *updated* config file instead of inheriting stale values from this
-    // process.  Without this, changing ports in the GUI has no effect on the
-    // restarted server — it would start on the old ports.
-    //
-    // Pass the current (old) ports via MINDOS_OLD_* so the restart command
-    // can clean up processes still listening on the previous ports.
-    const childEnv = { ...process.env };
-    const oldWebPort = childEnv.MINDOS_WEB_PORT;
-    const oldMcpPort = childEnv.MINDOS_MCP_PORT;
-    delete childEnv.MINDOS_WEB_PORT;
-    delete childEnv.MINDOS_MCP_PORT;
-    delete childEnv.MIND_ROOT;
-    delete childEnv.AUTH_TOKEN;
-    delete childEnv.WEB_PASSWORD;
-    if (oldWebPort) childEnv.MINDOS_OLD_WEB_PORT = oldWebPort;
-    if (oldMcpPort) childEnv.MINDOS_OLD_MCP_PORT = oldMcpPort;
+
+    const { env: childEnv } = cleanEnvForRestart();
     const child = spawn(nodeBin, [cliPath, 'restart'], {
       detached: true,
       stdio: 'ignore',
