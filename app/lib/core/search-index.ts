@@ -1,6 +1,5 @@
 import fs from 'fs';
 import path from 'path';
-import os from 'os';
 import { execFileSync } from 'child_process';
 import { collectAllFiles } from './tree';
 import { readFile } from './fs-ops';

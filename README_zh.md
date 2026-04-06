@@ -55,7 +55,7 @@ MindOS 是你思考的地方，也是 AI Agent 行动的起点——一个你和
   </tr>
   <tr>
     <td align="center"><em>首页 — 知识库概览</em></td>
-    <td align="center"><em>AI Agent — 基于知识库上下文执行任务</em></td>
+    <td align="center"><em>AI Agent — 基于知识库主动识别意图并执行任务</em></td>
   </tr>
   <tr>
     <td width="50%">

@@ -61,7 +61,7 @@ export default function ViewPageClient({
   // Graph mode — per-view, resets when navigating to a different file
   const [graphMode, setGraphMode] = useState(false);
   const router = useRouter();
-  const isBinaryFile = extension === 'pdf';
+  const isBinaryFile = extension === 'pdf'; // binary files use their own renderer, no text editing
   const [editing, setEditing] = useState(!isBinaryFile && (initialEditing || content === ''));
   const [editContent, setEditContent] = useState(content);
   const [savedContent, setSavedContent] = useState(content);
@@ -283,7 +283,7 @@ export default function ViewPageClient({
         e.preventDefault();
         setFindOpen(true);
       }
-      if (e.key === 'e' && !editing && document.activeElement?.tagName === 'BODY') {
+      if (e.key === 'e' && !editing && !isBinaryFile && document.activeElement?.tagName === 'BODY') {
         handleEdit();
       }
       if (e.key === 'Escape' && editing) handleCancel();
@@ -384,8 +384,8 @@ export default function ViewPageClient({
               <span className="text-xs text-error hidden sm:inline">{saveError}</span>
             )}
 
-            {/* Renderer toggle — only shown when a custom renderer exists (excludes graph-mode override) */}
-            {registryRenderer && !editing && !isDraft && !graphRenderer && (
+            {/* Renderer toggle — only shown when a custom renderer exists (excludes graph-mode override and binary files) */}
+            {registryRenderer && !editing && !isDraft && !graphRenderer && !isBinaryFile && (
               <button
                 onClick={handleToggleRaw}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors font-display"
@@ -400,7 +400,7 @@ export default function ViewPageClient({
               </button>
             )}
 
-            {!editing && !showRenderer && !isDraft && (
+            {!editing && !showRenderer && !isDraft && !isBinaryFile && (
               <button
                 onClick={handleEdit}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors font-display"

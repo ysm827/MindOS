@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import type { RendererContext } from '@/lib/renderers/registry';
 
 /**
@@ -12,6 +12,14 @@ export function PdfRenderer({ filePath }: RendererContext) {
   const src = `/api/file/raw?path=${encodeURIComponent(filePath)}`;
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  // Increment key to force iframe remount on retry
+  const [retryKey, setRetryKey] = useState(0);
+
+  const handleRetry = useCallback(() => {
+    setError(false);
+    setLoading(true);
+    setRetryKey(k => k + 1);
+  }, []);
 
   return (
     <div className="w-full h-full min-h-[80vh] flex flex-col relative">
@@ -28,7 +36,7 @@ export function PdfRenderer({ filePath }: RendererContext) {
             Failed to load PDF
           </span>
           <button
-            onClick={() => { setError(false); setLoading(true); }}
+            onClick={handleRetry}
             className="text-xs px-3 py-1.5 rounded-md bg-[var(--bg-tertiary)] hover:bg-[var(--bg-hover)] transition-colors"
           >
             Retry
@@ -36,6 +44,7 @@ export function PdfRenderer({ filePath }: RendererContext) {
         </div>
       )}
       <iframe
+        key={retryKey}
         src={src}
         className="w-full flex-1 min-h-[80vh] border-0 rounded-lg bg-[var(--bg-secondary)]"
         title={filePath.split('/').pop() ?? 'PDF'}

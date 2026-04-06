@@ -26,7 +26,8 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Missing path parameter' }, { status: 400 });
   }
 
-  const ext = filePath.toLowerCase().slice(filePath.lastIndexOf('.'));
+  const lower = filePath.toLowerCase();
+  const ext = lower.slice(lower.lastIndexOf('.'));
   const mime = BINARY_MIME[ext];
   if (!mime) {
     return NextResponse.json({ error: `Unsupported binary file type: ${ext}` }, { status: 400 });
