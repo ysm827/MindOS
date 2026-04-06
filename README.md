@@ -49,13 +49,13 @@ MindOS is where you think, and where your AI agents act — a local-first knowle
     <td width="50%">
       <picture>
         <source srcset="assets/images/mindos-chat.webp" type="image/webp" />
-        <img src="assets/images/mindos-chat.png" alt="MindOS AI Chat" />
+        <img src="assets/images/mindos-chat.png" alt="MindOS AI Agent" />
       </picture>
     </td>
   </tr>
   <tr>
     <td align="center"><em>Home — Knowledge base overview</em></td>
-    <td align="center"><em>AI Chat — Converse with your knowledge in context</em></td>
+    <td align="center"><em>AI Agent — Execute tasks grounded in your knowledge</em></td>
   </tr>
   <tr>
     <td width="50%">

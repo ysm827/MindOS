@@ -49,13 +49,13 @@ MindOS 是你思考的地方，也是 AI Agent 行动的起点——一个你和
     <td width="50%">
       <picture>
         <source srcset="assets/images/mindos-chat.webp" type="image/webp" />
-        <img src="assets/images/mindos-chat.png" alt="MindOS AI 对话" />
+        <img src="assets/images/mindos-chat.png" alt="MindOS AI Agent" />
       </picture>
     </td>
   </tr>
   <tr>
     <td align="center"><em>首页 — 知识库概览</em></td>
-    <td align="center"><em>AI 对话 — 在上下文中与知识库对话</em></td>
+    <td align="center"><em>AI Agent — 基于知识库上下文执行任务</em></td>
   </tr>
   <tr>
     <td width="50%">
