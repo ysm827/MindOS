@@ -200,10 +200,12 @@ function appendMindosBinToShellRc(): boolean {
     // Skip non-existent files unless we must create them
     if (!fileExists && !mustCreate) continue;
 
-    // Skip if already has our marker (idempotent)
+    // Skip if already has our marker OR CLI marker OR raw PATH line (idempotent)
     if (fileExists) {
       try {
-        if (readFileSync(full, 'utf-8').includes(SHELL_MARKER)) continue;
+        const content = readFileSync(full, 'utf-8');
+        if (content.includes(SHELL_MARKER) || content.includes('# MindOS CLI')
+            || content.includes('.mindos/bin')) continue;
       } catch { continue; }
     }
 
@@ -222,7 +224,11 @@ function appendMindosBinToShellRc(): boolean {
       const fishFile = path.join(fishConfD, 'mindos.fish');
       const fishMarker = '# MindOS Desktop — CLI (mindos)';
       const fishBlock = `${fishMarker}\nif not contains "$HOME/.mindos/bin" $PATH\n  set -gx PATH "$HOME/.mindos/bin" $PATH\nend\n`;
-      const needsWrite = !existsSync(fishFile) || !readFileSync(fishFile, 'utf-8').includes(fishMarker);
+      let needsWrite = !existsSync(fishFile);
+      if (!needsWrite) {
+        const fc = readFileSync(fishFile, 'utf-8');
+        needsWrite = !fc.includes(fishMarker) && !fc.includes('# MindOS CLI') && !fc.includes('.mindos/bin');
+      }
       if (needsWrite) {
         writeFileSync(fishFile, fishBlock, 'utf-8');
         appended = true;

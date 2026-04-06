@@ -36,6 +36,16 @@ export const run = async (args, flags) => {
   if (!process.env.MINDOS_MCP_PORT) process.env.MINDOS_MCP_PORT = '8781';
   process.env.MINDOS_CLI_PATH = resolve(ROOT, 'bin', 'cli.js');
   process.env.MINDOS_NODE_BIN = process.execPath;
+
+  // Inject ~/.mindos/bin into PATH so dev server child processes can find `mindos` CLI
+  const { homedir } = await import('node:os');
+  const mindosBinDir = resolve(homedir(), '.mindos', 'bin');
+  const pathSep = process.platform === 'win32' ? ';' : ':';
+  const pathDirs = (process.env.PATH || '').split(pathSep);
+  if (!pathDirs.includes(mindosBinDir)) {
+    process.env.PATH = `${mindosBinDir}${pathSep}${process.env.PATH || ''}`;
+  }
+
   const webPort = process.env.MINDOS_WEB_PORT;
   const mcpPort = process.env.MINDOS_MCP_PORT;
   await assertPortFree(Number(webPort), 'web');

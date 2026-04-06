@@ -230,21 +230,26 @@ function readKnowledgeFile(filePath: string): { ok: boolean; content: string; tr
  * Tries in order: app/data/skills → skills → {mindRoot}/.skills → ~/.mindos/skills
  * Returns { path, result } where result is the file content or error.
  */
+/**
+ * Candidate skill directories, ordered by priority.
+ * Used for SKILL.md resolution AND reference file fallback.
+ */
+function skillDirCandidates(skillName: string, projectRoot: string, mindRoot: string): string[] {
+  return [
+    path.join(projectRoot, 'app', 'data', 'skills', skillName),
+    path.join(projectRoot, 'skills', skillName),
+    path.join(mindRoot, '.skills', skillName),
+    path.join(process.env.HOME || '/root', '.mindos', 'skills', skillName),
+  ];
+}
+
 function resolveSkillFile(
   skillName: string,
   projectRoot: string,
   mindRoot: string,
 ): { path: string; result: ReturnType<typeof readAbsoluteFile> } {
-  const locations = [
-    // Primary: bundled location (Desktop/production builds)
-    path.join(projectRoot, 'app', 'data', 'skills', skillName, 'SKILL.md'),
-    // Fallback: repository root (dev/CLI usage)
-    path.join(projectRoot, 'skills', skillName, 'SKILL.md'),
-    // Fallback: knowledge base custom skills
-    path.join(mindRoot, '.skills', skillName, 'SKILL.md'),
-    // Fallback: global user skills
-    path.join(process.env.HOME || '/root', '.mindos', 'skills', skillName, 'SKILL.md'),
-  ];
+  const dirs = skillDirCandidates(skillName, projectRoot, mindRoot);
+  const locations = dirs.map(d => path.join(d, 'SKILL.md'));
 
   for (const absPath of locations) {
     const result = readAbsoluteFile(absPath);
@@ -253,7 +258,6 @@ function resolveSkillFile(
     }
   }
 
-  // All locations failed — return last error
   return {
     path: locations[locations.length - 1],
     result: {
@@ -263,6 +267,34 @@ function resolveSkillFile(
       error: `Skill not found: tried ${locations.length} locations`,
     },
   };
+}
+
+/**
+ * Resolve a skill reference file (e.g. references/write-supplement.md) with
+ * multi-location fallback. First tries relative to the found SKILL.md, then
+ * falls back to all other candidate directories. This handles the case where
+ * SKILL.md is found in one location but its references/ dir is in another
+ * (e.g. stale Desktop build, Core Hot Update with partial content).
+ */
+function resolveSkillReference(
+  relPath: string,
+  skillInfo: { path: string },
+  skillName: string,
+  projectRoot: string,
+  mindRoot: string,
+): ReturnType<typeof readAbsoluteFile> {
+  const primaryDir = path.dirname(skillInfo.path);
+  const primaryPath = path.join(primaryDir, relPath);
+  const primaryResult = readAbsoluteFile(primaryPath);
+  if (primaryResult.ok) return primaryResult;
+
+  for (const dir of skillDirCandidates(skillName, projectRoot, mindRoot)) {
+    if (dir === primaryDir) continue;
+    const result = readAbsoluteFile(path.join(dir, relPath));
+    if (result.ok) return result;
+  }
+
+  return primaryResult;
 }
 
 /**
@@ -504,10 +536,10 @@ export async function POST(req: NextRequest) {
     const skillInfo = resolveSkillFile(skillDirName, projectRoot, mindRoot);
     const skill = skillInfo.result;
     
-    // Resolve write-supplement from the same base directory as SKILL.md
-    const skillWriteDir = path.dirname(skillInfo.path);
-    const skillWritePath = path.join(skillWriteDir, 'references', 'write-supplement.md');
-    const skillWrite = readAbsoluteFile(skillWritePath);
+    const skillWrite = resolveSkillReference(
+      path.join('references', 'write-supplement.md'),
+      skillInfo, skillDirName, projectRoot, mindRoot,
+    );
 
     console.log(
       `[ask] SKILL skill=${skill.ok} (${skillInfo.path}), write-supplement=${skillWrite.ok}`

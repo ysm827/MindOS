@@ -63,14 +63,23 @@ export const run = async (args, flags) => {
   const isVerbose = Boolean(flags.verbose);
   const extra = args.join(' ');
 
-  // Ensure `mindos` CLI is in PATH (silent, best-effort, dev installs only)
-  try {
-    execSync('command -v mindos', { stdio: 'ignore' });
-  } catch {
-    const isDesktop = !!(process.env.ELECTRON_RUN_AS_NODE || process.env.MINDOS_DESKTOP);
-    if (!isDesktop && existsSync(resolve(ROOT, '.git'))) {
-      try { execSync('npm link', { cwd: ROOT, stdio: 'ignore' }); } catch { /* best effort */ }
-    }
+  // Ensure `mindos` CLI shim + PATH injection (silent, best-effort)
+  const isDesktop = !!(process.env.ELECTRON_RUN_AS_NODE || process.env.MINDOS_DESKTOP);
+  if (!isDesktop) {
+    try {
+      const { ensureCliShim } = await import('../lib/cli-shim.js');
+      ensureCliShim();
+    } catch { /* best effort */ }
+  }
+
+  // Inject ~/.mindos/bin into current process PATH so child processes
+  // (Next.js server, MCP) can find the `mindos` command.
+  const { homedir } = await import('node:os');
+  const mindosBinDir = resolve(homedir(), '.mindos', 'bin');
+  const pathSep = process.platform === 'win32' ? ';' : ':';
+  const pathDirs = (process.env.PATH || '').split(pathSep);
+  if (!pathDirs.includes(mindosBinDir)) {
+    process.env.PATH = `${mindosBinDir}${pathSep}${process.env.PATH || ''}`;
   }
 
   // Check for incomplete setup

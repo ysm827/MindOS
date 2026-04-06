@@ -53,7 +53,8 @@ function enrichedPath(extraBinDir?: string): string {
   const home = app.getPath('home');
   const dirs = [
     extraBinDir,
-    path.join(home, '.mindos', 'node', 'bin'),  // Private MindOS Node.js
+    path.join(home, '.mindos', 'bin'),           // MindOS CLI shim
+    path.join(home, '.mindos', 'node', 'bin'),    // Private MindOS Node.js
     '/usr/local/bin',
     '/opt/homebrew/bin',
     '/opt/local/bin',
