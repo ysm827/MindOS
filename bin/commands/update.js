@@ -15,6 +15,7 @@ import { EXIT } from '../lib/command.js';
 import { stopMindos } from '../lib/stop.js';
 import { getLocalIP } from '../lib/startup.js';
 import { isPortInUse } from '../lib/port.js';
+import { cleanEnvForRestart } from '../lib/clean-env.js';
 
 /**
  * Dynamically resolve the new ROOT after `npm install -g`.
@@ -180,7 +181,7 @@ export const run = async () => {
     const webPort = updateConfig.port ?? 3456;
     const mcpPort = updateConfig.mcpPort ?? 8781;
     console.log(dim('  (Waiting for Web UI to come back up — first run after update includes a rebuild...)'));
-    const ready = await gateway.waitForHttp(Number(webPort), { retries: 450, intervalMs: 2000, label: 'Web UI', logFile: LOG_PATH });
+    const ready = await gateway.waitForHttp(Number(webPort), { retries: 450, intervalMs: 2000, label: 'Web UI', logFile: LOG_PATH, expectedVersion: newVersion });
     if (ready) {
       const localIP = getLocalIP();
       console.log(`\n${'─'.repeat(53)}`);
@@ -214,12 +215,28 @@ export const run = async () => {
     if (wasRunning) {
       console.log(cyan('\n  MindOS is running — restarting to apply the new version...'));
       stopMindos();
-      // Wait for ports to free (up to 15s)
-      const deadline = Date.now() + 15_000;
+      // Wait for ports to free (up to 20s) with stabilization check.
+      // After first "free" reading, wait 1s and check again to avoid
+      // false negatives from TCP TIME_WAIT flickering.
+      const deadline = Date.now() + 20_000;
+      let portsFree = false;
       while (Date.now() < deadline) {
         const busy = await isPortInUse(webPort) || await isPortInUse(mcpPort);
-        if (!busy) break;
+        if (!busy) {
+          // Stabilization: wait 1s, then double-check
+          await new Promise((r) => setTimeout(r, 1000));
+          const stillFree = !(await isPortInUse(webPort)) && !(await isPortInUse(mcpPort));
+          if (stillFree) { portsFree = true; break; }
+        }
         await new Promise((r) => setTimeout(r, 500));
+      }
+      if (!portsFree) {
+        console.log(yellow('  ⚠ Ports not fully released, force-killing remaining processes...'));
+        // Last resort: import killByPort and SIGKILL anything on these ports
+        const stopLib = await import('../lib/stop.js');
+        stopLib.killByPort(webPort);
+        stopLib.killByPort(mcpPort);
+        await new Promise((r) => setTimeout(r, 2000));
       }
 
       // Stage 3: Rebuild
@@ -237,12 +254,7 @@ export const run = async () => {
       // (`mindos start` has its own build-on-startup logic)
       writeUpdateStatus('restarting', vOpts);
       const newCliPath = resolve(updatedRoot, 'bin', 'cli.js');
-      const childEnv = { ...process.env };
-      delete childEnv.MINDOS_WEB_PORT;
-      delete childEnv.MINDOS_MCP_PORT;
-      delete childEnv.MIND_ROOT;
-      delete childEnv.AUTH_TOKEN;
-      delete childEnv.WEB_PASSWORD;
+      const childEnv = cleanEnvForRestart();
       const child = nodeSpawn(
         process.execPath, [newCliPath, 'start'],
         { detached: true, stdio: 'ignore', env: childEnv },
@@ -250,7 +262,7 @@ export const run = async () => {
       child.unref();
 
       console.log(dim('  (Waiting for Web UI to come back up...)'));
-      const ready = await gateway.waitForHttp(webPort, { retries: 180, intervalMs: 2000, label: 'Web UI', logFile: LOG_PATH });
+      const ready = await gateway.waitForHttp(webPort, { retries: 180, intervalMs: 2000, label: 'Web UI', logFile: LOG_PATH, expectedVersion: newVersion });
       if (ready) {
         const localIP = getLocalIP();
         console.log(`\n${'─'.repeat(53)}`);

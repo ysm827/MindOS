@@ -113,12 +113,42 @@ export function parseLogHint(line) {
   return null;
 }
 
-export async function waitForHttp(port, { retries = 60, intervalMs = 2000, label = 'service', logFile = null } = {}) {
+export async function waitForHttp(port, { retries = 60, intervalMs = 2000, label = 'service', logFile = null, expectedVersion = null } = {}) {
   const start = Date.now();
   const elapsed = () => {
     const s = Math.round((Date.now() - start) / 1000);
     return s < 60 ? `${s}s` : `${Math.floor(s / 60)}m${String(s % 60).padStart(2, '0')}s`;
   };
+
+  /**
+   * Version-aware readiness check: after health check passes, verify the
+   * server is actually running the expected version (not an orphaned old process).
+   * Prevents the "fake update" where health check hits a stale worker.
+   */
+  async function verifyVersion(hostname) {
+    if (!expectedVersion) return true; // no version check requested
+    try {
+      const { request } = await import('node:http');
+      return new Promise((resolve) => {
+        const req = request(
+          { hostname, port, path: '/api/update-check', method: 'GET', timeout: 5000 },
+          (res) => {
+            let body = '';
+            res.on('data', (chunk) => { body += chunk; });
+            res.on('end', () => {
+              try {
+                const data = JSON.parse(body);
+                resolve(data.current === expectedVersion);
+              } catch { resolve(false); }
+            });
+          }
+        );
+        req.on('error', () => resolve(false));
+        req.on('timeout', () => { req.destroy(); resolve(false); });
+        req.end();
+      });
+    } catch { return false; }
+  }
 
   // Track log file position for incremental reads
   let logOffset = 0;
@@ -169,9 +199,16 @@ export async function waitForHttp(port, { retries = 60, intervalMs = 2000, label
       });
       const ok = await tryHost('127.0.0.1') || await tryHost('localhost');
       if (ok) {
-        process.stdout.write(`\r\x1b[K`);
-        process.stdout.write(`  ${green('\u2714')} ${label} ready ${dim(`(${elapsed()})`)}\n`);
-        return true;
+        // If expectedVersion is set, verify the server is running the right version
+        const versionOk = await verifyVersion('127.0.0.1') || await verifyVersion('localhost');
+        if (!versionOk && expectedVersion) {
+          // Health check passed but wrong version — old process still serving
+          // Continue waiting for the new process to take over
+        } else {
+          process.stdout.write(`\r\x1b[K`);
+          process.stdout.write(`  ${green('\u2714')} ${label} ready ${dim(`(${elapsed()})`)}\n`);
+          return true;
+        }
       }
     } catch { /* not ready yet */ }
 

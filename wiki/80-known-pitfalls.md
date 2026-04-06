@@ -114,6 +114,23 @@
 - **原因：** `bin/cli.js` update 命令的 daemon 和 non-daemon 两条路径中，`buildIfNeeded()` 没有 try-catch。`stopMindos()` 已杀旧进程后若 build 抛异常，整个 update 进程崩溃，不会走到 Stage 4 (restart)
 - **解决：** 三个 `buildIfNeeded()` 调用全部加 try-catch；catch 后仍然继续启动服务（`mindos start` 有自己的 build-on-startup 逻辑，可以重试）；失败信息写入 `update-status.json`，浏览器能立即显示具体错误而非等 5 分钟超时
 
+### "假更新"：更新后服务仍运行旧版本代码（2026-04-06 修复）
+- **现象：** Web UI 点「Update」，进度条走完提示成功，但页面功能/内容仍是旧版本。`/api/update-check` 报新版本号，但实际代码行为不变
+- **原因（三重叠加）：**
+  1. **环境变量泄漏**：`/api/update/route.ts` 和 `update.js` spawn 新进程时只删了 5 个特定 env var（`MINDOS_WEB_PORT` 等），遗漏了 `MINDOS_PROJECT_ROOT`、`MINDOS_CLI_PATH` 等关键路径变量。新进程继承旧路径 → 从旧安装目录读代码
+  2. **孤儿进程**：`stopMindos()` 发 SIGTERM 后不等待确认，Next.js worker 进程忽略 SIGTERM 继续占端口。新进程无法绑定或被路由到旧 worker
+  3. **就绪检查不验证版本**：`waitForHttp()` 只检查 `/api/health` 返回 HTTP 200，不验证是否是新版本。旧 worker 响应 health check → 误判更新成功
+- **解决（四层防御）：**
+  1. **`bin/lib/clean-env.js`**：新建通用 helper，遍历删除所有 `MINDOS_*`/`MIND_*` 前缀 + `AUTH_TOKEN`/`WEB_PASSWORD`/`NODE_OPTIONS`。`update.js`、`/api/update/route.ts`、`/api/restart/route.ts` 统一使用
+  2. **`bin/lib/stop.js` SIGKILL fallback**：SIGTERM 后等 2s（`Atomics.wait` 跨平台），检查进程是否存活 → 仍活则 SIGKILL。`killTree()` 和 `killByPort()` 均增加此逻辑
+  3. **`bin/lib/gateway.js` 版本感知就绪检查**：`waitForHttp()` 新增 `expectedVersion` 参数。health check 通过后，额外查 `/api/update-check` 确认 `current === expectedVersion`。版本不匹配视为旧进程，继续等待
+  4. **端口释放双重确认**：`update.js` 停止旧进程后，端口"空闲"后再等 1s 复查，避免 TCP TIME_WAIT 闪烁假阴性。超时则 force-kill
+- **反思**：
+  - `childEnv` 清理应该用"白名单"（只保留需要的）或"黑前缀"（删所有自定义前缀），而非"黑名单"（逐个删）。黑名单永远跟不上新增变量
+  - `waitForHttp` 从一开始就应该验证版本，不应假设"HTTP 200 = 新版本就绪"
+  - 进程清理必须有 SIGKILL 后备，SIGTERM 不保证进程响应
+- **文件：** `bin/lib/clean-env.js`（新建）, `bin/lib/stop.js`, `bin/lib/gateway.js`, `bin/commands/update.js`, `app/app/api/update/route.ts`, `app/app/api/restart/route.ts`
+
 ### Diff 仅做插件入口，用户看不到全局变化
 - **现象：** 只有打开 `Agent-Diff.md` 才能看到差异；普通编辑流里不知道哪里变了、何时变了
 - **原因：** Diff 依赖 renderer + markdown fenced block（`agent-diff`），缺少主程序级事件流和全局未读提醒
