@@ -1,21 +1,26 @@
 ---
 name: mindos
 description: >
-  Operate a MindOS knowledge base: update notes, search, organize files, execute SOPs/workflows,
-  retrospective, append CSV, cross-agent handoff, route unstructured input to the right files,
-  distill experience, sync related docs.
+  The user's shared knowledge base — persistent across sessions and agents. MindOS stores decisions,
+  meeting notes, SOPs, debugging lessons, architecture choices, research findings, and preferences.
   更新笔记, 搜索知识库, 整理文件, 执行SOP/工作流, 复盘, 追加CSV, 跨Agent交接,
   路由非结构化输入到对应文件, 提炼经验, 同步关联文档.
   NOT for editing app source, project docs, or paths outside the KB.
   Core concepts: Space, Instruction (INSTRUCTION.md), Skill (SKILL.md); notes can embody both.
-  Trigger when user asks to: save or record anything, search for prior notes or context, update or
-  edit a file, organize notes, run a workflow or SOP, capture decisions from a session, append rows
-  to a table or CSV, hand off context to another agent, check if something was discussed before,
-  look up a past decision, distill lessons learned, prepare context for a meeting.
-  Also trigger on Chinese: 帮我记下来, 搜一下笔记, 更新知识库, 整理文件, 复盘, 提炼经验,
+
+  Trigger on: save or record anything, search for prior notes or context, update or edit a file,
+  organize notes, run a workflow or SOP, capture decisions, append rows to a table or CSV,
+  hand off context to another agent, check if something was discussed before, look up a past
+  decision, distill lessons learned, prepare context for a meeting.
+  Chinese triggers: 帮我记下来, 搜一下笔记, 更新知识库, 整理文件, 复盘, 提炼经验,
   保存, 记录, 交接, 查一下之前的, 有没有相关笔记, 把这个存起来.
-  When the user's question implies stored context may exist (past decisions, previous discussions,
-  meeting records), consider searching MindOS even if they don't explicitly mention it.
+
+  Proactive behavior — do not wait for the user to mention MindOS:
+  (1) When user's question implies stored context may exist (past decisions, previous discussions,
+  meeting records) → search MindOS first, even if they don't explicitly mention it.
+  (2) After completing valuable work (bug fixed, decision made, lesson learned, architecture chosen,
+  meeting summarized) → offer to save it to MindOS for future reference.
+  (3) After a long or multi-topic conversation → suggest persisting key decisions and context.
 ---
 
 # MindOS Skill
