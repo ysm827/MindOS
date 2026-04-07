@@ -406,6 +406,76 @@ function toPiCustomToolDefinitions(tools: AgentTool<any>[]): ToolDefinition<any,
 // ---------------------------------------------------------------------------
 
 /**
+ * Convert pi-ai format messages to OpenAI API format.
+ * pi-ai messages have nested structures; OpenAI format is flatter with tool_calls array.
+ */
+function piMessagesToOpenAI(piMessages: any[]): any[] {
+  return piMessages.map(msg => {
+    const role = msg.role;
+
+    // Skip system role (will be added separately)
+    if (role === 'system') return null;
+
+    // Pass through user messages (simple string content)
+    if (role === 'user') {
+      return {
+        role: 'user',
+        content: typeof msg.content === 'string' ? msg.content : msg.content,
+      };
+    }
+
+    // Assistant messages: flatten content array into text + tool_calls
+    if (role === 'assistant') {
+      const content = msg.content;
+      let textContent = '';
+      const toolCalls: any[] = [];
+
+      if (Array.isArray(content)) {
+        for (const part of content) {
+          if (part.type === 'text' && part.text) {
+            textContent += part.text;
+          } else if (part.type === 'toolCall') {
+            toolCalls.push({
+              id: part.id ?? `call_${Date.now()}`,
+              type: 'function',
+              function: {
+                name: part.name ?? 'unknown',
+                arguments: JSON.stringify(part.arguments ?? {}),
+              },
+            });
+          }
+        }
+      }
+
+      const result: any = { role: 'assistant' };
+      // Always include content (even if empty) for tool-call-only messages
+      // OpenAI API may handle this differently, but it's safer to include empty string
+      result.content = textContent || '';
+      if (toolCalls.length > 0) result.tool_calls = toolCalls;
+      return result;
+    }
+
+    // Tool result messages
+    if (role === 'toolResult') {
+      const contentText = Array.isArray(msg.content)
+        ? msg.content
+            .filter((c: any) => c.type === 'text')
+            .map((c: any) => c.text ?? '')
+            .join('\n')
+        : String(msg.content ?? '');
+
+      return {
+        role: 'tool',
+        tool_call_id: msg.toolCallId ?? 'unknown',
+        content: contentText,
+      };
+    }
+
+    return null;
+  }).filter(Boolean);
+}
+
+/**
  * Mini agent loop using non-streaming OpenAI-compatible API.
  * Used when a proxy silently breaks stream+tools by returning plain text.
  * Emits SSE events identical to the streaming path so the frontend is unaffected.
@@ -415,7 +485,7 @@ async function runNonStreamingFallback(opts: {
   apiKey: string;
   model: string;
   systemPrompt: string;
-  historyMessages: { role: string; content: unknown }[];
+  historyMessages: any[];
   userContent: string;
   tools: AgentTool<any>[];
   send: (event: MindOSSSEvent) => void;
@@ -433,9 +503,12 @@ async function runNonStreamingFallback(opts: {
     },
   }));
 
-  const messages: { role: string; content: unknown; tool_calls?: unknown; tool_call_id?: string }[] = [
+  // Convert pi-ai format messages to OpenAI format
+  const openaiMessages = piMessagesToOpenAI(historyMessages);
+
+  const messages: { role: string; content?: unknown; tool_calls?: unknown; tool_call_id?: string }[] = [
     { role: 'system', content: systemPrompt },
-    ...historyMessages,
+    ...openaiMessages,
     { role: 'user', content: userContent },
   ];
 

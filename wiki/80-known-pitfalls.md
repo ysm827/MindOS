@@ -18,7 +18,32 @@
 
 **恢复方式**：`git reset --hard <merge前的commit>` + `git push origin main --force-with-lease`
 
-## Desktop / 打包
+## Agent / LLM API
+
+### Non-streaming API fallback message format mismatch (2026-04-07)
+
+**症状**：用户配置非官方 LLM API 代理（例：`https://api.ikuncode.cc/v1`），启用 non-streaming 模式后报错或返回错误内容。MindOS 内部 runNonStreamingFallback() 函数无法正确调用第三方 API。
+
+**根因**：runNonStreamingFallback() 在将消息传递给 OpenAI 兼容 API 时，直接使用 pi-ai 格式的消息对象，而非 OpenAI 标准格式：
+- pi-ai assistant message: `{ content: [{ type: 'text', text: '...' }, { type: 'toolCall', ... }] }`
+- OpenAI format: `{ content: 'text', tool_calls: [{ id, type, function: { name, arguments } }] }`
+- pi-ai toolResult: `{ toolCallId, content: [{ type: 'text', text: '...' }] }`
+- OpenAI format: `{ tool_call_id, content: 'text' }`
+
+rootcause: app/api/ask/route.ts:143 直接传递 llmHistoryMessages（pi-ai Message[]）给 runNonStreamingFallback()，未经格式转换。
+
+**修复**：（app/api/ask/route.ts:408-477）
+1. 新增 `piMessagesToOpenAI()` 函数，完整映射 pi-ai → OpenAI 消息格式
+2. 在 runNonStreamingFallback() 入口调用该转换函数
+3. 保证所有用户场景可用：文本、工具调用、工具结果、复杂对话历史
+
+**验收标准**：
+- ✅ 非流式纯文本提示
+- ✅ 含工具调用的多轮对话
+- ✅ 非官方 OpenAI 兼容代理（ikuncode、本地 llama.cpp 等）
+- ✅ 所有消息类型（user/assistant/tool/system）
+
+
 
 ### 首次本地模式白屏（无/空 config + 未进 /setup）
 - **现象：** 选「本地模式」后主窗口全白；`~/.mindos/config.json` 不存在，或存在但为空/坏 JSON/缺 `desktopMode`
@@ -48,6 +73,12 @@
 ### `mindos.pid` 误判「CLI 已在跑」→ `ERR_CONNECTION_REFUSED` 白屏
 - **现象：** 主窗口 `did-fail-load -102`；`http://127.0.0.1:3456/` 拒绝连接；删 `config.json` 仍白屏；可能伴随 `Bundled MindOS CLI not found (mindos-runtime/bin/cli.js)`
 - **原因：** (1) `checkCliConflict()` 仅 `kill(pid,0)` 即假定 MindOS Web 已在 `config.port ?? 3456` 上监听，**未探测 `/api/health`**，陈旧 PID 或无关进程占位会导致假阳性；(2) `prepare-mindos-runtime` 未拷贝仓库 `bin/`，打包内缺少 `mindos-runtime/bin/cli.js`
+
+### Core 更新下载在 Windows 上失败（ENOENT / All URLs failed）【已修复 v0.6.57】
+- **现象：** Windows 用户点"更新"→ "All download URLs failed" 或 "ENOENT: no such file or directory, open 'C:\Users\...\runtime-download.tar.gz'"；重试也无法成功
+- **根因：** (1) Windows 文件锁定：第一次下载失败后 `TARBALL_PATH` 可能无法被立即删除，重试时部分覆写导致状态混乱；(2) 错误信息丢失：所有 URL 失败时只返回泛泛的 "All URLs failed"，未记录具体错误（超时/404/DNS 等），难以诊断
+- **解决：** (1) 下载前清理 tarball 时添加重试逻辑（最多 3 次，每次间隔 100ms）；(2) 在 `downloadFile()` 中用 `lastErr` 变量追踪最后错误，返回具体信息如 "All URLs failed: timeout"；(3) 增强日志，记录每次删除/重试的尝试
+- **Ref:** `wiki/specs/spec-core-updater-bugfix.md`
 - **解决：** 冲突分支在 `loadURL` 前 `verifyMindOsWebListening`（短重试）；`prepare-mindos-runtime` 在存在时拷贝 `bin/`；用户可手动删 `~/.mindos/mindos.pid` 后重开（仍建议用新版本逻辑自动回落到起本地服务）
 
 ### macOS：用户拖拽删除 .app 后残留进程、端口、PID 文件导致重装异常
