@@ -26,6 +26,8 @@ export interface CustomAgentDef {
   presenceDirs: string[];
   presenceCli?: string;
   globalNestedKey?: string;
+  /** Skills directory path. Defaults to `baseDir + 'skills/'`. */
+  skillDir?: string;
 }
 
 export interface DetectResult {
@@ -34,6 +36,9 @@ export interface DetectResult {
   detectedFormat?: 'json' | 'toml';
   detectedConfigKey?: string;
   hasSkillsDir: boolean;
+  detectedSkillDir?: string;
+  skillCount?: number;
+  skillNames?: string[];
   suggestedName?: string;
 }
 
@@ -87,6 +92,7 @@ export function inferDefaults(name: string, baseDir: string): Omit<CustomAgentDe
     format: 'json',
     preferredTransport: 'stdio',
     presenceDirs: [dir],
+    skillDir: dir + 'skills/',
   };
 }
 
@@ -112,8 +118,23 @@ export function detectBaseDir(baseDir: string): DetectResult {
   const dirName = path.basename(expanded.replace(/\/$/, ''));
   result.suggestedName = dirName.charAt(0).toUpperCase() + dirName.slice(1);
 
-  // Check for skills/ subdirectory
-  result.hasSkillsDir = fs.existsSync(path.join(expanded, 'skills'));
+  // Check for skills/ subdirectory and scan contents
+  const skillsPath = path.join(expanded, 'skills');
+  if (fs.existsSync(skillsPath)) {
+    result.hasSkillsDir = true;
+    result.detectedSkillDir = baseDir.endsWith('/') ? baseDir + 'skills/' : baseDir + '/skills/';
+    try {
+      const skillEntries = fs.readdirSync(skillsPath, { withFileTypes: true });
+      const skillNames = skillEntries
+        .filter(e => (e.isDirectory() || e.isSymbolicLink()) && !e.name.startsWith('.'))
+        .map(e => e.name)
+        .sort((a, b) => a.localeCompare(b));
+      result.skillCount = skillNames.length;
+      result.skillNames = skillNames;
+    } catch {
+      result.skillCount = 0;
+    }
+  }
 
   // Scan top-level files (max 20)
   let entries: string[];
@@ -237,6 +258,28 @@ export function getAllAgents(): Record<string, AgentDef> {
   }
 
   return result;
+}
+
+/* ─── Skill Scanning ─── */
+
+/**
+ * Scan skills installed in a custom agent's skill directory.
+ * Returns the same shape as detectAgentInstalledSkills.
+ */
+export function scanCustomAgentSkills(custom: CustomAgentDef): { skills: string[]; sourcePath: string } {
+  const skillDir = custom.skillDir || (custom.baseDir.endsWith('/') ? custom.baseDir + 'skills/' : custom.baseDir + '/skills/');
+  const expanded = expandHome(skillDir);
+  if (!fs.existsSync(expanded)) return { skills: [], sourcePath: expanded };
+  try {
+    const entries = fs.readdirSync(expanded, { withFileTypes: true });
+    const skills = entries
+      .filter(e => (e.isDirectory() || e.isSymbolicLink()) && !e.name.startsWith('.'))
+      .map(e => e.name)
+      .sort((a, b) => a.localeCompare(b));
+    return { skills, sourcePath: expanded };
+  } catch {
+    return { skills: [], sourcePath: expanded };
+  }
 }
 
 /* ─── Validation ─── */

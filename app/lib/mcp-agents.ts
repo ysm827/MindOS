@@ -235,6 +235,15 @@ export const MCP_AGENTS: Record<string, AgentDef> = {
     presenceCli: 'codex',
     presenceDirs: ['~/.codex/'],
   },
+  'antigravity': {
+    name: 'Antigravity',
+    project: '.antigravity/mcp_config.json',
+    global: '~/.gemini/antigravity/mcp_config.json',
+    key: 'mcpServers',
+    preferredTransport: 'stdio',
+    presenceCli: 'agy',
+    presenceDirs: ['~/.gemini/antigravity/'],
+  },
 };
 
 /**
@@ -261,6 +270,7 @@ export const SKILL_AGENT_REGISTRY: Record<string, SkillAgentRegistration> = {
   'roo': { mode: 'additional', skillAgentName: 'roo' },
   'github-copilot': { mode: 'universal' },
   'codex': { mode: 'universal' },
+  'antigravity': { mode: 'additional', skillAgentName: 'antigravity' },
 };
 
 export interface SkillWorkspaceProfile {

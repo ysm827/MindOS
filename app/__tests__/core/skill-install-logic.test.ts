@@ -35,6 +35,7 @@ const SKILL_AGENT_REGISTRY: Record<string, { mode: 'universal' | 'additional' | 
   'roo': { mode: 'additional', skillAgentName: 'roo' },
   'github-copilot': { mode: 'universal' },
   'codex': { mode: 'universal' },
+  'antigravity': { mode: 'additional', skillAgentName: 'antigravity' },
 };
 
 /* ── Replicated logic from scripts/setup.js ──────────────────────── */

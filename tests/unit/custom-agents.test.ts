@@ -37,6 +37,7 @@ let detectBaseDir: typeof import('../../app/lib/custom-agents').detectBaseDir;
 let loadCustomAgents: typeof import('../../app/lib/custom-agents').loadCustomAgents;
 let saveCustomAgents: typeof import('../../app/lib/custom-agents').saveCustomAgents;
 let getAllAgents: typeof import('../../app/lib/custom-agents').getAllAgents;
+let scanCustomAgentSkills: typeof import('../../app/lib/custom-agents').scanCustomAgentSkills;
 
 beforeEach(async () => {
   mockCustomAgents = [];
@@ -50,6 +51,7 @@ beforeEach(async () => {
   loadCustomAgents = mod.loadCustomAgents;
   saveCustomAgents = mod.saveCustomAgents;
   getAllAgents = mod.getAllAgents;
+  scanCustomAgentSkills = mod.scanCustomAgentSkills;
 });
 
 /* ─── slugify ─── */
@@ -135,6 +137,16 @@ describe('inferDefaults', () => {
     const result = inferDefaults('Test', '~/.test/');
     expect(result.baseDir).toBe('~/.test/');
     expect(result.global).toBe('~/.test/mcp.json');
+  });
+
+  it('sets skillDir to baseDir + skills/', () => {
+    const result = inferDefaults('QCLaw', '~/.qclaw');
+    expect(result.skillDir).toBe('~/.qclaw/skills/');
+  });
+
+  it('preserves trailing slash for skillDir', () => {
+    const result = inferDefaults('Test', '~/.test/');
+    expect(result.skillDir).toBe('~/.test/skills/');
   });
 });
 
@@ -372,6 +384,30 @@ describe('detectBaseDir', () => {
     fs.mkdirSync(path.join(tempDir, 'skills'));
     const result = detectBaseDir(tempDir);
     expect(result.hasSkillsDir).toBe(true);
+    expect(result.detectedSkillDir).toBeDefined();
+    expect(result.skillCount).toBe(0);
+  });
+
+  it('counts skills inside skills/ directory', () => {
+    const skillsDir = path.join(tempDir, 'skills');
+    fs.mkdirSync(skillsDir);
+    fs.mkdirSync(path.join(skillsDir, 'my-skill-a'));
+    fs.mkdirSync(path.join(skillsDir, 'my-skill-b'));
+    fs.writeFileSync(path.join(skillsDir, 'not-a-skill.txt'), '');
+    const result = detectBaseDir(tempDir);
+    expect(result.hasSkillsDir).toBe(true);
+    expect(result.skillCount).toBe(2);
+    expect(result.skillNames).toEqual(['my-skill-a', 'my-skill-b']);
+  });
+
+  it('ignores hidden directories in skills/', () => {
+    const skillsDir = path.join(tempDir, 'skills');
+    fs.mkdirSync(skillsDir);
+    fs.mkdirSync(path.join(skillsDir, 'visible-skill'));
+    fs.mkdirSync(path.join(skillsDir, '.hidden-skill'));
+    const result = detectBaseDir(tempDir);
+    expect(result.skillCount).toBe(1);
+    expect(result.skillNames).toEqual(['visible-skill']);
   });
 
   it('detects TOML config with mcp_servers section', () => {
@@ -396,5 +432,47 @@ describe('detectBaseDir', () => {
     fs.mkdirSync(namedDir);
     const result = detectBaseDir(namedDir);
     expect(result.suggestedName).toBe('Qclaw');
+  });
+});
+
+/* ─── scanCustomAgentSkills ─── */
+
+describe('scanCustomAgentSkills', () => {
+  let tempDir: string;
+
+  beforeEach(() => {
+    tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'mindos-skill-scan-'));
+  });
+
+  afterEach(() => {
+    fs.rmSync(tempDir, { recursive: true, force: true });
+  });
+
+  it('returns empty when skillDir does not exist', () => {
+    const custom = { ...inferDefaults('Test', tempDir), key: 'test', skillDir: tempDir + '/skills/' };
+    fs.rmSync(path.join(tempDir), { recursive: true, force: true });
+    const result = scanCustomAgentSkills(custom);
+    expect(result.skills).toEqual([]);
+  });
+
+  it('scans skills from skillDir', () => {
+    const skillsDir = path.join(tempDir, 'skills');
+    fs.mkdirSync(skillsDir);
+    fs.mkdirSync(path.join(skillsDir, 'alpha'));
+    fs.mkdirSync(path.join(skillsDir, 'beta'));
+    const custom = { ...inferDefaults('Test', tempDir + '/'), key: 'test', skillDir: tempDir + '/skills/' };
+    const result = scanCustomAgentSkills(custom);
+    expect(result.skills).toEqual(['alpha', 'beta']);
+    expect(result.sourcePath).toContain('skills');
+  });
+
+  it('uses baseDir + skills/ when skillDir is not set', () => {
+    const skillsDir = path.join(tempDir, 'skills');
+    fs.mkdirSync(skillsDir);
+    fs.mkdirSync(path.join(skillsDir, 'gamma'));
+    const custom = { ...inferDefaults('Test', tempDir + '/'), key: 'test' };
+    delete (custom as Record<string, unknown>).skillDir;
+    const result = scanCustomAgentSkills(custom);
+    expect(result.skills).toEqual(['gamma']);
   });
 });

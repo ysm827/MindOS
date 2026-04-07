@@ -14,7 +14,7 @@ import {
   detectAgentInstalledSkills,
   resolveSkillWorkspaceProfile,
 } from '@/lib/mcp-agents';
-import { getAllAgents, loadCustomAgents } from '@/lib/custom-agents';
+import { getAllAgents, loadCustomAgents, scanCustomAgentSkills } from '@/lib/custom-agents';
 import { readSettings } from '@/lib/settings';
 import { scanSkillDirs } from '@/lib/pi-integration/skills';
 import { getMindRoot } from '@/lib/fs';
@@ -105,7 +105,9 @@ export async function GET() {
         status = detectInstalled(key);
       }
 
-      const skillProfile = resolveSkillWorkspaceProfile(key);
+      const skillProfile = isCustom
+        ? { mode: 'additional' as const, skillAgentName: key, workspacePath: expandHome(customByKey[key]?.skillDir || agent.presenceDirs?.[0] + 'skills/') }
+        : resolveSkillWorkspaceProfile(key);
       const runtime = isCustom
         ? { hiddenRootPath: '', hiddenRootPresent: false, conversationSignal: false, usageSignal: false, lastActivityAt: undefined }
         : detectAgentRuntimeSignals(key);
@@ -113,7 +115,7 @@ export async function GET() {
         ? { servers: [] as string[], sources: [] as string[] }
         : detectAgentConfiguredMcpServers(key);
       const installedSkills = isCustom
-        ? { skills: [] as string[], sourcePath: '' }
+        ? scanCustomAgentSkills(customByKey[key])
         : detectAgentInstalledSkills(key);
 
       return {

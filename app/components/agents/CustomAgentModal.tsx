@@ -16,6 +16,9 @@ interface DetectResult {
   detectedFormat?: 'json' | 'toml';
   detectedConfigKey?: string;
   hasSkillsDir: boolean;
+  detectedSkillDir?: string;
+  skillCount?: number;
+  skillNames?: string[];
   suggestedName?: string;
 }
 
@@ -28,6 +31,7 @@ interface FormState {
   preferredTransport: 'stdio' | 'http';
   project: string;
   presenceCli: string;
+  skillDir: string;
 }
 
 interface CustomAgentModalProps {
@@ -85,6 +89,7 @@ export default function CustomAgentModal({
     preferredTransport: 'stdio',
     project: '',
     presenceCli: '',
+    skillDir: '',
   });
 
   // Reset state when modal opens/closes or editAgent changes
@@ -100,6 +105,7 @@ export default function CustomAgentModal({
         preferredTransport: editAgent.preferredTransport || 'stdio',
         project: editAgent.projectPath || '',
         presenceCli: '',
+        skillDir: editAgent.skillWorkspacePath || '',
       });
       setPhase('result');
       setCustomizeOpen(true);
@@ -115,6 +121,7 @@ export default function CustomAgentModal({
         preferredTransport: 'stdio',
         project: '',
         presenceCli: '',
+        skillDir: '',
       });
       setPhase('input');
       setCustomizeOpen(false);
@@ -182,7 +189,9 @@ export default function CustomAgentModal({
     // Detect API only scans ~/ paths for security; for other absolute paths,
     // skip detection and go straight to Phase B with sensible defaults.
     if (!dir.startsWith('~/')) {
-      setField('global', (dir.endsWith('/') ? dir : dir + '/') + 'mcp.json');
+      const normalized = dir.endsWith('/') ? dir : dir + '/';
+      setField('global', normalized + 'mcp.json');
+      setField('skillDir', normalized + 'skills/');
       setDetectResult({ exists: false, hasSkillsDir: false });
       setPhase('result');
       setDetecting(false);
@@ -216,11 +225,14 @@ export default function CustomAgentModal({
       }
       if (data.detectedFormat) setField('format', data.detectedFormat);
       if (data.detectedConfigKey) setField('configKey', data.detectedConfigKey);
+      setField('skillDir', data.detectedSkillDir || (dir.endsWith('/') ? dir : dir + '/') + 'skills/');
 
       setPhase('result');
     } catch {
       clearTimeout(timeout);
-      setField('global', (dir.endsWith('/') ? dir : dir + '/') + 'mcp.json');
+      const normalized = dir.endsWith('/') ? dir : dir + '/';
+      setField('global', normalized + 'mcp.json');
+      setField('skillDir', normalized + 'skills/');
       setDetectResult({ exists: false, hasSkillsDir: false });
       setDetectTimedOut(true);
       setPhase('result');
@@ -246,6 +258,7 @@ export default function CustomAgentModal({
           preferredTransport: form.preferredTransport,
           project: form.project.trim() || null,
           presenceCli: form.presenceCli.trim() || undefined,
+          skillDir: form.skillDir.trim() || undefined,
         }
       : {
           name: form.name.trim(),
@@ -256,6 +269,7 @@ export default function CustomAgentModal({
           preferredTransport: form.preferredTransport,
           project: form.project.trim() || null,
           presenceCli: form.presenceCli.trim() || undefined,
+          skillDir: form.skillDir.trim() || undefined,
         };
 
     try {
@@ -410,12 +424,12 @@ export default function CustomAgentModal({
                   <span className="text-muted-foreground">{p.customAgentTransportLabel}</span>
                   <span className="text-foreground">{form.preferredTransport}</span>
 
-                  {detectResult?.hasSkillsDir && (
-                    <>
-                      <span className="text-muted-foreground">{p.customAgentSkillsLabel}</span>
-                      <span className="text-foreground">{p.customAgentSkillsFound(0)}</span>
-                    </>
-                  )}
+                  <span className="text-muted-foreground">{p.customAgentSkillsLabel}</span>
+                  <span className="text-foreground">
+                    {detectResult?.hasSkillsDir
+                      ? p.customAgentSkillsFound(detectResult.skillCount ?? 0)
+                      : p.customAgentSkillsNone ?? '—'}
+                  </span>
                 </div>
               </div>
 
@@ -488,6 +502,16 @@ export default function CustomAgentModal({
                           name="transport"
                         />
                       </div>
+                    </Field>
+
+                    {/* Skills Directory */}
+                    <Field label={p.customAgentSkillDir} hint={p.customAgentSkillDirHint}>
+                      <Input
+                        value={form.skillDir}
+                        onChange={(e) => setField('skillDir', e.target.value)}
+                        placeholder={p.customAgentSkillDirPlaceholder}
+                        autoComplete="off"
+                      />
                     </Field>
 
                     {/* Project Config */}

@@ -254,11 +254,11 @@ describe('POST /api/mcp/install', () => {
 });
 
 describe('GET /api/mcp/agents', () => {
-  it('returns all 20 agents (1 builtin + 19 registry)', async () => {
+  it('returns all 21 agents (1 builtin + 20 registry)', async () => {
     const { GET } = await importAgentsRoute();
     const res = await GET();
     const body = await res.json();
-    expect(body.agents).toHaveLength(20);
+    expect(body.agents).toHaveLength(21);
     const keys = body.agents.map((a: { key: string }) => a.key);
     expect(keys).toContain('mindos');
     expect(keys).toContain('claude-code');
@@ -275,6 +275,7 @@ describe('GET /api/mcp/agents', () => {
     expect(keys).toContain('roo');
     expect(keys).toContain('github-copilot');
     expect(keys).toContain('codex');
+    expect(keys).toContain('antigravity');
   });
 
   it('detects installed agent from config file', async () => {

@@ -10,9 +10,10 @@ import { app } from 'electron';
 import path from 'path';
 import {
   existsSync, mkdirSync, renameSync, rmSync,
-  createWriteStream, readFileSync, unlinkSync,
+  createWriteStream, createReadStream, readFileSync, unlinkSync, writeFileSync,
 } from 'fs';
 import { createHash } from 'crypto';
+import { createGunzip } from 'zlib';
 import { execFile } from 'child_process';
 import https from 'https';
 import http from 'http';
@@ -113,10 +114,17 @@ function downloadFile(
   return new Promise((resolve, reject) => {
     let urlIdx = 0;
     let settled = false;
+    let lastErr: Error | undefined; // Track last error for better diagnostics
 
     const tryNext = () => {
       if (settled) return;
-      if (urlIdx >= urlQueue.length) { settled = true; return reject(new Error('All download URLs failed')); }
+      if (urlIdx >= urlQueue.length) { 
+        settled = true; 
+        const msg = lastErr 
+          ? `All download URLs failed: ${lastErr.message}` 
+          : 'All download URLs failed';
+        return reject(new Error(msg)); 
+      }
       if (signal.aborted) { settled = true; return reject(new Error('aborted')); }
 
       const url = urlQueue[urlIdx++];
@@ -132,7 +140,9 @@ function downloadFile(
         }
         if (res.statusCode !== 200) {
           res.resume();
-          console.warn(`[CoreUpdater] ${url} → HTTP ${res.statusCode}, trying next`);
+          const msg = `HTTP ${res.statusCode}`;
+          lastErr = new Error(msg);
+          console.warn(`[CoreUpdater] ${url} → ${msg}, trying next`);
           tryNext();
           return;
         }
@@ -152,16 +162,30 @@ function downloadFile(
 
         res.pipe(file);
         file.on('finish', () => { file.close(); if (!settled) { settled = true; resolve(); } });
-        file.on('error', (err) => { file.close(); if (!settled) { settled = true; reject(err); } });
-        res.on('error', (err) => { file.close(); if (!settled) { settled = true; reject(err); } });
+        file.on('error', (err) => { 
+          file.close(); 
+          if (!settled) { 
+            settled = true; 
+            reject(err); 
+          } 
+        });
+        res.on('error', (err) => { 
+          file.close(); 
+          if (!settled) { 
+            settled = true; 
+            reject(err); 
+          } 
+        });
       });
 
       req.on('error', (err) => {
-        console.warn(`[CoreUpdater] ${url} → ${err.message}, trying next`);
+        lastErr = err instanceof Error ? err : new Error(String(err));
+        console.warn(`[CoreUpdater] ${url} → ${lastErr.message}, trying next`);
         tryNext();
       });
       req.on('timeout', () => {
         req.destroy();
+        lastErr = new Error('timeout');
         console.warn(`[CoreUpdater] ${url} → timeout, trying next`);
         tryNext();
       });
@@ -174,14 +198,114 @@ function downloadFile(
   });
 }
 
-/** Extract a tar.gz using system tar (available on macOS, Linux, Windows with Git). */
+/**
+ * Extract a tar.gz archive.
+ *
+ * On macOS/Linux: uses system `tar` (fast, reliable).
+ * On Windows: uses a pure-JS implementation (Node zlib + minimal tar parser)
+ * because Windows' built-in bsdtar silently fails on long paths (>260 chars),
+ * which is common in node_modules trees like app/.next/standalone/node_modules/...
+ */
 function extractTarGz(tarball: string, destDir: string): Promise<void> {
-  return new Promise((resolve, reject) => {
-    execFile('tar', ['xzf', tarball, '-C', destDir], { timeout: 120_000 }, (err) => {
-      if (err) reject(new Error(`tar extract failed: ${err.message}`));
-      else resolve();
+  if (process.platform !== 'win32') {
+    // macOS / Linux — system tar is reliable
+    return new Promise((resolve, reject) => {
+      execFile('tar', ['xzf', tarball, '-C', destDir], { timeout: 120_000 }, (err) => {
+        if (err) reject(new Error(`tar extract failed: ${err.message}`));
+        else resolve();
+      });
     });
+  }
+  // Windows — pure-JS extraction to avoid bsdtar long-path bugs
+  return extractTarGzJs(tarball, destDir);
+}
+
+/**
+ * Pure-JS tar.gz extraction using Node built-in zlib.
+ * Handles the POSIX tar format (512-byte header blocks) which is what
+ * `tar czf` produces. Supports regular files and directories.
+ * Uses \\?\ long-path prefix on Windows to bypass 260-char limit.
+ */
+async function extractTarGzJs(tarball: string, destDir: string): Promise<void> {
+  // Read & decompress the entire file into memory.
+  // Runtime tarballs are ~32 MB compressed, ~125 MB decompressed — fits in memory.
+  const buf = await decompressGzip(tarball);
+
+  let offset = 0;
+  while (offset + 512 <= buf.length) {
+    const header = buf.subarray(offset, offset + 512);
+    offset += 512;
+
+    // Two consecutive zero blocks = end of archive
+    if (header.every(b => b === 0)) break;
+
+    // Parse tar header fields (POSIX ustar format)
+    const nameRaw = readTarString(header, 0, 100);
+    const sizeOctal = readTarString(header, 124, 12);
+    const typeflag = header[156];
+    const prefix = readTarString(header, 345, 155);
+
+    const entryName = prefix ? `${prefix}/${nameRaw}` : nameRaw;
+    const fileSize = parseInt(sizeOctal, 8) || 0;
+
+    // Data blocks (rounded up to 512-byte boundary)
+    const dataBlocks = Math.ceil(fileSize / 512) * 512;
+
+    if (!entryName || entryName === '.' || entryName === './') {
+      offset += dataBlocks;
+      continue;
+    }
+
+    // Resolve path and apply Windows long-path prefix
+    const entryPath = winLongPath(path.join(destDir, entryName));
+
+    // typeflag: '5' (0x35) = directory, '0' (0x30) or 0 (NUL) = regular file
+    const isDir = typeflag === 0x35 || entryName.endsWith('/');
+
+    if (isDir) {
+      mkdirSync(entryPath, { recursive: true });
+    } else {
+      // Ensure parent directory exists
+      const parentDir = path.dirname(entryPath);
+      mkdirSync(parentDir, { recursive: true });
+
+      // Write file content
+      const content = buf.subarray(offset, offset + fileSize);
+      writeFileSync(entryPath, content);
+    }
+
+    offset += dataBlocks;
+  }
+}
+
+/** Decompress a .gz file into a Buffer using Node's built-in zlib. */
+function decompressGzip(filePath: string): Promise<Buffer> {
+  return new Promise((resolve, reject) => {
+    const chunks: Buffer[] = [];
+    const gunzip = createGunzip();
+    const input = createReadStream(filePath);
+
+    input.pipe(gunzip);
+    gunzip.on('data', (chunk: Buffer) => chunks.push(chunk));
+    gunzip.on('end', () => resolve(Buffer.concat(chunks)));
+    gunzip.on('error', (err) => reject(new Error(`gzip decompression failed: ${err.message}`)));
+    input.on('error', (err) => reject(new Error(`reading tarball failed: ${err.message}`)));
   });
+}
+
+/** Read a NUL-terminated string from a tar header field. */
+function readTarString(buf: Buffer, offset: number, length: number): string {
+  const slice = buf.subarray(offset, offset + length);
+  const nulIdx = slice.indexOf(0);
+  return slice.subarray(0, nulIdx === -1 ? length : nulIdx).toString('utf-8');
+}
+
+/** On Windows, prefix absolute paths with \\?\ to support paths > 260 chars. */
+function winLongPath(p: string): string {
+  if (process.platform !== 'win32') return p;
+  // Already prefixed, or is a relative/UNC path
+  if (p.startsWith('\\\\?\\') || !path.isAbsolute(p)) return p;
+  return `\\\\?\\${p}`;
 }
 
 // ── CoreUpdater ──
@@ -247,9 +371,37 @@ export class CoreUpdater extends EventEmitter {
       this.abortController = null;
     }
 
-    // Clean up previous download attempts
-    if (existsSync(DOWNLOAD_DIR)) rmSync(DOWNLOAD_DIR, { recursive: true, force: true });
-    if (existsSync(TARBALL_PATH)) try { unlinkSync(TARBALL_PATH); } catch { /* may not exist */ }
+    // Clean up previous download attempts — CRITICAL: must ensure files are fully deleted
+    if (existsSync(DOWNLOAD_DIR)) {
+      console.info('[CoreUpdater] Removing previous download directory');
+      rmSync(DOWNLOAD_DIR, { recursive: true, force: true });
+    }
+    
+    // Delete tarball with retry — Windows may hold file lock momentarily
+    if (existsSync(TARBALL_PATH)) {
+      let deleted = false;
+      for (let attempt = 0; attempt < 3; attempt++) {
+        try {
+          unlinkSync(TARBALL_PATH);
+          deleted = true;
+          console.info('[CoreUpdater] Deleted previous tarball');
+          break;
+        } catch (err) {
+          if (attempt < 2) {
+            console.warn(`[CoreUpdater] Failed to delete tarball (attempt ${attempt + 1}/3), retrying: ${err instanceof Error ? err.message : err}`);
+            // Brief delay before retry (let any file locks release)
+            await new Promise(r => setTimeout(r, 100));
+          } else {
+            console.warn(`[CoreUpdater] Could not delete previous tarball after 3 attempts: ${err instanceof Error ? err.message : err}`);
+          }
+        }
+      }
+      if (!deleted) {
+        // If we still can't delete it, at least warn but don't fail — downloadFile may overwrite it
+        console.warn('[CoreUpdater] WARNING: Could not clean up old tarball — may cause issues if download is partial');
+      }
+    }
+    
     mkdirSync(DOWNLOAD_DIR, { recursive: true });
 
     this.abortController = new AbortController();
@@ -291,7 +443,11 @@ export class CoreUpdater extends EventEmitter {
     } catch (err) {
       // Clean up on failure
       if (existsSync(DOWNLOAD_DIR)) rmSync(DOWNLOAD_DIR, { recursive: true, force: true });
-      if (existsSync(TARBALL_PATH)) try { unlinkSync(TARBALL_PATH); } catch { /* ignore */ }
+      if (existsSync(TARBALL_PATH)) {
+        try { unlinkSync(TARBALL_PATH); } catch (cleanupErr) { 
+          console.warn('[CoreUpdater] Failed to clean up tarball after download error:', cleanupErr instanceof Error ? cleanupErr.message : cleanupErr);
+        }
+      }
       this.abortController = null;
       throw err;
     }

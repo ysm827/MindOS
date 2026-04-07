@@ -49,6 +49,7 @@ export async function POST(req: NextRequest) {
       ...(overrides.presenceDirs && { presenceDirs: overrides.presenceDirs }),
       ...(overrides.presenceCli && { presenceCli: overrides.presenceCli }),
       ...(overrides.globalNestedKey && { globalNestedKey: overrides.globalNestedKey }),
+      ...(overrides.skillDir && { skillDir: overrides.skillDir }),
     };
 
     customs.push(agent);
@@ -106,6 +107,7 @@ export async function PUT(req: NextRequest) {
       ...(updates.preferredTransport && { preferredTransport: updates.preferredTransport }),
       ...(updates.presenceCli !== undefined && { presenceCli: updates.presenceCli || undefined }),
       ...(updates.globalNestedKey !== undefined && { globalNestedKey: updates.globalNestedKey || undefined }),
+      ...(updates.skillDir !== undefined && { skillDir: updates.skillDir || undefined }),
     };
 
     // Update presenceDirs: explicit override takes priority, then baseDir-derived default
@@ -113,6 +115,12 @@ export async function PUT(req: NextRequest) {
       updated.presenceDirs = updates.presenceDirs;
     } else if (updates.baseDir) {
       updated.presenceDirs = [updates.baseDir.endsWith('/') ? updates.baseDir : updates.baseDir + '/'];
+    }
+
+    // Update skillDir default when baseDir changes and no explicit skillDir
+    if (!updates.skillDir && updates.baseDir) {
+      const bd = updates.baseDir.endsWith('/') ? updates.baseDir : updates.baseDir + '/';
+      updated.skillDir = bd + 'skills/';
     }
 
     customs[idx] = updated;
