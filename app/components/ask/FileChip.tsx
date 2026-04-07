@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { X, FileText, Table, Paperclip, ImageIcon, Zap, Bot, Folder } from 'lucide-react';
+import { X, FileText, Table, Paperclip, ImageIcon, Zap, Bot, Folder, Loader2, CheckCircle2, AlertCircle, AlertTriangle } from 'lucide-react';
 
 interface FileChipProps {
   path: string;
@@ -12,6 +12,16 @@ interface FileChipProps {
   imageData?: string;
   /** MIME type for image preview */
   imageMime?: string;
+  /** Extraction status for uploaded files (e.g. PDF). */
+  status?: 'loading' | 'success' | 'error';
+  /** Human-readable error message shown on hover when status='error'. */
+  error?: string;
+  /** Present when the PDF text was truncated due to length. */
+  truncatedInfo?: {
+    totalChars: number;
+    includedChars: number;
+    totalPages: number;
+  };
 }
 
 const VARIANT_ICON = {
@@ -30,11 +40,13 @@ const VARIANT_STYLE = {
   agent: 'border-[var(--amber)]/25 bg-[var(--amber)]/10 text-foreground',
 } as const;
 
-export default function FileChip({ path, onRemove, variant = 'kb', imageData, imageMime }: FileChipProps) {
+export default function FileChip({ path, onRemove, variant = 'kb', imageData, imageMime, status, error, truncatedInfo }: FileChipProps) {
   const [showPreview, setShowPreview] = useState(false);
+  const [showTooltip, setShowTooltip] = useState(false);
   const [mounted, setMounted] = useState(false);
   const chipRef = useRef<HTMLSpanElement>(null);
   const [previewPos, setPreviewPos] = useState<{ top: number; left: number } | null>(null);
+  const [tooltipPos, setTooltipPos] = useState<{ top: number; left: number } | null>(null);
 
   useEffect(() => setMounted(true), []);
 
@@ -42,22 +54,60 @@ export default function FileChip({ path, onRemove, variant = 'kb', imageData, im
   const cleanPath = isDir ? path.slice(0, -1) : path;
   const name = cleanPath.split('/').pop() ?? cleanPath;
   const isCsv = variant === 'kb' && !isDir && name.endsWith('.csv');
-  const { icon: Icon, cls: iconClass } = isDir
+
+  // Determine the base icon from variant / file type
+  const { icon: BaseIcon, cls: baseIconCls } = isDir
     ? { icon: Folder, cls: 'text-yellow-400' }
     : isCsv
     ? { icon: Table, cls: 'text-success' }
     : VARIANT_ICON[variant];
-  const style = VARIANT_STYLE[variant];
 
-  // Position preview above the chip using getBoundingClientRect
+  // Determine status trailing indicator
+  const isTruncated = !!truncatedInfo;
+  let StatusIndicator: React.ComponentType<{ size: number; className?: string }> | null = null;
+  let statusIndicatorCls = '';
+  if (status === 'loading') {
+    StatusIndicator = Loader2;
+    statusIndicatorCls = 'text-muted-foreground animate-spin';
+  } else if (status === 'error') {
+    StatusIndicator = AlertCircle;
+    statusIndicatorCls = 'text-destructive';
+  } else if (isTruncated) {
+    StatusIndicator = AlertTriangle;
+    statusIndicatorCls = 'text-amber-500';
+  } else if (status === 'success') {
+    StatusIndicator = CheckCircle2;
+    statusIndicatorCls = 'text-emerald-500';
+  }
+
+  const style = status === 'error'
+    ? 'border-destructive/30 bg-destructive/5 text-foreground'
+    : isTruncated
+    ? 'border-amber-500/30 bg-amber-500/5 text-foreground'
+    : VARIANT_STYLE[variant];
+
+  // Build tooltip text
+  let tooltipText: string | null = null;
+  if (status === 'error' && error) {
+    tooltipText = error;
+  } else if (isTruncated) {
+    const pct = Math.round((truncatedInfo.includedChars / truncatedInfo.totalChars) * 100);
+    tooltipText = `Document truncated — only ${pct}% included (${Math.round(truncatedInfo.includedChars / 1000)}K / ${Math.round(truncatedInfo.totalChars / 1000)}K chars, ${truncatedInfo.totalPages} pages total)`;
+  }
+
+  // Position image preview above the chip
   useEffect(() => {
     if (!showPreview || !chipRef.current) { setPreviewPos(null); return; }
     const rect = chipRef.current.getBoundingClientRect();
-    setPreviewPos({
-      top: rect.top - 8, // 8px gap above chip
-      left: rect.left,
-    });
+    setPreviewPos({ top: rect.top - 8, left: rect.left });
   }, [showPreview]);
+
+  // Position tooltip above the chip
+  useEffect(() => {
+    if (!showTooltip || !chipRef.current) { setTooltipPos(null); return; }
+    const rect = chipRef.current.getBoundingClientRect();
+    setTooltipPos({ top: rect.top - 8, left: rect.left });
+  }, [showTooltip]);
 
   const preview = showPreview && previewPos && imageData && imageMime ? (
     <div
@@ -75,16 +125,44 @@ export default function FileChip({ path, onRemove, variant = 'kb', imageData, im
     </div>
   ) : null;
 
+  const tooltipBorderCls = status === 'error'
+    ? 'border-destructive/20 text-destructive'
+    : 'border-amber-500/20 text-amber-600 dark:text-amber-400';
+
+  const tooltip = showTooltip && tooltipPos && tooltipText ? (
+    <div
+      className={`fixed z-50 px-2.5 py-1.5 rounded-lg border bg-card text-xs shadow-lg pointer-events-none max-w-[280px] ${tooltipBorderCls}`}
+      style={{
+        left: tooltipPos.left,
+        bottom: window.innerHeight - tooltipPos.top,
+      }}
+    >
+      {tooltipText}
+    </div>
+  ) : null;
+
+  const handleMouseEnter = () => {
+    if (imageData) setShowPreview(true);
+    if (tooltipText) setShowTooltip(true);
+  };
+  const handleMouseLeave = () => {
+    setShowPreview(false);
+    setShowTooltip(false);
+  };
+
   return (
     <>
       <span
         ref={chipRef}
         className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs border max-w-[220px] ${style}`}
-        onMouseEnter={() => imageData && setShowPreview(true)}
-        onMouseLeave={() => setShowPreview(false)}
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
       >
-        <Icon size={11} className={`${iconClass} shrink-0`} />
+        <BaseIcon size={11} className={`${baseIconCls} shrink-0`} />
         <span className="truncate" title={isDir ? cleanPath : path}>{name}</span>
+        {StatusIndicator && (
+          <StatusIndicator size={10} className={`${statusIndicatorCls} shrink-0`} />
+        )}
         <button
           type="button"
           onClick={onRemove}
@@ -95,6 +173,7 @@ export default function FileChip({ path, onRemove, variant = 'kb', imageData, im
         </button>
       </span>
       {mounted && preview && createPortal(preview, document.body)}
+      {mounted && tooltip && createPortal(tooltip, document.body)}
     </>
   );
 }

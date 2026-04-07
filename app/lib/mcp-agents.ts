@@ -5,7 +5,7 @@ import { execSync } from 'child_process';
 
 /** Parse JSONC — strips single-line (//) and block comments before JSON.parse */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function parseJsonc(text: string): any {
+export function parseJsonc(text: string): any {
   let stripped = text.replace(/\\"|"(?:\\"|[^"])*"|(\/\/.*$)/gm, (m, g) => g ? '' : m);
   stripped = stripped.replace(/\/\*[\s\S]*?\*\//g, '');
   if (!stripped.trim()) return {};
@@ -244,6 +244,24 @@ export const MCP_AGENTS: Record<string, AgentDef> = {
     presenceCli: 'agy',
     presenceDirs: ['~/.gemini/antigravity/'],
   },
+  'qclaw': {
+    name: 'QClaw',
+    project: null,
+    global: '~/.qclaw/mcp.json',
+    key: 'mcpServers',
+    preferredTransport: 'stdio',
+    presenceCli: 'qclaw',
+    presenceDirs: ['~/.qclaw/'],
+  },
+  'workbuddy': {
+    name: 'WorkBuddy',
+    project: null,
+    global: '~/.workbuddy/mcp.json',
+    key: 'mcpServers',
+    preferredTransport: 'stdio',
+    presenceCli: 'workbuddy',
+    presenceDirs: ['~/.workbuddy/'],
+  },
 };
 
 /**
@@ -271,6 +289,8 @@ export const SKILL_AGENT_REGISTRY: Record<string, SkillAgentRegistration> = {
   'github-copilot': { mode: 'universal' },
   'codex': { mode: 'universal' },
   'antigravity': { mode: 'additional', skillAgentName: 'antigravity' },
+  'qclaw': { mode: 'unsupported' },
+  'workbuddy': { mode: 'unsupported' },
 };
 
 export interface SkillWorkspaceProfile {

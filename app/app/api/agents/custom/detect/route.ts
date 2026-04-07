@@ -1,7 +1,7 @@
 export const dynamic = 'force-dynamic';
 
 import { NextRequest, NextResponse } from 'next/server';
-import { detectBaseDir } from '@/lib/custom-agents';
+import { detectBaseDir, detectCustomAgentProfile } from '@/lib/custom-agents';
 
 /** POST — Auto-detect config files in a baseDir. */
 export async function POST(req: NextRequest) {
@@ -24,6 +24,21 @@ export async function POST(req: NextRequest) {
     }
 
     const result = detectBaseDir(dir);
+    
+    // Enhanced detection: if we detected a config, read detailed MCP and skill info
+    if (result.detectedConfig && result.detectedConfigKey) {
+      const profile = detectCustomAgentProfile(
+        dir,
+        result.detectedConfig,
+        result.detectedConfigKey
+      );
+      result.mcpServers = profile.mcpServers;
+      result.skillNames = profile.skillNames;
+      if (profile.parseError) {
+        result.mcpParseError = profile.parseError;
+      }
+    }
+    
     return NextResponse.json(result);
   } catch (err) {
     return NextResponse.json({ error: String(err) }, { status: 500 });

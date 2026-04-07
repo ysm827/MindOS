@@ -223,17 +223,7 @@ export default function AgentsOverviewSection({
             </span>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {sortedAgents.map((agent, i) => (
-              <AgentCard
-                key={agent.key}
-                agent={agent}
-                copy={copy}
-                index={i}
-                mcpEnabled={mcpEnabled}
-                onEdit={agent.isCustom ? onEditCustomAgent : undefined}
-                onRemove={agent.isCustom ? onRemoveCustomAgent : undefined}
-              />
-            ))}
+            {/* Add Custom Agent Button — Always First */}
             {onAddCustomAgent && (
               <button
                 type="button"
@@ -254,6 +244,18 @@ export default function AgentsOverviewSection({
                 </span>
               </button>
             )}
+            {/* Agent Cards */}
+            {sortedAgents.map((agent, i) => (
+              <AgentCard
+                key={agent.key}
+                agent={agent}
+                copy={copy}
+                index={i}
+                mcpEnabled={mcpEnabled}
+                onEdit={agent.isCustom ? onEditCustomAgent : undefined}
+                onRemove={agent.isCustom ? onRemoveCustomAgent : undefined}
+              />
+            ))}
           </div>
         </section>
       ) : (

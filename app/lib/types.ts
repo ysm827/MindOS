@@ -72,6 +72,16 @@ export interface Message {
 export interface LocalAttachment {
   name: string;
   content: string;
+  /** Extraction status for PDF uploads. Absent / undefined = legacy (treated as success). */
+  status?: 'loading' | 'success' | 'error';
+  /** Human-readable error message (only when status = 'error'). */
+  error?: string;
+  /** Present when the full text was too long and had to be truncated. */
+  truncatedInfo?: {
+    totalChars: number;
+    includedChars: number;
+    totalPages: number;
+  };
 }
 
 /** User-facing Ask modes. 'organize' is internal-only (not selectable by users). */

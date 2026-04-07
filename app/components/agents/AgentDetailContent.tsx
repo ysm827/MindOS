@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ArrowLeft, Activity, Globe, Key, Loader2, MoreHorizontal, Pencil, Server, Search,
-  Shield, ShieldCheck, Trash2, Wifi, WifiOff, Zap,
+  Shield, ShieldCheck, Trash2, Wifi, WifiOff, Zap, Copy, AlertTriangle,
   FileEdit, FilePlus, Clock, Terminal, CheckCircle2, AlertCircle, ChevronDown, BookOpen,
 } from 'lucide-react';
 import { useLocale } from '@/lib/stores/locale-store';
@@ -195,6 +195,35 @@ export default function AgentDetailContent({ agentKey }: { agentKey: string }) {
       setTimeout(() => setDeleteMsg(null), 3000);
     }
   }, [a.detail.skillDeleteSuccess, a.detail.skillDeleteFailed, mcp]);
+
+  const handleCopySkillToAgent = useCallback(async (skillName: string) => {
+    if (!agent?.skillWorkspacePath) return;
+    setSkillBusy(skillName);
+    setEditError(null);
+    try {
+      const res = await apiFetch<{ success: boolean; targetPath?: string }>(
+        '/api/agents/copy-skill',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            skillName,
+            targetPath: agent.skillWorkspacePath,
+          }),
+        }
+      );
+      if (res.success) {
+        toast.success(`Skill "${skillName}" copied to ${agent.name}`);
+        await mcp.refresh();
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Failed to copy skill';
+      setEditError(msg);
+      toast.error(msg);
+    } finally {
+      setSkillBusy(null);
+    }
+  }, [agent, mcp]);
 
   const handleCopySnippet = useCallback(async () => {
     const ok = await copyToClipboard(snippet.snippet);
@@ -460,6 +489,22 @@ export default function AgentDetailContent({ agentKey }: { agentKey: string }) {
           </div>
         )}
 
+        {/* Unsupported Skill Installation Notice (for agents like QClaw, WorkBuddy) */}
+        {agent?.skillMode === 'unsupported' && (
+          <div className="rounded-lg border border-[var(--amber)]/20 bg-[var(--amber-dim)] p-3 mb-2">
+            <p className="text-sm font-medium text-foreground mb-2 flex items-center gap-1.5">
+              <AlertTriangle size={14} className="text-[var(--amber)] shrink-0" aria-hidden="true" />
+              Manual Skill Installation
+            </p>
+            <p className="text-xs text-muted-foreground mb-3">
+              This agent doesn&apos;t support <code className="bg-background px-1 py-0.5 rounded text-xs font-mono">npx skills</code>. Copy skills manually:
+            </p>
+            <div className="bg-background rounded-md px-3 py-2 font-mono text-xs overflow-x-auto border border-border/50 select-all">
+              cp -r ~/.mindos/skills/&lt;skill-name&gt; {agent.skillWorkspacePath || '~/.agent/skills/'}
+            </div>
+          </div>
+        )}
+
         {/* MindOS Skills */}
         {filteredSkills.length > 0 && (
           <div>
@@ -509,6 +554,18 @@ export default function AgentDetailContent({ agentKey }: { agentKey: string }) {
                               <Trash2 size={13} />
                             </button>
                           </>
+                        )}
+                        {agent?.skillMode === 'unsupported' && (
+                          <button
+                            type="button"
+                            onClick={() => void handleCopySkillToAgent(skill.name)}
+                            disabled={skillBusy === skill.name}
+                            className="inline-flex items-center justify-center min-h-[28px] px-1.5 rounded-md text-muted-foreground hover:text-[var(--amber)] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-150"
+                            title={`Copy ${skill.name} to ${agent.name}`}
+                            aria-label={`Copy ${skill.name} to ${agent.name}`}
+                          >
+                            <Copy size={13} />
+                          </button>
                         )}
                       </div>
                     </div>

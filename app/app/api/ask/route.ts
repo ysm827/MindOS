@@ -735,11 +735,17 @@ export async function POST(req: NextRequest) {
   const contextStrategy = agentConfig.contextStrategy ?? 'auto';
 
   // Uploaded files — shared by all modes
+  // These are already truncated client-side (80K limit), so only apply a generous
+  // server-side cap to guard against malformed requests.
+  const UPLOADED_FILE_MAX = 100_000;
   const uploadedParts: string[] = [];
   if (Array.isArray(uploadedFiles) && uploadedFiles.length > 0) {
     for (const f of uploadedFiles.slice(0, 8)) {
       if (!f || typeof f.name !== 'string' || typeof f.content !== 'string') continue;
-      uploadedParts.push(`### ${f.name}\n\n${truncate(f.content)}`);
+      const content = f.content.length > UPLOADED_FILE_MAX
+        ? f.content.slice(0, UPLOADED_FILE_MAX) + '\n\n[...truncated]'
+        : f.content;
+      uploadedParts.push(`### ${f.name}\n\n${content}`);
     }
   }
 

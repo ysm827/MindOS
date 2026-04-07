@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { X, Loader2, ChevronRight, ChevronDown, CheckCircle2, Info, AlertCircle } from 'lucide-react';
+import { X, Loader2, ChevronRight, ChevronDown, CheckCircle2, Info, AlertCircle, Server, Zap } from 'lucide-react';
 import { useLocale } from '@/lib/stores/locale-store';
 import { useFocusTrap } from '@/lib/hooks/useFocusTrap';
 import { toast } from '@/lib/toast';
@@ -19,6 +19,8 @@ interface DetectResult {
   detectedSkillDir?: string;
   skillCount?: number;
   skillNames?: string[];
+  mcpServers?: string[];
+  mcpParseError?: string;
   suggestedName?: string;
 }
 
@@ -406,7 +408,7 @@ export default function CustomAgentModal({
           {phase === 'result' && (
             <>
               {/* Result Card */}
-              <div className={`rounded-lg p-4 space-y-2 ${
+              <div className={`rounded-lg p-4 space-y-3 ${
                 detectResult?.exists
                   ? 'border border-[var(--success)]/20 bg-[var(--success)]/5'
                   : 'border border-border bg-muted/30'
@@ -414,22 +416,74 @@ export default function CustomAgentModal({
                 <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
                   {detectResult?.exists ? p.customAgentDetectedTitle : p.customAgentDefaultTitle}
                 </p>
-                <div className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 text-sm">
-                  <span className="text-muted-foreground">{p.customAgentConfigLabel}</span>
-                  <span className="text-foreground font-mono text-xs truncate">{form.global}</span>
+                <div className="space-y-2.5">
+                  {/* Config Path */}
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-1">{p.customAgentConfigLabel}</p>
+                    <span className="text-sm text-foreground font-mono truncate block">{form.global}</span>
+                    {detectResult?.mcpParseError && (
+                      <p className="text-xs text-[var(--error)] mt-1 flex items-center gap-1">
+                        <AlertCircle size={12} className="shrink-0" />
+                        {detectResult.mcpParseError}
+                      </p>
+                    )}
+                  </div>
 
-                  <span className="text-muted-foreground">{p.customAgentFormatLabel}</span>
-                  <span className="text-foreground">{form.format.toUpperCase()} · {form.configKey}</span>
+                  {/* Format & Key */}
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-1">{p.customAgentFormatLabel}</p>
+                      <span className="text-sm text-foreground">{form.format.toUpperCase()}</span>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-1">Config Key</p>
+                      <span className="text-sm text-foreground font-mono">{form.configKey}</span>
+                    </div>
+                  </div>
 
-                  <span className="text-muted-foreground">{p.customAgentTransportLabel}</span>
-                  <span className="text-foreground">{form.preferredTransport}</span>
+                  {/* Transport */}
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-1">{p.customAgentTransportLabel}</p>
+                    <span className="text-sm text-foreground">{form.preferredTransport}</span>
+                  </div>
 
-                  <span className="text-muted-foreground">{p.customAgentSkillsLabel}</span>
-                  <span className="text-foreground">
-                    {detectResult?.hasSkillsDir
-                      ? p.customAgentSkillsFound(detectResult.skillCount ?? 0)
-                      : p.customAgentSkillsNone ?? '—'}
-                  </span>
+                  {/* MCP Servers */}
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-1 flex items-center gap-1">
+                      <Server size={11} className="shrink-0" aria-hidden="true" />
+                      MCP Servers
+                    </p>
+                    {detectResult?.mcpServers && detectResult.mcpServers.length > 0 ? (
+                      <div className="flex flex-wrap gap-1">
+                        {detectResult.mcpServers.map(name => (
+                          <span key={name} className="text-xs bg-muted/60 text-foreground px-2 py-0.5 rounded font-mono">
+                            {name}
+                          </span>
+                        ))}
+                      </div>
+                    ) : (
+                      <span className="text-sm text-muted-foreground">—</span>
+                    )}
+                  </div>
+
+                  {/* Skills */}
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-1 flex items-center gap-1">
+                      <Zap size={11} className="shrink-0" aria-hidden="true" />
+                      {p.customAgentSkillsLabel}
+                    </p>
+                    {detectResult?.skillNames && detectResult.skillNames.length > 0 ? (
+                      <div className="flex flex-wrap gap-1">
+                        {detectResult.skillNames.map(name => (
+                          <span key={name} className="text-xs bg-[var(--amber-dim)] text-[var(--amber-text,var(--foreground))] px-2 py-0.5 rounded font-mono">
+                            {name}
+                          </span>
+                        ))}
+                      </div>
+                    ) : (
+                      <span className="text-sm text-muted-foreground">—</span>
+                    )}
+                  </div>
                 </div>
               </div>
 

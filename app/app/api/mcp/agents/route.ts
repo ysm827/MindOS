@@ -13,8 +13,9 @@ import {
   detectAgentConfiguredMcpServers,
   detectAgentInstalledSkills,
   resolveSkillWorkspaceProfile,
+  parseJsonc,
 } from '@/lib/mcp-agents';
-import { getAllAgents, loadCustomAgents, scanCustomAgentSkills } from '@/lib/custom-agents';
+import { getAllAgents, loadCustomAgents, scanCustomAgentSkills, toAgentDef } from '@/lib/custom-agents';
 import { readSettings } from '@/lib/settings';
 import { scanSkillDirs } from '@/lib/pi-integration/skills';
 import { getMindRoot } from '@/lib/fs';
@@ -58,6 +59,67 @@ function enrichMindOsAgent(agent: Record<string, unknown>) {
   agent.runtimeLastActivityAt = new Date().toISOString();
   agent.hiddenRootPath = path.join(os.homedir(), '.mindos');
   agent.hiddenRootPresent = true;
+}
+
+/**
+ * Detect configured MCP servers for a custom agent.
+ */
+function detectCustomAgentConfiguredMcp(
+  customDef: Parameters<typeof toAgentDef>[0],
+): { servers: string[]; sources: string[] } {
+  const globalPath = expandHome(customDef.global);
+  if (!fs.existsSync(globalPath)) {
+    return { servers: [], sources: [] };
+  }
+
+  try {
+    const content = fs.readFileSync(globalPath, 'utf-8');
+    const config = customDef.format === 'toml'
+      ? parseTomlForServers(content, customDef.configKey)
+      : parseJsonForServers(content, customDef.configKey);
+    return {
+      servers: config,
+      sources: config.length > 0 ? [`local:${globalPath}`] : [],
+    };
+  } catch {
+    return { servers: [], sources: [] };
+  }
+}
+
+/**
+ * Parse JSON config for MCP servers.
+ */
+function parseJsonForServers(content: string, key: string): string[] {
+  try {
+    const config = parseJsonc(content);
+    const servers = config[key];
+    if (servers && typeof servers === 'object') {
+      return Object.keys(servers).sort();
+    }
+  } catch {}
+  return [];
+}
+
+/**
+ * Parse TOML config for MCP servers.
+ */
+function parseTomlForServers(content: string, sectionKey: string): string[] {
+  const names = new Set<string>();
+  const lines = content.split('\n');
+  const sectionPrefix = `${sectionKey}.`;
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
+      const section = trimmed.slice(1, -1).trim();
+      if (section.startsWith(sectionPrefix)) {
+        const name = section.slice(sectionPrefix.length).split('.')[0];
+        if (name) names.add(name);
+      }
+    }
+  }
+
+  return [...names].sort();
 }
 
 export async function GET() {
@@ -112,7 +174,7 @@ export async function GET() {
         ? { hiddenRootPath: '', hiddenRootPresent: false, conversationSignal: false, usageSignal: false, lastActivityAt: undefined }
         : detectAgentRuntimeSignals(key);
       const configuredMcp = isCustom
-        ? { servers: [] as string[], sources: [] as string[] }
+        ? detectCustomAgentConfiguredMcp(customByKey[key])
         : detectAgentConfiguredMcpServers(key);
       const installedSkills = isCustom
         ? scanCustomAgentSkills(customByKey[key])

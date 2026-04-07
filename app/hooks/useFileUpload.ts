@@ -22,28 +22,76 @@ function uint8ToBase64(bytes: Uint8Array): string {
   return btoa(binary);
 }
 
-async function extractPdfText(file: File): Promise<string> {
-  const buffer = await file.arrayBuffer();
-  const dataBase64 = uint8ToBase64(new Uint8Array(buffer));
+/**
+ * Extract text from a PDF file via the backend API.
+ * Returns a LocalAttachment with `status` reflecting the outcome.
+ */
+async function extractPdfToAttachment(file: File): Promise<LocalAttachment> {
+  const name = file.name;
 
-  const res = await fetch('/api/extract-pdf', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name: file.name, dataBase64 }),
-  });
-
-  let payload: { text?: string; extracted?: boolean; error?: string } = {};
   try {
-    payload = await res.json();
-  } catch {
-    // ignore JSON parse error
-  }
+    const buffer = await file.arrayBuffer();
+    const dataBase64 = uint8ToBase64(new Uint8Array(buffer));
 
-  if (!res.ok) {
-    throw new Error(payload.error || `PDF extraction failed (${res.status})`);
-  }
+    const res = await fetch('/api/extract-pdf', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, dataBase64 }),
+    });
 
-  return payload.extracted ? (payload.text || '') : '';
+    let payload: {
+      text?: string;
+      extracted?: boolean;
+      error?: string;
+      truncated?: boolean;
+      totalChars?: number;
+      pagesParsed?: number;
+    } = {};
+    try {
+      payload = await res.json();
+    } catch {
+      throw new Error('Failed to parse extraction response');
+    }
+
+    if (!res.ok) {
+      throw new Error(payload.error || `PDF extraction failed (${res.status})`);
+    }
+
+    const extracted = payload.extracted ? (payload.text || '') : '';
+
+    if (!extracted) {
+      return {
+        name,
+        content: `[PDF: ${name}] Could not extract readable text (possibly scanned/image PDF).`,
+        status: 'error',
+        error: 'Scanned or image-only PDF — no extractable text',
+      };
+    }
+
+    const att: LocalAttachment = {
+      name,
+      content: `[PDF TEXT EXTRACTED: ${name}]\n\n${extracted}`,
+      status: 'success',
+    };
+
+    if (payload.truncated && payload.totalChars) {
+      att.truncatedInfo = {
+        totalChars: payload.totalChars,
+        includedChars: extracted.length,
+        totalPages: payload.pagesParsed ?? 0,
+      };
+    }
+
+    return att;
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'Unknown error';
+    return {
+      name,
+      content: `[PDF: ${name}] Failed to extract text from this PDF.`,
+      status: 'error',
+      error: msg,
+    };
+  }
 }
 
 export function useFileUpload() {
@@ -73,37 +121,43 @@ export function useFileUpload() {
       setUploadError('');
     }
 
-    const loaded = await Promise.all(
-      accepted.map(async (f) => {
-        const ext = getExt(f.name);
-        if (ext === '.pdf') {
-          try {
-            const extracted = await extractPdfText(f);
-            return {
-              name: f.name,
-              content: extracted
-                ? `[PDF TEXT EXTRACTED: ${f.name}]\n\n${extracted}`
-                : `[PDF: ${f.name}] Could not extract readable text (possibly scanned/image PDF).`,
-            };
-          } catch {
-            return {
-              name: f.name,
-              content: `[PDF: ${f.name}] Failed to extract text from this PDF.`,
-            };
-          }
-        }
-        return { name: f.name, content: await f.text() };
-      }),
-    );
+    // Phase 1: Immediately add all files — PDFs start in 'loading' state
+    const pdfFiles: File[] = [];
+    const immediateItems: LocalAttachment[] = [];
+
+    for (const f of accepted) {
+      if (getExt(f.name) === '.pdf') {
+        immediateItems.push({ name: f.name, content: '', status: 'loading' });
+        pdfFiles.push(f);
+      } else {
+        immediateItems.push({
+          name: f.name,
+          content: await f.text(),
+          status: 'success',
+        });
+      }
+    }
 
     setLocalAttachments((prev) => {
       const merged = [...prev];
-      for (const item of loaded) {
-        if (!merged.some((m) => m.name === item.name && m.content === item.content))
-          merged.push(item);
+      for (const item of immediateItems) {
+        if (!merged.some((m) => m.name === item.name)) merged.push(item);
       }
       return merged;
     });
+
+    // Phase 2: Extract PDFs in parallel, then update each one in-place
+    if (pdfFiles.length > 0) {
+      const results = await Promise.all(pdfFiles.map(extractPdfToAttachment));
+
+      setLocalAttachments((prev) =>
+        prev.map((att) => {
+          if (att.status !== 'loading') return att;
+          const result = results.find((r) => r.name === att.name);
+          return result ?? att;
+        }),
+      );
+    }
   }, []);
 
   const removeAttachment = useCallback((idx: number) => {

@@ -8,7 +8,7 @@
 
 import fs from 'fs';
 import path from 'path';
-import { expandHome, MCP_AGENTS } from './mcp-agents';
+import { expandHome, MCP_AGENTS, parseJsonc } from './mcp-agents';
 import type { AgentDef } from './mcp-agents';
 import { readSettings, writeSettings } from './settings';
 
@@ -39,6 +39,8 @@ export interface DetectResult {
   detectedSkillDir?: string;
   skillCount?: number;
   skillNames?: string[];
+  mcpServers?: string[];
+  mcpParseError?: string;
   suggestedName?: string;
 }
 
@@ -280,6 +282,112 @@ export function scanCustomAgentSkills(custom: CustomAgentDef): { skills: string[
   } catch {
     return { skills: [], sourcePath: expanded };
   }
+}
+
+/* ─── Enhanced Skill & MCP Detection ─── */
+
+/**
+ * Parse JSON config to extract MCP server names from a config key.
+ */
+function parseJsonMcpServers(content: string, key: string): string[] {
+  try {
+    const config = parseJsonc(content);
+    const servers = config[key];
+    if (servers && typeof servers === 'object') {
+      return Object.keys(servers).sort();
+    }
+  } catch {
+    return [];
+  }
+  return [];
+}
+
+/**
+ * Parse TOML config to extract MCP server names from a section key.
+ */
+function parseTomlMcpServers(content: string, sectionKey: string): string[] {
+  const names = new Set<string>();
+  const lines = content.split('\n');
+  const sectionPrefix = `${sectionKey}.`;
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
+      const section = trimmed.slice(1, -1).trim();
+      if (section.startsWith(sectionPrefix)) {
+        const name = section.slice(sectionPrefix.length).split('.')[0];
+        if (name) names.add(name);
+      }
+    }
+  }
+
+  return [...names].sort();
+}
+
+/**
+ * Detect config format from file extension.
+ */
+function detectConfigFormat(configPath: string): 'json' | 'toml' {
+  return configPath.toLowerCase().endsWith('.toml') ? 'toml' : 'json';
+}
+
+/**
+ * Comprehensive profile detection for a custom agent.
+ * Returns MCP servers, skills, and any parse errors.
+ */
+export function detectCustomAgentProfile(
+  baseDir: string,
+  configPath: string,
+  configKey: string,
+): {
+  mcpServers: string[];
+  skillNames: string[];
+  skillDir: string;
+  configFormat: 'json' | 'toml';
+  parseError?: string;
+} {
+  const expanded = expandHome(baseDir);
+  const configAbsPath = expandHome(configPath);
+
+  const result = {
+    mcpServers: [] as string[],
+    skillNames: [] as string[],
+    skillDir: '',
+    configFormat: detectConfigFormat(configPath) as 'json' | 'toml',
+    parseError: undefined as string | undefined,
+  };
+
+  // 1. Read MCP servers from config
+  if (fs.existsSync(configAbsPath)) {
+    try {
+      const content = fs.readFileSync(configAbsPath, 'utf-8');
+      result.mcpServers =
+        result.configFormat === 'json'
+          ? parseJsonMcpServers(content, configKey)
+          : parseTomlMcpServers(content, configKey);
+    } catch (err) {
+      result.parseError = `Failed to parse MCP config: ${err instanceof Error ? err.message : 'Unknown error'}`;
+    }
+  }
+
+  // 2. Scan Skill directory
+  const skillDirPath = path.join(expanded, 'skills');
+  if (fs.existsSync(skillDirPath)) {
+    result.skillDir = baseDir.endsWith('/') ? baseDir + 'skills/' : baseDir + '/skills/';
+    try {
+      const entries = fs.readdirSync(skillDirPath, { withFileTypes: true });
+      result.skillNames = entries
+        .filter(e => (e.isDirectory() || e.isSymbolicLink()) && !e.name.startsWith('.'))
+        .map(e => e.name)
+        .sort((a, b) => a.localeCompare(b));
+    } catch {
+      // Skill dir exists but not readable, continue
+    }
+  } else {
+    result.skillDir = baseDir.endsWith('/') ? baseDir + 'skills/' : baseDir + '/skills/';
+  }
+
+  return result;
 }
 
 /* ─── Validation ─── */

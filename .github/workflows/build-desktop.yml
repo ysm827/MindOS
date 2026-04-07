@@ -326,7 +326,24 @@ jobs:
           echo "✅ Uploaded to Cloudflare R2: desktop/v${VERSION}/ + desktop/latest/"
 
       # ── Alibaba Cloud OSS upload (optional, non-blocking) ──
+      # Uses ossutil for multipart + parallel upload (much faster than curl for large files)
+      - name: Install ossutil
+        continue-on-error: true
+        id: ossutil
+        run: |
+          OSSUTIL_VERSION="1.7.19"
+          curl -sSL -o /tmp/ossutil.zip \
+            "https://gosspublic.alicdn.com/ossutil/${OSSUTIL_VERSION}/ossutil-v${OSSUTIL_VERSION}-linux-amd64.zip"
+          unzip -qo /tmp/ossutil.zip -d /tmp/ossutil_extract
+          mkdir -p "$HOME/.local/bin"
+          cp "/tmp/ossutil_extract/ossutil-v${OSSUTIL_VERSION}-linux-amd64/ossutil64" "$HOME/.local/bin/ossutil64"
+          chmod +x "$HOME/.local/bin/ossutil64"
+          rm -rf /tmp/ossutil.zip /tmp/ossutil_extract
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          "$HOME/.local/bin/ossutil64" --version
+
       - name: Upload to Alibaba Cloud OSS
+        if: steps.ossutil.outcome == 'success'
         continue-on-error: true
         env:
           OSS_ACCESS_KEY_ID: ${{ secrets.OSS_ACCESS_KEY_ID }}
@@ -339,43 +356,41 @@ jobs:
             exit 0
           fi
 
-          # Upload via curl + OSS REST API signing (no CLI tools needed)
-          oss_upload() {
-            local file="$1"
-            local object_key="$2"
-            local content_type="application/octet-stream"
-            local date=$(date -u +"%a, %d %b %Y %H:%M:%S GMT")
-            local resource="/${OSS_BUCKET}/${object_key}"
-            local string_to_sign="PUT\n\n${content_type}\n${date}\n${resource}"
-            local signature=$(printf "$string_to_sign" | openssl dgst -sha1 -hmac "$OSS_ACCESS_KEY_SECRET" -binary | base64)
-
-            local http_code=$(curl -s -o /dev/null -w "%{http_code}" \
-              -X PUT \
-              -H "Date: ${date}" \
-              -H "Content-Type: ${content_type}" \
-              -H "Authorization: OSS ${OSS_ACCESS_KEY_ID}:${signature}" \
-              -T "$file" \
-              "https://${OSS_BUCKET}.${OSS_ENDPOINT}/${object_key}")
-
-            if [ "$http_code" = "200" ]; then
-              echo "  Uploaded: $object_key"
-            else
-              echo "  Failed ($http_code): $object_key"
-              return 1
-            fi
+          # ossutil wrapper with inline auth (no config file needed)
+          oss() {
+            ossutil64 "$@" -e "$OSS_ENDPOINT" -i "$OSS_ACCESS_KEY_ID" -k "$OSS_ACCESS_KEY_SECRET"
           }
 
           VERSION="${{ steps.version.outputs.version }}"
           strip_version() {
             echo "$1" | sed "s/-${VERSION}//g; s/ ${VERSION}//g; s/ /-/g"
           }
+
+          # Parallel upload all files to versioned path (multipart + concurrent)
+          PIDS=()
+          for file in artifacts/*.dmg artifacts/*.zip artifacts/*.exe artifacts/*.AppImage artifacts/*.deb; do
+            [ -f "$file" ] || continue
+            BASENAME=$(basename "$file")
+            echo "Uploading: ${BASENAME}"
+            oss cp "$file" "oss://${OSS_BUCKET}/desktop/v${VERSION}/${BASENAME}" \
+              -f --parallel 10 --part-size 10485760 &
+            PIDS+=($!)
+          done
+          ERRORS=0
+          for pid in "${PIDS[@]}"; do
+            wait "$pid" || ERRORS=$((ERRORS + 1))
+          done
+          [ "$ERRORS" -eq 0 ] && echo "All versioned uploads succeeded" || echo "WARNING: ${ERRORS} upload(s) failed"
+
+          # Server-side copy to latest/ (oss→oss, zero egress from runner)
           for file in artifacts/*.dmg artifacts/*.zip artifacts/*.exe artifacts/*.AppImage artifacts/*.deb; do
             [ -f "$file" ] || continue
             BASENAME=$(basename "$file")
             LATEST_NAME=$(strip_version "$BASENAME")
-            oss_upload "$file" "desktop/v${VERSION}/${BASENAME}" || true
-            oss_upload "$file" "desktop/latest/${LATEST_NAME}" || true
+            oss cp "oss://${OSS_BUCKET}/desktop/v${VERSION}/${BASENAME}" \
+                   "oss://${OSS_BUCKET}/desktop/latest/${LATEST_NAME}" -f &
           done
+          wait
           echo "Uploaded to Alibaba Cloud OSS: desktop/v${VERSION}/ + desktop/latest/"
 
       # ── Finalize GitHub Release ──

@@ -50,7 +50,9 @@ export default function WalkthroughTooltip({ stepIndex, rect, position }: Walkth
 
   return (
     <div
-      className="fixed z-[102] w-[280px] rounded-xl border shadow-lg animate-in fade-in slide-in-from-left-2 duration-200"
+      className={`fixed z-[102] w-[280px] rounded-xl border shadow-lg animate-in fade-in duration-200 ${
+        position === 'right' ? 'slide-in-from-left-2' : 'slide-in-from-top-2'
+      }`}
       style={{
         top: `${top}px`,
         left: `${left}px`,

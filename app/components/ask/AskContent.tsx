@@ -403,6 +403,7 @@ export default function AskContent({ visible, currentFile, initialMessage, initi
     // Accept mindos file paths and image drops
     if (e.dataTransfer.types.includes('text/mindos-path') || e.dataTransfer.types.includes('Files')) {
       e.preventDefault();
+      e.stopPropagation();
       e.dataTransfer.dropEffect = 'copy';
       setIsDragOver(true);
     }
@@ -412,6 +413,7 @@ export default function AskContent({ visible, currentFile, initialMessage, initi
 
   const handleDrop = useCallback(async (e: React.DragEvent) => {
     e.preventDefault();
+    e.stopPropagation();
     setIsDragOver(false);
     const filePath = e.dataTransfer.getData('text/mindos-path');
     if (filePath) {
@@ -571,7 +573,7 @@ export default function AskContent({ visible, currentFile, initialMessage, initi
                   <FileChip key={f} path={f} variant="kb" onRemove={() => setAttachedFiles(prev => prev.filter(x => x !== f))} />
                 ))}
                 {upload.localAttachments.map((f, idx) => (
-                  <FileChip key={`up-${f.name}-${idx}`} path={f.name} variant="upload" onRemove={() => upload.removeAttachment(idx)} />
+                  <FileChip key={`up-${f.name}-${idx}`} path={f.name} variant="upload" status={f.status} error={f.error} truncatedInfo={f.truncatedInfo} onRemove={() => upload.removeAttachment(idx)} />
                 ))}
                 {imageUpload.images.map((img, idx) => (
                   <FileChip

@@ -18,6 +18,6 @@ export interface WalkthroughStep {
  */
 export const walkthroughSteps: WalkthroughStep[] = [
   { anchor: 'files-panel', position: 'right' },
-  { anchor: 'ask-button', position: 'right' },
+  { anchor: 'ask-button', position: 'bottom' },
   { anchor: 'agents-panel', position: 'right' },
 ];

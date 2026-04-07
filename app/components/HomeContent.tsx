@@ -77,13 +77,21 @@ export default function HomeContent({ recent, existingFiles, spaces }: { recent:
       )}
 
       {/* ── Chatbot area: always mounted, layout changes with maximized ── */}
-      <div className={
-        maximized
-          ? 'flex-1 min-h-0 flex flex-col overflow-hidden'
-          : 'flex-shrink-0 px-4 md:px-6 flex justify-center'
-      }>
+      <div
+        className={
+          maximized
+            ? 'flex-1 min-h-0 flex flex-col overflow-hidden'
+            : 'flex-shrink-0 px-4 md:px-6 flex justify-center'
+        }
+        onDragOver={(e) => { if (e.dataTransfer.types.includes('Files')) { e.preventDefault(); e.stopPropagation(); } }}
+        onDragEnter={(e) => { if (e.dataTransfer.types.includes('Files')) { e.stopPropagation(); } }}
+        onDrop={(e) => { e.stopPropagation(); }}
+      >
         <div className={maximized ? 'flex-1 min-h-0 flex flex-col overflow-hidden' : 'w-full max-w-4xl'}>
-          <div className={maximized ? 'flex-1 min-h-0 flex flex-col overflow-hidden' : 'rounded-xl border border-border/50 shadow-sm overflow-hidden flex flex-col max-h-[50vh]'}>
+          <div
+            data-walkthrough="ask-button"
+            className={maximized ? 'flex-1 min-h-0 flex flex-col overflow-hidden' : 'rounded-xl border border-border/70 shadow-sm overflow-hidden flex flex-col max-h-[50vh]'}
+          >
             <AskContent
               visible={true}
               variant="home"

@@ -18,7 +18,7 @@ export interface AskChatRefs {
     setMessages: React.Dispatch<React.SetStateAction<Message[]>>;
   }>;
   uploadRef: React.RefObject<{
-    localAttachments: { name: string; content: string }[];
+    localAttachments: { name: string; content: string; status?: 'loading' | 'success' | 'error' }[];
   }>;
   selectedSkillRef: React.RefObject<{ name: string } | null>;
   selectedAcpAgentRef: React.RefObject<unknown>;
@@ -103,12 +103,14 @@ export function useAskChat({
       messages: requestMessages,
       currentFile,
       attachedFiles: refs.attachedFilesRef.current,
-      uploadedFiles: upl.localAttachments.map(f => ({
-        name: f.name,
-        content: f.content.length > 20_000
-          ? f.content.slice(0, 20_000) + '\n\n[...truncated to first ~20000 chars]'
-          : f.content,
-      })),
+      uploadedFiles: upl.localAttachments
+        .filter(f => f.status !== 'loading')
+        .map(f => ({
+          name: f.name,
+          content: f.content.length > 80_000
+            ? f.content.slice(0, 80_000) + '\n\n[...truncated to first ~80000 chars]'
+            : f.content,
+        })),
       selectedAcpAgent: acpAgent,
       mode: chatMode,
       providerOverride: providerOverride ?? undefined,

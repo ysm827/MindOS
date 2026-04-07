@@ -7,12 +7,15 @@ import os from 'os';
 
 export const runtime = 'nodejs';
 
-const MAX_TEXT_CHARS = 30_000;
+const MAX_TEXT_CHARS = 100_000;
 const MAX_BYTES = 12 * 1024 * 1024; // 12MB
 
-function truncateText(text: string): string {
-  if (text.length <= MAX_TEXT_CHARS) return text;
-  return `${text.slice(0, MAX_TEXT_CHARS)}\n\n[...truncated from PDF]`;
+function truncateText(text: string): { result: string; truncated: boolean } {
+  if (text.length <= MAX_TEXT_CHARS) return { result: text, truncated: false };
+  return {
+    result: `${text.slice(0, MAX_TEXT_CHARS)}\n\n[...content truncated — only first ~${Math.round(MAX_TEXT_CHARS / 1000)}K characters included]`,
+    truncated: true,
+  };
 }
 
 /**
@@ -67,11 +70,15 @@ export async function POST(req: NextRequest) {
 
     const { text: rawText, pages } = extractPdf(raw);
     const text = rawText.replace(/\u0000/g, '').trim();
+    const totalChars = text.length;
+    const { result: finalText, truncated } = truncateText(text);
 
     return NextResponse.json({
       name,
-      text: truncateText(text),
+      text: finalText,
       extracted: text.length > 0,
+      truncated,
+      totalChars,
       pagesParsed: pages,
     });
   } catch (err) {

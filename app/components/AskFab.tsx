@@ -2,6 +2,7 @@
 
 import { Sparkles } from 'lucide-react';
 import { useLocale } from '@/lib/stores/locale-store';
+import { usePathname } from 'next/navigation';
 
 interface AskFabProps {
   /** Toggle the right-side Ask AI panel */
@@ -12,7 +13,12 @@ interface AskFabProps {
 
 export default function AskFab({ onToggle, askPanelOpen }: AskFabProps) {
   const { t } = useLocale();
+  const pathname = usePathname();
   const label = `${t.ask?.fabLabel ?? 'Ask AI'} (⌘/)`;
+
+  // Hide on home page — it already has an inline chatbot
+  const isHome = pathname === '/' || pathname === '';
+  const hidden = askPanelOpen || isHome;
 
   return (
     <button
@@ -28,7 +34,7 @@ export default function AskFab({ onToggle, askPanelOpen }: AskFabProps) {
         transition-all duration-200 ease-out
         hover:shadow-lg hover:shadow-[var(--amber)]/20
         active:scale-95 cursor-pointer overflow-hidden
-        ${askPanelOpen ? 'opacity-0 pointer-events-none translate-y-2' : 'opacity-100 translate-y-0'}
+        ${hidden ? 'opacity-0 pointer-events-none translate-y-2' : 'opacity-100 translate-y-0'}
       `}
       style={{
         background: 'var(--amber)',
