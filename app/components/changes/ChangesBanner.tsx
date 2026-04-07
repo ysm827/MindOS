@@ -111,7 +111,7 @@ export default function ChangesBanner() {
             <History size={14} />
           </span>
           <div className="min-w-0 flex-1">
-            <p className="text-xs text-foreground font-display whitespace-nowrap">
+            <p className="text-xs text-foreground font-medium whitespace-nowrap">
               {t.changes.unreadBanner(unreadCount)}
             </p>
             <div className="mt-1 flex items-center gap-1.5">

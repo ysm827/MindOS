@@ -424,7 +424,21 @@ export default function AskContent({ visible, currentFile, initialMessage, initi
       }
       return;
     }
-    await imageUploadRef.current.handleDrop(e);
+    // Try image upload first, then fall back to general file upload
+    const files = e.dataTransfer.files;
+    if (files.length > 0) {
+      const hasImages = Array.from(files).some(f => f.type.startsWith('image/'));
+      if (hasImages) {
+        await imageUploadRef.current.handleDrop(e);
+      }
+      // Upload non-image files as attachments
+      const nonImageFiles = Array.from(files).filter(f => !f.type.startsWith('image/'));
+      if (nonImageFiles.length > 0) {
+        const dt = new DataTransfer();
+        nonImageFiles.forEach(f => dt.items.add(f));
+        await uploadRef.current.pickFiles(dt.files);
+      }
+    }
   }, []);
 
   const handlePaste = useCallback((e: React.ClipboardEvent) => {
@@ -578,7 +592,7 @@ export default function AskContent({ visible, currentFile, initialMessage, initi
                 {imageUpload.images.map((img, idx) => (
                   <FileChip
                     key={`img-${idx}`}
-                    path={`Image ${idx + 1}`}
+                    path={img.fileName || `Image ${idx + 1}`}
                     variant="image"
                     imageData={img.data}
                     imageMime={img.mimeType}

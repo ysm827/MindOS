@@ -1,7 +1,7 @@
 'use client';
 
 import { useRef, useState, useCallback } from 'react';
-import type { Message, ImagePart, AskMode } from '@/lib/types';
+import type { Message, ImagePart, AskMode, LocalAttachment } from '@/lib/types';
 import type { ProviderId } from '@/lib/agent/providers';
 import { consumeUIMessageStream } from '@/lib/agent/stream-consumer';
 import { isRetryableError, retryDelay, sleep } from '@/lib/agent/reconnect';
@@ -18,7 +18,7 @@ export interface AskChatRefs {
     setMessages: React.Dispatch<React.SetStateAction<Message[]>>;
   }>;
   uploadRef: React.RefObject<{
-    localAttachments: { name: string; content: string; status?: 'loading' | 'success' | 'error' }[];
+    localAttachments: LocalAttachment[];
   }>;
   selectedSkillRef: React.RefObject<{ name: string } | null>;
   selectedAcpAgentRef: React.RefObject<unknown>;

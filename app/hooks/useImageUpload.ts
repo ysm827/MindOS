@@ -86,7 +86,7 @@ export function useImageUpload() {
       }
       try {
         const { data, mimeType } = await compressImage(file);
-        results.push({ type: 'image', data, mimeType });
+        results.push({ type: 'image', data, mimeType, fileName: file.name || undefined });
       } catch {
         setImageError(`Failed to process image: ${file.name}`);
       }

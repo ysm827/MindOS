@@ -103,6 +103,7 @@ export const knowledgeEn = {
     viewAllHistory: (n: number) => `View all ${n} records →`,
     agingHint: '7+ days',
     savedToast: (n: number) => `${n} file${n === 1 ? '' : 's'} saved to Capture`,
+    savedToDir: (n: number, dir: string) => `${n} file${n === 1 ? '' : 's'} saved to ${dir}`,
     savedWithSkipped: (saved: number, skipped: number) =>
       saved > 0
         ? `${saved} saved, ${skipped} skipped (unsupported format)`
@@ -481,6 +482,7 @@ export const knowledgeZh = {
     viewAllHistory: (n: number) => `查看全部 ${n} 条记录 →`,
     agingHint: '7天+',
     savedToast: (n: number) => `${n} 个文件已保存到暂存台`,
+    savedToDir: (n: number, dir: string) => `${n} 个文件已保存到 ${dir}`,
     savedWithSkipped: (saved: number, skipped: number) =>
       saved > 0
         ? `已保存 ${saved} 个，跳过 ${skipped} 个（格式不支持）`

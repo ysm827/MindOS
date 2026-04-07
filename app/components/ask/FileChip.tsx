@@ -91,7 +91,9 @@ export default function FileChip({ path, onRemove, variant = 'kb', imageData, im
   if (status === 'error' && error) {
     tooltipText = error;
   } else if (isTruncated) {
-    const pct = Math.round((truncatedInfo.includedChars / truncatedInfo.totalChars) * 100);
+    const pct = truncatedInfo.totalChars > 0
+      ? Math.round((truncatedInfo.includedChars / truncatedInfo.totalChars) * 100)
+      : 0;
     tooltipText = `Document truncated — only ${pct}% included (${Math.round(truncatedInfo.includedChars / 1000)}K / ${Math.round(truncatedInfo.totalChars / 1000)}K chars, ${truncatedInfo.totalPages} pages total)`;
   }
 

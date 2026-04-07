@@ -13,7 +13,6 @@
 'use strict';
 
 const fs = require('fs');
-const path = require('path');
 
 // Suppress pdfjs-dist warnings (loadFont etc.) that go to stdout/stderr
 // and would corrupt our JSON output.
@@ -33,15 +32,14 @@ console.log = () => {};
 function isCJK(ch) {
   const c = ch.codePointAt(0);
   return (
-    (c >= 0x2E80 && c <= 0x9FFF) ||   // CJK Radicals, Kangxi, Ideographs
-    (c >= 0xF900 && c <= 0xFAFF) ||    // CJK Compatibility Ideographs
-    (c >= 0xFE30 && c <= 0xFE4F) ||    // CJK Compatibility Forms
-    (c >= 0x3000 && c <= 0x303F) ||    // CJK Symbols & Punctuation (。、「」)
-    (c >= 0x3040 && c <= 0x309F) ||    // Hiragana
-    (c >= 0x30A0 && c <= 0x30FF) ||    // Katakana
-    (c >= 0xAC00 && c <= 0xD7AF) ||    // Hangul Syllables
-    (c >= 0xFF00 && c <= 0xFFEF) ||    // Fullwidth Forms (Ａ-Ｚ, ０-９)
-    (c >= 0x20000 && c <= 0x2FA1F)     // CJK Extensions B-F + Supplement
+    (c >= 0x2E80 && c <= 0x2FDF) ||   // CJK Radicals Supplement, Kangxi Radicals
+    (c >= 0x4E00 && c <= 0x9FFF) ||   // CJK Unified Ideographs
+    (c >= 0x3400 && c <= 0x4DBF) ||   // CJK Extension A
+    (c >= 0xF900 && c <= 0xFAFF) ||   // CJK Compatibility Ideographs
+    (c >= 0x3040 && c <= 0x309F) ||   // Hiragana
+    (c >= 0x30A0 && c <= 0x30FF) ||   // Katakana
+    (c >= 0xAC00 && c <= 0xD7AF) ||   // Hangul Syllables
+    (c >= 0x20000 && c <= 0x2FA1F)    // CJK Extensions B-F + Supplement
   );
 }
 

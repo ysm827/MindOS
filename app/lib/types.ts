@@ -52,6 +52,8 @@ export interface ImagePart {
   /** Base64-encoded image data (no data: prefix) */
   data: string;
   mimeType: ImageMimeType;
+  /** Original file name, if available */
+  fileName?: string;
 }
 
 export type MessagePart = TextPart | ToolCallPart | ReasoningPart | ImagePart;

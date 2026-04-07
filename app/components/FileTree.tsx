@@ -12,6 +12,7 @@ import {
 import { createFileAction, deleteFileAction, renameFileAction, renameSpaceAction, deleteSpaceAction, convertToSpaceAction, deleteFolderAction, undoDeleteAction } from '@/lib/actions';
 import { toast } from '@/lib/toast';
 import { useLocale } from '@/lib/stores/locale-store';
+import { quickDropToDirectory } from '@/lib/inbox-upload';
 import { ConfirmDialog } from '@/components/agents/AgentsPrimitives';
 import { usePinnedFiles } from '@/lib/hooks/usePinnedFiles';
 import { checkAiAvailable, triggerSpaceAiInit } from '@/lib/space-ai-init';
@@ -318,6 +319,81 @@ function DirectoryNode({ node, depth, currentPath, onNavigate, maxOpenDepth, onI
   const [deleteConfirm, setDeleteConfirm] = useState<null | 'space' | 'folder'>(null);
   const [isPendingDelete, startDeleteTransition] = useTransition();
 
+  // ── External file drop target ──
+  const [isDragTarget, setIsDragTarget] = useState(false);
+  const autoExpandTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const dragLeaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const clearAutoExpand = useCallback(() => {
+    if (autoExpandTimerRef.current) {
+      clearTimeout(autoExpandTimerRef.current);
+      autoExpandTimerRef.current = null;
+    }
+  }, []);
+
+  // Use dragOver (fires continuously while hovering) for highlight.
+  // Clear highlight with a short delay on dragLeave — if dragOver fires again
+  // within the delay, the highlight stays. This avoids flicker from nested elements.
+  const handleRowDragOver = useCallback((e: React.DragEvent) => {
+    if (!e.dataTransfer.types.includes('Files')) return;
+    e.preventDefault();
+    e.stopPropagation();
+    e.dataTransfer.dropEffect = 'copy';
+    if (dragLeaveTimerRef.current) {
+      clearTimeout(dragLeaveTimerRef.current);
+      dragLeaveTimerRef.current = null;
+    }
+    if (!isDragTarget) setIsDragTarget(true);
+  }, [isDragTarget]);
+
+  const handleRowDragEnter = useCallback((e: React.DragEvent) => {
+    if (!e.dataTransfer.types.includes('Files')) return;
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragTarget(true);
+    // Auto-expand collapsed directory after 500ms hover
+    clearAutoExpand();
+    if (!open) {
+      autoExpandTimerRef.current = setTimeout(() => {
+        setOpen(true);
+        autoExpandTimerRef.current = null;
+      }, 500);
+    }
+  }, [open, clearAutoExpand]);
+
+  const handleRowDragLeave = useCallback((e: React.DragEvent) => {
+    if (!e.dataTransfer.types.includes('Files')) return;
+    e.stopPropagation();
+    // Delay clearing so dragOver on the same row can cancel it
+    dragLeaveTimerRef.current = setTimeout(() => {
+      setIsDragTarget(false);
+      clearAutoExpand();
+      dragLeaveTimerRef.current = null;
+    }, 50);
+  }, [clearAutoExpand]);
+
+  const handleRowDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragTarget(false);
+    clearAutoExpand();
+    if (dragLeaveTimerRef.current) {
+      clearTimeout(dragLeaveTimerRef.current);
+      dragLeaveTimerRef.current = null;
+    }
+    const files = e.dataTransfer.files;
+    if (files.length > 0) {
+      void quickDropToDirectory(Array.from(files), node.path, t);
+    }
+  }, [node.path, t, clearAutoExpand]);
+
+  useEffect(() => {
+    return () => {
+      clearAutoExpand();
+      if (dragLeaveTimerRef.current) clearTimeout(dragLeaveTimerRef.current);
+    };
+  }, [clearAutoExpand]);
+
   const toggle = useCallback(() => setOpen(v => !v), []);
 
   const prevMaxOpenDepth = useRef<number | null | undefined>(undefined);
@@ -421,8 +497,14 @@ function DirectoryNode({ node, depth, currentPath, onNavigate, maxOpenDepth, onI
   return (
     <div>
       <div
-        className="relative group/dir flex items-center"
+        className={`relative group/dir flex items-center transition-colors duration-100 ${
+          isDragTarget ? 'bg-[var(--amber)]/10 rounded-md' : ''
+        }`}
         onContextMenu={handleContextMenu}
+        onDragEnter={handleRowDragEnter}
+        onDragOver={handleRowDragOver}
+        onDragLeave={handleRowDragLeave}
+        onDrop={handleRowDrop}
       >
         <button
           onClick={toggle}
