@@ -13,23 +13,27 @@ function FileTypeIcon({ name }: { name: string }) {
 export default function Breadcrumb({ filePath }: { filePath: string }) {
   const parts = filePath.split('/');
   return (
-    <nav className="flex items-center gap-1 text-xs text-muted-foreground flex-wrap">
-      <Link href="/" className="hover:text-foreground transition-colors">
+    <nav className="flex items-center gap-0.5 text-xs text-muted-foreground flex-wrap">
+      <Link
+        href="/"
+        className="p-1.5 rounded-md hover:bg-muted/50 hover:text-foreground transition-colors"
+        title="Home"
+      >
         <Home size={14} />
       </Link>
       {parts.map((part, i) => {
         const isLast = i === parts.length - 1;
         const href = '/view/' + parts.slice(0, i + 1).map(encodeURIComponent).join('/');
         return (
-          <span key={i} className="flex items-center gap-1">
-            <ChevronRight size={12} className="text-muted-foreground/50" />
+          <span key={i} className="flex items-center gap-0.5">
+            <ChevronRight size={12} className="text-muted-foreground/50 shrink-0" />
             {isLast ? (
-              <span className="flex items-center gap-1.5 text-foreground font-medium">
+              <span className="flex items-center gap-1.5 px-2 py-1 text-foreground font-medium">
                 <FileTypeIcon name={part} />
                 <span suppressHydrationWarning>{part}</span>
               </span>
             ) : (
-              <Link href={href} className="px-2 py-0.5 rounded-md hover:bg-muted/50 transition-colors truncate max-w-[200px]" title={part}>
+              <Link href={href} className="px-2 py-1 rounded-md hover:bg-muted/50 hover:text-foreground transition-colors truncate max-w-[200px]" title={part}>
                 <span suppressHydrationWarning>{part}</span>
               </Link>
             )}
