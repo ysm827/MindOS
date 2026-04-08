@@ -357,7 +357,7 @@ export default function ProviderModelCapsule({
     setOpen(false); setHoveredProvider(null); setModelSearch('');
   }, [onProviderChange, onModelChange]);
 
-  const handleSelectModel = useCallback((provider: ProviderId, model: string) => {
+  const handleSelectModel = useCallback((provider: ProviderSelection, model: string) => {
     onProviderChange(provider); onModelChange(model);
     persistProviderModel(provider, model);
     setOpen(false); setHoveredProvider(null); setModelSearch('');
