@@ -1,12 +1,15 @@
 'use client';
 
 import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
-import { AlertCircle, ChevronDown, Loader2, Sparkles, Bot, Monitor, ExternalLink } from 'lucide-react';
+import { AlertCircle, Loader2, Sparkles, Bot, Monitor, ExternalLink, RotateCcw, Check, Zap, X } from 'lucide-react';
 import type { AiSettings, AgentSettings, ProviderConfig, SettingsData, AiTabProps } from './types';
 import { Field, Select, Input, EnvBadge, ApiKeyInput, Toggle, SettingCard, SettingRow } from './Primitives';
 import { useLocale } from '@/lib/stores/locale-store';
 import { type ProviderId, PROVIDER_PRESETS, isProviderId, getApiKeyEnvVar, getDefaultBaseUrl } from '@/lib/agent/providers';
 import ProviderSelect from '@/components/shared/ProviderSelect';
+import ModelInput from '@/components/shared/ModelInput';
+import { type CustomProvider, generateCustomProviderId } from '@/lib/custom-endpoints';
+import { ALL_PROVIDER_IDS } from '@/lib/agent/providers';
 
 type TestState = 'idle' | 'testing' | 'ok' | 'error';
 type ErrorCode = 'auth_error' | 'model_not_found' | 'rate_limited' | 'network_error' | 'unknown';
@@ -28,7 +31,7 @@ function errorMessage(t: AiTabProps['t'], code?: ErrorCode): string {
   }
 }
 
-export function AiTab({ data, updateAi, updateAgent, t }: AiTabProps) {
+export function AiTab({ data, updateAi, updateAgent, updateCustomProviders, t }: AiTabProps) {
   const { locale } = useLocale();
   const env = data.envOverrides ?? {};
   const envVal = data.envValues ?? {};
@@ -36,6 +39,8 @@ export function AiTab({ data, updateAi, updateAgent, t }: AiTabProps) {
   const preset = isProviderId(provider) ? PROVIDER_PRESETS[provider] : null;
 
   const [testResult, setTestResult] = useState<Record<string, TestResult>>({});
+  const [customFormOpen, setCustomFormOpen] = useState(false);
+  const [customEditingId, setCustomEditingId] = useState<string | null>(null);
   const okTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
   const prevProviderRef = useRef(provider);
 
@@ -116,40 +121,33 @@ export function AiTab({ data, updateAi, updateAgent, t }: AiTabProps) {
       .map(([id]) => id as ProviderId),
   );
 
-  const renderTestButton = (providerName: ProviderId, hasKey: boolean, hasEnv: boolean) => {
-    const result = testResult[providerName] ?? { state: 'idle' as TestState };
-    const hasFallback = !!PROVIDER_PRESETS[providerName]?.apiKeyFallback;
-    const disabled = result.state === 'testing' || (!hasKey && !hasEnv && !hasFallback);
+  const resetProvider = useCallback((name: ProviderId) => {
+    setTestResult(prev => ({ ...prev, [name]: { state: 'idle' } }));
+    updateAi({
+      providers: {
+        ...data.ai.providers,
+        [name]: { apiKey: '', model: '', baseUrl: '' },
+      },
+    });
+  }, [data.ai.providers, updateAi]);
 
-    return (
-      <div className="flex items-center gap-2 mt-1.5">
-        <button
-          type="button"
-          disabled={disabled}
-          title={disabled ? t.hints.testInProgressOrNoKey : undefined}
-          onClick={() => handleTestKey(providerName)}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg border border-border text-muted-foreground hover:text-foreground hover:border-foreground/20 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-        >
-          {result.state === 'testing' ? (
-            <>
-              <Loader2 size={12} className="animate-spin" />
-              {t.settings.ai.testKeyTesting}
-            </>
-          ) : (
-            t.settings.ai.testKey
-          )}
-        </button>
-        {result.state === 'ok' && result.latency != null && (
-          <span className="text-xs text-success">
-            {t.settings.ai.testKeyOk(result.latency)}
-          </span>
-        )}
-        {result.state === 'error' && (
-          <span className="text-xs text-error">✗ {errorMessage(t, result.code)}</span>
-        )}
-      </div>
-    );
-  };
+  const customProviders = data.customProviders ?? [];
+  const editingCustomProvider = useMemo(
+    () => customEditingId ? customProviders.find(p => p.id === customEditingId) : null,
+    [customEditingId, customProviders],
+  );
+  const handleSaveCustom = useCallback((cp: CustomProvider) => {
+    const updated = customEditingId
+      ? customProviders.map(p => p.id === customEditingId ? cp : p)
+      : [...customProviders, cp];
+    updateCustomProviders(updated);
+    setCustomFormOpen(false);
+    setCustomEditingId(null);
+  }, [customEditingId, customProviders, updateCustomProviders]);
+  const handleDeleteCustom = useCallback((id: string) => {
+    if (customEditingId === id) { setCustomFormOpen(false); setCustomEditingId(null); }
+    updateCustomProviders(customProviders.filter(p => p.id !== id));
+  }, [customProviders, updateCustomProviders, customEditingId]);
 
   const displayName = preset ? (locale === 'zh' ? preset.nameZh : preset.name) : provider;
 
@@ -163,14 +161,33 @@ export function AiTab({ data, updateAi, updateAgent, t }: AiTabProps) {
       >
         <ProviderSelect
           value={provider}
-          onChange={id => { if (id !== 'skip') updateAi({ provider: id }); }}
+          onChange={id => {
+            if (id !== 'skip') updateAi({ provider: id });
+            setCustomFormOpen(false);
+            setCustomEditingId(null);
+          }}
           compact
           configuredProviders={configuredProviders}
+          customProviders={customProviders}
+          onAddCustom={() => { setCustomEditingId(null); setCustomFormOpen(true); }}
+          onEditCustom={id => { setCustomEditingId(id); setCustomFormOpen(true); }}
+          onDeleteCustom={handleDeleteCustom}
         />
 
+        {/* Inline custom provider form */}
+        {customFormOpen && (
+          <CustomProviderForm
+            key={customEditingId ?? 'new'}
+            initial={editingCustomProvider ?? undefined}
+            onSave={handleSaveCustom}
+            onCancel={() => { setCustomFormOpen(false); setCustomEditingId(null); }}
+            t={t}
+          />
+        )}
+
         {/* Provider configuration fields */}
-        {preset && (
-          <div className="space-y-3 pt-3" style={{ borderTop: '1px solid var(--border)' }}>
+        {preset && !customFormOpen && (
+          <div className="space-y-3 pt-3 border-t border-border">
             {/* 1. API Key — most essential, enter first */}
             <Field
               label={<>{t.settings.ai.apiKey} {envKeyName && <EnvBadge overridden={env[envKeyName]} />}</>}
@@ -222,12 +239,22 @@ export function AiTab({ data, updateAi, updateAgent, t }: AiTabProps) {
                 envKey={!!activeEnvKey}
                 baseUrl={currentConfig.baseUrl}
                 supportsListModels={preset.supportsListModels}
-                t={t}
+                browseLabel={t.settings.ai.listModels}
+                noModelsLabel={t.settings.ai.noModelsFound}
               />
             </Field>
 
-            {/* 4. Test — after all fields, tests the complete configuration */}
-            {renderTestButton(provider, !!currentConfig.apiKey, !!activeEnvKey)}
+            {/* 4. Test & Reset — after all fields */}
+            <ProviderActions
+              provider={provider}
+              result={testResult[provider] ?? { state: 'idle' }}
+              hasKey={!!currentConfig.apiKey}
+              hasEnv={!!activeEnvKey}
+              hasConfig={!!(currentConfig.apiKey || currentConfig.model || currentConfig.baseUrl)}
+              onTest={() => handleTestKey(provider)}
+              onReset={() => resetProvider(provider)}
+              t={t}
+            />
           </div>
         )}
 
@@ -329,192 +356,297 @@ export function AiTab({ data, updateAi, updateAgent, t }: AiTabProps) {
   );
 }
 
-/* ── Model Input with "List models" picker ── */
+/* ── Provider Actions: Test + Reset ── */
 
-function ModelInput({
-  value, onChange, placeholder, provider, apiKey, envKey, baseUrl, supportsListModels, t,
+function ProviderActions({
+  provider, result, hasKey, hasEnv, hasConfig, onTest, onReset, t,
 }: {
-  value: string;
-  onChange: (v: string) => void;
-  placeholder: string;
   provider: ProviderId;
-  apiKey: string;
-  envKey?: boolean;
-  baseUrl?: string;
-  supportsListModels: boolean;
+  result: TestResult;
+  hasKey: boolean;
+  hasEnv: boolean;
+  hasConfig: boolean;
+  onTest: () => void;
+  onReset: () => void;
   t: AiTabProps['t'];
 }) {
-  const [models, setModels] = useState<string[] | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [open, setOpen] = useState(false);
-  const [error, setError] = useState('');
-  const [focused, setFocused] = useState(false);
-  const [highlightIdx, setHighlightIdx] = useState(-1);
-  const containerRef = useRef<HTMLDivElement>(null);
-  const listRef = useRef<HTMLDivElement>(null);
-  const fetchedRef = useRef(false);
-  const fetchVersionRef = useRef(0);
-  const loadingRef = useRef(false);
+  const [confirmReset, setConfirmReset] = useState(false);
+  const confirmTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const hasFallback = !!PROVIDER_PRESETS[provider]?.apiKeyFallback;
+  const canTest = hasKey || hasEnv || hasFallback;
+  const isTesting = result.state === 'testing';
+  const isOk = result.state === 'ok';
+  const isError = result.state === 'error';
 
-  const hasKey = !!apiKey || !!envKey || !!PROVIDER_PRESETS[provider]?.apiKeyFallback;
+  useEffect(() => () => { if (confirmTimerRef.current) clearTimeout(confirmTimerRef.current); }, []);
 
-  // Reset fetched cache when provider/key/baseUrl changes
-  useEffect(() => {
-    fetchedRef.current = false;
-    fetchVersionRef.current++;
-    setModels(null);
-  }, [provider, apiKey, baseUrl]);
-
-  const fetchModels = useCallback(async (silent = false) => {
-    if (loadingRef.current) return;
-    loadingRef.current = true;
-    setLoading(true);
-    if (!silent) setError('');
-    const version = fetchVersionRef.current;
-    try {
-      const body: Record<string, string> = { provider };
-      if (apiKey) body.apiKey = apiKey;
-      if (baseUrl) body.baseUrl = baseUrl;
-
-      const res = await fetch('/api/settings/list-models', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      });
-      if (version !== fetchVersionRef.current) return;
-      const json = await res.json();
-      if (version !== fetchVersionRef.current) return;
-      if (json.ok && Array.isArray(json.models)) {
-        setModels(json.models);
-        fetchedRef.current = true;
-        if (!silent) setOpen(true);
-      } else if (!silent) {
-        setError(json.error || 'Failed to fetch models');
-      }
-    } catch {
-      if (version !== fetchVersionRef.current) return;
-      if (!silent) setError('Network error');
-    } finally {
-      loadingRef.current = false;
-      setLoading(false);
+  const handleResetClick = () => {
+    if (confirmReset) {
+      onReset();
+      setConfirmReset(false);
+      if (confirmTimerRef.current) clearTimeout(confirmTimerRef.current);
+    } else {
+      setConfirmReset(true);
+      confirmTimerRef.current = setTimeout(() => setConfirmReset(false), 3000);
     }
-  }, [provider, apiKey, baseUrl]);
-
-  const handleFocus = useCallback(() => {
-    setFocused(true);
-    if (!fetchedRef.current && supportsListModels && hasKey && !loadingRef.current) {
-      fetchModels(true);
-    }
-  }, [supportsListModels, hasKey, fetchModels]);
-
-  // Filtered models for typeahead
-  const filtered = useMemo(() => {
-    if (!models || !value.trim()) return models ?? [];
-    const q = value.toLowerCase();
-    return models.filter(m => m.toLowerCase().includes(q));
-  }, [models, value]);
-
-  // Show typeahead when focused + models loaded + user is typing (or Browse was clicked)
-  const showDropdown = open || (focused && models !== null && value.trim().length > 0 && filtered.length > 0);
-
-  // Reset highlight when filtered list changes
-  useEffect(() => { setHighlightIdx(-1); }, [filtered]);
-
-  // Scroll highlighted item into view
-  useEffect(() => {
-    if (highlightIdx < 0 || !listRef.current) return;
-    const items = listRef.current.querySelectorAll('[data-model-item]');
-    items[highlightIdx]?.scrollIntoView({ block: 'nearest' });
-  }, [highlightIdx]);
-
-  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
-    const items = showDropdown ? filtered : [];
-    if (!items.length) return;
-
-    if (e.key === 'ArrowDown') {
-      e.preventDefault();
-      setHighlightIdx(i => (i + 1) % items.length);
-    } else if (e.key === 'ArrowUp') {
-      e.preventDefault();
-      setHighlightIdx(i => (i - 1 + items.length) % items.length);
-    } else if (e.key === 'Enter' && highlightIdx >= 0 && highlightIdx < items.length) {
-      e.preventDefault();
-      onChange(items[highlightIdx]);
-      setOpen(false);
-      setFocused(false);
-    } else if (e.key === 'Escape') {
-      setOpen(false);
-      setFocused(false);
-    }
-  }, [showDropdown, filtered, highlightIdx, onChange]);
-
-  useEffect(() => {
-    if (!showDropdown) return;
-    function handleClickOutside(e: MouseEvent) {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
-        setOpen(false);
-        setFocused(false);
-      }
-    }
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [showDropdown]);
-
-  const displayList = filtered;
+  };
 
   return (
-    <div ref={containerRef} className="relative">
-      <div className="flex gap-1.5">
-        <Input
-          value={value}
-          onChange={e => { onChange(e.target.value); if (!open) setFocused(true); }}
-          onFocus={handleFocus}
-          onKeyDown={handleKeyDown}
-          placeholder={placeholder}
-          className="flex-1"
-          autoComplete="off"
-        />
-        {supportsListModels && (
+    <div className="space-y-2 pt-2">
+      <div className="flex items-center justify-between">
+        {/* Left: Test button */}
+        <button
+          type="button"
+          disabled={!canTest || isTesting}
+          onClick={onTest}
+          className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 text-sm font-medium rounded-lg transition-all duration-200 disabled:cursor-not-allowed ${
+            isOk
+              ? 'bg-success/10 text-success border border-success/20'
+              : isError
+                ? 'bg-destructive/8 text-destructive border border-destructive/20 hover:bg-destructive/12'
+                : 'border border-border text-muted-foreground hover:text-foreground hover:border-foreground/20 disabled:opacity-40'
+          }`}
+        >
+          {isTesting ? (
+            <Loader2 size={13} className="animate-spin" />
+          ) : isOk ? (
+            <Check size={13} />
+          ) : isError ? (
+            <AlertCircle size={13} />
+          ) : (
+            <Zap size={13} />
+          )}
+          {isTesting
+            ? t.settings.ai.testKeyTesting
+            : isOk && result.latency != null
+              ? t.settings.ai.testKeyOk(result.latency)
+              : isError
+                ? errorMessage(t, result.code)
+                : t.settings.ai.testKey}
+        </button>
+
+        {/* Right: Reset — subtle, icon-first, inline confirm */}
+        {hasConfig && (
           <button
             type="button"
-            disabled={!hasKey || loading}
-            onClick={() => fetchModels(false)}
-            title={t.settings.ai.listModels}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg border border-border text-muted-foreground hover:text-foreground hover:border-foreground/20 transition-colors disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
+            onClick={handleResetClick}
+            onBlur={() => { setConfirmReset(false); if (confirmTimerRef.current) clearTimeout(confirmTimerRef.current); }}
+            className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs rounded-lg transition-all duration-200 ${
+              confirmReset
+                ? 'bg-destructive/10 text-destructive border border-destructive/25 font-medium'
+                : 'text-muted-foreground/60 hover:text-muted-foreground hover:bg-muted/50'
+            }`}
           >
-            {loading ? <Loader2 size={12} className="animate-spin" /> : <ChevronDown size={12} />}
-            {t.settings.ai.listModels}
+            <RotateCcw size={12} />
+            {confirmReset ? t.settings.ai.resetProviderConfirm : t.settings.ai.resetProvider}
           </button>
         )}
       </div>
-      {error && <p className="text-xs text-error mt-1">{error}</p>}
-      {showDropdown && displayList.length > 0 && (
-        <div ref={listRef} className="absolute z-50 mt-1 w-full max-h-48 overflow-y-auto rounded-lg border border-border bg-popover shadow-lg">
-          {displayList.map((m, i) => (
-            <button
-              key={m}
-              type="button"
-              data-model-item
-              className={`w-full text-left px-3 py-1.5 text-sm transition-colors ${
-                m === value ? 'bg-accent/60 font-medium'
-                : i === highlightIdx ? 'bg-accent'
-                : 'hover:bg-accent'
-              }`}
-              onClick={() => { onChange(m); setOpen(false); setFocused(false); }}
-            >
-              {m}
-            </button>
-          ))}
-        </div>
-      )}
-      {open && displayList.length === 0 && (
-        <div className="absolute z-50 mt-1 w-full rounded-lg border border-border bg-popover shadow-lg px-3 py-2 text-xs text-muted-foreground">
-          {t.settings.ai.noModelsFound}
-        </div>
-      )}
     </div>
   );
 }
+
+/* ── Inline Custom Provider Form (replaces modal) ── */
+
+function CustomProviderForm({
+  initial, onSave, onCancel, t,
+}: {
+  initial?: CustomProvider;
+  onSave: (provider: CustomProvider) => void;
+  onCancel: () => void;
+  t: AiTabProps['t'];
+}) {
+  const { locale } = useLocale();
+  const [name, setName] = useState(initial?.name ?? '');
+  const [baseProviderId, setBaseProviderId] = useState<ProviderId>(initial?.baseProviderId ?? 'openai');
+  const [apiKey, setApiKey] = useState(initial?.apiKey === '***set***' ? '' : initial?.apiKey ?? '');
+  const [model, setModel] = useState(initial?.model ?? '');
+  const [baseUrl, setBaseUrl] = useState(initial?.baseUrl ?? '');
+  const [testState, setTestState] = useState<'idle' | 'testing' | 'ok' | 'error'>('idle');
+  const [testError, setTestError] = useState('');
+
+  const basePreset = PROVIDER_PRESETS[baseProviderId];
+  const canSave = name.trim() && baseUrl.trim() && model.trim();
+
+  const handleTest = useCallback(async () => {
+    if (!canSave) { setTestError(locale === 'zh' ? '名称、接口地址和模型为必填' : 'Name, base URL, and model are required'); return; }
+    setTestState('testing');
+    setTestError('');
+    try {
+      const res = await fetch('/api/settings/test-key', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ apiKey, model, baseUrl, baseProviderId }),
+      });
+      const json = await res.json();
+      if (json.ok) setTestState('ok');
+      else { setTestState('error'); setTestError(json.error || 'Test failed'); }
+    } catch {
+      setTestState('error');
+      setTestError('Network error');
+    }
+  }, [canSave, apiKey, model, baseUrl, baseProviderId, locale]);
+
+  const handleSave = () => {
+    if (!canSave) { setTestError(locale === 'zh' ? '名称、接口地址和模型为必填' : 'Name, base URL, and model are required'); return; }
+    onSave({
+      id: initial?.id || generateCustomProviderId(),
+      name: name.trim(),
+      baseProviderId,
+      apiKey,
+      model: model.trim(),
+      baseUrl: baseUrl.trim(),
+    });
+  };
+
+  const formTitle = initial
+    ? (locale === 'zh' ? '编辑自定义 Provider' : 'Edit Custom Provider')
+    : (locale === 'zh' ? '添加自定义 Provider' : 'Add Custom Provider');
+
+  const missingFields: string[] = [];
+  if (!name.trim()) missingFields.push(locale === 'zh' ? '名称' : 'Name');
+  if (!baseUrl.trim()) missingFields.push(locale === 'zh' ? '接口地址' : 'Base URL');
+  if (!model.trim()) missingFields.push(locale === 'zh' ? '模型' : 'Model');
+
+  return (
+    <div className="mt-3 rounded-lg border border-[var(--amber)]/30 bg-[var(--amber-dim)] overflow-hidden">
+      {/* Header */}
+      <div className="flex items-center justify-between px-4 py-2.5 border-b border-[var(--amber)]/15">
+        <span className="text-sm font-medium text-foreground">{formTitle}</span>
+        <button
+          type="button"
+          onClick={onCancel}
+          className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
+          aria-label={locale === 'zh' ? '关闭' : 'Close'}
+        >
+          <X size={14} />
+        </button>
+      </div>
+
+      {/* Form body */}
+      <div className="space-y-3 p-4">
+        {/* Row 1: Name + Protocol side by side */}
+        <div className="grid grid-cols-2 gap-3">
+          <Field label={t.settings?.customProviders?.modal?.fieldName ?? 'Name'}>
+            <Input
+              value={name}
+              onChange={e => setName(e.target.value)}
+              placeholder={locale === 'zh' ? '公司 GPT-4' : 'Company GPT-4'}
+              autoFocus
+            />
+          </Field>
+          <Field
+            label={t.settings?.customProviders?.modal?.fieldProtocol ?? 'Protocol'}
+          >
+            <Select
+              value={baseProviderId}
+              onChange={e => setBaseProviderId(e.target.value as ProviderId)}
+            >
+              {ALL_PROVIDER_IDS.map(id => (
+                <option key={id} value={id}>
+                  {locale === 'zh' ? PROVIDER_PRESETS[id].nameZh : PROVIDER_PRESETS[id].name}
+                </option>
+              ))}
+            </Select>
+          </Field>
+        </div>
+
+        {/* Base URL */}
+        <Field
+          label={t.settings?.customProviders?.modal?.fieldBaseUrl ?? 'Base URL'}
+          hint={t.settings?.customProviders?.modal?.fieldBaseUrlHint}
+        >
+          <Input
+            value={baseUrl}
+            onChange={e => setBaseUrl(e.target.value)}
+            placeholder={basePreset.fixedBaseUrl || 'https://api.example.com/v1'}
+          />
+        </Field>
+
+        {/* API Key */}
+        <Field
+          label={<>{t.settings?.customProviders?.modal?.fieldApiKey ?? 'API Key'} <span className="text-muted-foreground/50 font-normal">{locale === 'zh' ? '(可选)' : '(optional)'}</span></>}
+        >
+          <Input
+            type="password"
+            value={apiKey}
+            onChange={e => setApiKey(e.target.value)}
+            placeholder="sk-..."
+          />
+        </Field>
+
+        {/* Model */}
+        <Field label={t.settings?.customProviders?.modal?.fieldModel ?? 'Model'}>
+          <ModelInput
+            value={model}
+            onChange={setModel}
+            placeholder={basePreset.defaultModel}
+            provider={baseProviderId}
+            apiKey={apiKey}
+            baseUrl={baseUrl}
+            supportsListModels={!!baseUrl.trim()}
+            allowNoKey
+            browseLabel={t.settings.ai.listModels}
+            noModelsLabel={t.settings.ai.noModelsFound}
+          />
+        </Field>
+
+        {/* Feedback */}
+        {testError && testState !== 'ok' && (
+          <div className="flex items-start gap-2 text-xs text-destructive/80 bg-destructive/8 border border-destructive/20 rounded-lg px-3 py-2">
+            <AlertCircle size={13} className="shrink-0 mt-0.5" />
+            <span>{testError}</span>
+          </div>
+        )}
+        {testState === 'ok' && (
+          <div className="flex items-center gap-2 text-xs text-success bg-success/10 border border-success/20 rounded-lg px-3 py-2">
+            <Check size={13} />
+            <span>{t.settings?.customProviders?.modal?.success ?? 'Connected'}</span>
+          </div>
+        )}
+
+        {/* Actions */}
+        <div className="flex items-center gap-2 pt-1">
+          <button
+            type="button"
+            onClick={handleTest}
+            disabled={!canSave || testState === 'testing'}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg border border-border text-muted-foreground hover:text-foreground hover:border-foreground/20 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            {testState === 'testing' ? <Loader2 size={12} className="animate-spin" /> : <Zap size={13} />}
+            {testState === 'testing' ? t.settings.ai.testKeyTesting : t.settings.ai.testKey}
+          </button>
+
+          <div className="flex-1">
+            {!canSave && missingFields.length > 0 && (
+              <span className="text-2xs text-muted-foreground/60 pl-2">
+                {locale === 'zh' ? `需要: ${missingFields.join('、')}` : `Required: ${missingFields.join(', ')}`}
+              </span>
+            )}
+          </div>
+
+          <button
+            type="button"
+            onClick={onCancel}
+            className="px-3 py-1.5 text-sm rounded-lg text-muted-foreground hover:text-foreground transition-colors"
+          >
+            {t.settings?.customProviders?.modal?.buttonCancel ?? 'Cancel'}
+          </button>
+          <button
+            type="button"
+            onClick={handleSave}
+            disabled={!canSave}
+            className="px-4 py-1.5 text-sm font-medium rounded-lg bg-[var(--amber)] text-[var(--amber-foreground)] hover:bg-[var(--amber)]/90 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            {locale === 'zh' ? '保存' : 'Save'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ModelInput is now a shared component at @/components/shared/ModelInput */
 
 /* ── Ask AI Display Mode (localStorage-based, no server roundtrip) ── */
 

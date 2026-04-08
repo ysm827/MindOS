@@ -410,24 +410,52 @@ export default function SidebarLayout({ fileTree, children }: SidebarLayoutProps
         onPanelChange={lp.setActivePanel}
         onEchoClick={() => {
           const wasActive = lp.activePanel === 'echo';
-          lp.setActivePanel(wasActive ? null : 'echo');
-          if (!wasActive) router.push('/echo/about-you');
+          const onEchoRoute = pathname?.startsWith('/echo');
+          if (!wasActive) {
+            lp.setActivePanel('echo');
+            router.push('/echo/about-you');
+          } else if (!onEchoRoute) {
+            router.push('/echo/about-you');
+          } else {
+            lp.setActivePanel(null);
+          }
         }}
         onAgentsClick={() => {
           const wasActive = lp.activePanel === 'agents';
-          lp.setActivePanel(wasActive ? null : 'agents');
-          if (!wasActive) router.push('/agents');
+          const onAgentsRoute = pathname?.startsWith('/agents');
+          if (!wasActive) {
+            lp.setActivePanel('agents');
+            router.push('/agents');
+          } else if (!onAgentsRoute) {
+            router.push('/agents');
+          } else {
+            lp.setActivePanel(null);
+          }
           setAgentDetailKey(null);
         }}
         onDiscoverClick={() => {
           const wasActive = lp.activePanel === 'discover';
-          lp.setActivePanel(wasActive ? null : 'discover');
-          if (!wasActive) router.push('/explore');
+          const onDiscoverRoute = pathname?.startsWith('/explore');
+          if (!wasActive) {
+            lp.setActivePanel('discover');
+            router.push('/explore');
+          } else if (!onDiscoverRoute) {
+            router.push('/explore');
+          } else {
+            lp.setActivePanel(null);
+          }
         }}
         onSpacesClick={() => {
           const wasActive = lp.activePanel === 'files';
-          lp.setActivePanel(wasActive ? null : 'files');
-          if (!wasActive) router.push('/wiki');
+          const onFilesRoute = pathname === '/' || pathname === '/wiki' || pathname?.startsWith('/view/') || pathname?.startsWith('/wiki/');
+          if (!wasActive) {
+            lp.setActivePanel('files');
+            router.push('/wiki');
+          } else if (!onFilesRoute) {
+            router.push('/wiki');
+          } else {
+            lp.setActivePanel(null);
+          }
         }}
         syncStatus={syncStatus}
         expanded={lp.railExpanded}

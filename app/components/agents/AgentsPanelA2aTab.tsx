@@ -39,7 +39,10 @@ export default function AgentsPanelA2aTab({
     <div className="space-y-5">
       {/* Header + Discover button */}
       <div className="flex items-center justify-between">
-        <h2 className="text-sm font-medium text-foreground">{p.a2aTabTitle}</h2>
+        <h2 className="text-sm font-medium text-foreground flex items-center gap-2.5">
+          <div className="flex items-center justify-center w-6 h-6 rounded-md bg-[var(--amber-subtle)] text-[var(--amber)]"><Globe size={13} /></div>
+          {p.a2aTabTitle}
+        </h2>
         <button
           type="button"
           onClick={() => setShowModal(true)}
@@ -166,7 +169,8 @@ function AcpRegistrySection() {
   if (acp.loading) {
     return (
       <div className="space-y-2">
-        <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+        <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wide flex items-center gap-2">
+          <div className="flex items-center justify-center w-6 h-6 rounded-md bg-[var(--amber-subtle)] text-[var(--amber)]"><Network size={13} /></div>
           {p.acpSectionTitle}
         </h3>
         <div className="flex items-center justify-center py-6 gap-2">
@@ -180,7 +184,8 @@ function AcpRegistrySection() {
   if (acp.error) {
     return (
       <div className="space-y-2">
-        <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+        <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wide flex items-center gap-2">
+          <div className="flex items-center justify-center w-6 h-6 rounded-md bg-[var(--amber-subtle)] text-[var(--amber)]"><Network size={13} /></div>
           {p.acpSectionTitle}
         </h3>
         <div className="rounded-lg border border-border/60 bg-card/80 p-4 text-center">
@@ -220,7 +225,8 @@ function AcpRegistrySection() {
     <div className="space-y-3">
       {/* ── Installed Agents ── */}
       <div className="flex items-center justify-between">
-        <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+        <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wide flex items-center gap-2">
+          <div className="flex items-center justify-center w-6 h-6 rounded-md bg-[var(--amber-subtle)] text-[var(--amber)]"><Network size={13} /></div>
           {p.acpSectionTitle}
         </h3>
         <div className="flex items-center gap-2">
@@ -553,7 +559,8 @@ function DelegationHistorySection({ delegations }: { delegations: DelegationReco
 
   return (
     <div className="space-y-2">
-      <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+      <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wide flex items-center gap-2">
+        <div className="flex items-center justify-center w-6 h-6 rounded-md bg-[var(--amber-subtle)] text-[var(--amber)]"><Clock size={13} /></div>
         {p.a2aDelegations}
       </h3>
       {delegations.length === 0 ? (

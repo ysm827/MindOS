@@ -33,7 +33,9 @@ export async function POST(req: NextRequest) {
       resolvedKey = cfg.apiKey;
     }
 
-    if (!resolvedKey) {
+    // Allow keyless requests when an explicit baseUrl is provided (local servers like Ollama)
+    const effectiveBaseUrl = baseUrl || cfg.baseUrl || '';
+    if (!resolvedKey && !effectiveBaseUrl) {
       return NextResponse.json({ ok: false, error: 'No API key configured' });
     }
 
@@ -41,7 +43,7 @@ export async function POST(req: NextRequest) {
     const timer = setTimeout(() => ctrl.abort(), TIMEOUT);
 
     try {
-      const models = await fetchModels(provider as ProviderId, resolvedKey, baseUrl || cfg.baseUrl || '', ctrl.signal);
+      const models = await fetchModels(provider as ProviderId, resolvedKey, effectiveBaseUrl, ctrl.signal);
       return NextResponse.json({ ok: true, models });
     } catch (e: unknown) {
       if (e instanceof Error && e.name === 'AbortError') {
@@ -112,10 +114,9 @@ async function fetchAnthropicModels(apiKey: string, signal: AbortSignal): Promis
 async function fetchOpenAICompatModels(
   endpoint: string, apiKey: string, signal: AbortSignal,
 ): Promise<string[]> {
-  const res = await fetch(endpoint, {
-    headers: { 'Authorization': `Bearer ${apiKey}` },
-    signal,
-  });
+  const headers: Record<string, string> = {};
+  if (apiKey) headers['Authorization'] = `Bearer ${apiKey}`;
+  const res = await fetch(endpoint, { headers, signal });
 
   if (!res.ok) {
     const errBody = await res.text().catch(() => '');

@@ -65,9 +65,11 @@ beforeEach(() => {
     CLI_PATH: path.join(tempDir, 'bin', 'cli.js'),
     NODE_BIN: process.execPath,
     UPDATE_CHECK_PATH: path.join(tempDir, 'update-check.json'),
+    STANDALONE_SERVER: path.join(tempDir, '_standalone', 'server.js'),
+    STANDALONE_STAMP: path.join(tempDir, '_standalone', '.mindos-build-version'),
   }));
-  vi.doMock('../../bin/lib/utils.js', () => ({
-    run: mockRun,
+  vi.doMock('../../bin/lib/shell.js', () => ({
+    execInherited: mockRun,
     npmInstall: mockInstall,
   }));
 });

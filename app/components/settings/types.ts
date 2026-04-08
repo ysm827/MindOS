@@ -1,6 +1,7 @@
 import type { Locale, Messages } from '@/lib/i18n';
 import type React from 'react';
 import type { ProviderId } from '@/lib/agent/providers';
+import type { CustomProvider } from '@/lib/custom-endpoints';
 
 export interface ProviderConfig {
   apiKey: string;
@@ -30,6 +31,7 @@ export interface SettingsData {
   mcpPort?: number;
   envOverrides?: Record<string, boolean>;
   envValues?: Record<string, string>;
+  customProviders?: CustomProvider[];
 }
 
 export type Tab = 'ai' | 'appearance' | 'knowledge' | 'mcp' | 'sync' | 'update' | 'uninstall';
@@ -159,6 +161,7 @@ export interface AiTabProps {
   data: SettingsData;
   updateAi: (patch: Partial<AiSettings>) => void;
   updateAgent: (patch: Partial<AgentSettings>) => void;
+  updateCustomProviders: (providers: CustomProvider[]) => void;
   t: Messages;
 }
 

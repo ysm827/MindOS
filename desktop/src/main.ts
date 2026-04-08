@@ -46,6 +46,14 @@ import { getAppConfigStore } from './app-config-store';
 
 registerMindosConnectSchemePrivileged();
 
+// Intel Mac GPU workaround: some Intel HD/Iris/UHD GPUs are on Chromium's
+// blocklist, which disables GPU compositing and breaks backdrop-filter.
+// --ignore-gpu-blocklist re-enables GPU acceleration on these devices.
+if (process.platform === 'darwin' && process.arch === 'x64') {
+  app.commandLine.appendSwitch('ignore-gpu-blocklist');
+  app.commandLine.appendSwitch('enable-gpu-rasterization');
+}
+
 // ── Constants ──
 const CONFIG_DIR = path.join(app.getPath('home'), '.mindos');
 const CONFIG_PATH = path.join(CONFIG_DIR, 'config.json');

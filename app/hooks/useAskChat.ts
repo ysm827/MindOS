@@ -28,7 +28,8 @@ export interface AskChatRefs {
 interface UseAskChatOpts {
   currentFile?: string;
   chatMode: AskMode;
-  providerOverride: ProviderId | null;
+  providerOverride: ProviderId | `cp_${string}` | null;
+  modelOverride: string | null;
   onFirstMessage?: () => void;
   refs: AskChatRefs;
   errorLabels: { noResponse: string; stopped: string };
@@ -39,6 +40,7 @@ export function useAskChat({
   currentFile,
   chatMode,
   providerOverride,
+  modelOverride,
   onFirstMessage,
   refs,
   errorLabels,
@@ -114,6 +116,7 @@ export function useAskChat({
       selectedAcpAgent: acpAgent,
       mode: chatMode,
       providerOverride: providerOverride ?? undefined,
+      modelOverride: modelOverride ?? undefined,
     });
 
     const doFetch = async (): Promise<{ finalMessage: Message }> => {

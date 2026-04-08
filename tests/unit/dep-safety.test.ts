@@ -89,8 +89,8 @@ describe('npm install patterns', () => {
 
     const violations: string[] = [];
     for (const file of files) {
-      // utils.js defines npmInstall() which legitimately uses --prefer-offline
-      if (path.basename(file) === 'utils.js') continue;
+      // utils.js and shell.js define npmInstall() which legitimately uses --prefer-offline
+      if (path.basename(file) === 'utils.js' || path.basename(file) === 'shell.js') continue;
 
       const content = fs.readFileSync(file, 'utf-8');
       const lines = content.split('\n');

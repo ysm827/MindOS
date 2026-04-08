@@ -146,8 +146,8 @@ export default function AgentsMcpSection({
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2.5">
           <h2 className="text-sm font-semibold text-foreground flex items-center gap-2">
-            <div className="w-6 h-6 rounded-md bg-muted/50 flex items-center justify-center">
-              <Server size={13} className="text-muted-foreground/70" aria-hidden="true" />
+            <div className="w-6 h-6 rounded-md bg-[var(--amber-subtle)] flex items-center justify-center">
+              <Server size={13} className="text-[var(--amber)]" aria-hidden="true" />
             </div>
             {copy.title}
           </h2>

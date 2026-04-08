@@ -43,6 +43,8 @@ beforeEach(() => {
     CLI_PATH: '',
     NODE_BIN: process.execPath,
     UPDATE_CHECK_PATH: path.join(tempDir, 'update-check.json'),
+    STANDALONE_SERVER: path.join(tempDir, '_standalone', 'server.js'),
+    STANDALONE_STAMP: path.join(tempDir, '_standalone', '.mindos-build-version'),
   }));
 });
 
@@ -166,6 +168,8 @@ describe('ensureAppDeps', () => {
       CLI_PATH: '',
       NODE_BIN: process.execPath,
       UPDATE_CHECK_PATH: path.join(tempDir, 'update-check.json'),
+      STANDALONE_SERVER: path.join(tempDir, '_standalone', 'server.js'),
+      STANDALONE_STAMP: path.join(tempDir, '_standalone', '.mindos-build-version'),
     }));
 
     const build = await importBuild();

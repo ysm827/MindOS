@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   AlertTriangle,
+  Bot,
   Cable,
   ChevronDown,
   Globe,
@@ -217,7 +218,10 @@ export default function AgentsOverviewSection({
       {sortedAgents.length > 0 ? (
         <section aria-label={copy.usagePulse}>
           <div className="flex items-center justify-between mb-3">
-            <h2 className="text-sm font-medium text-foreground">{copy.usagePulse}</h2>
+            <div className="flex items-center gap-2.5">
+              <div className="flex items-center justify-center w-6 h-6 rounded-md bg-[var(--amber-subtle)] text-[var(--amber)]"><Bot size={13} /></div>
+              <h2 className="text-[13px] font-semibold text-foreground tracking-wide">{copy.usagePulse}</h2>
+            </div>
             <span className="text-2xs text-muted-foreground tabular-nums select-none">
               {copy.agentCount(sortedAgents.length)}
             </span>

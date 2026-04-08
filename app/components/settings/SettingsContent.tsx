@@ -121,7 +121,7 @@ export default function SettingsContent({ visible, initialTab, variant, onClose 
       await apiFetch('/api/settings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ai: d.ai, agent: d.agent, mindRoot: d.mindRoot, webPassword: d.webPassword, authToken: d.authToken }),
+        body: JSON.stringify({ ai: d.ai, agent: d.agent, mindRoot: d.mindRoot, webPassword: d.webPassword, authToken: d.authToken, customProviders: d.customProviders }),
       });
       setStatus('saved');
       window.dispatchEvent(new Event('mindos:settings-changed'));
@@ -168,7 +168,7 @@ export default function SettingsContent({ visible, initialTab, variant, onClose 
         apiFetch('/api/settings', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ ai: d.ai, agent: d.agent, mindRoot: d.mindRoot, webPassword: d.webPassword, authToken: d.authToken }),
+          body: JSON.stringify({ ai: d.ai, agent: d.agent, mindRoot: d.mindRoot, webPassword: d.webPassword, authToken: d.authToken, customProviders: d.customProviders }),
         }).catch(() => {});
       }
     };
@@ -177,6 +177,10 @@ export default function SettingsContent({ visible, initialTab, variant, onClose 
 
   const updateAi = useCallback((patch: Partial<AiSettings>) => {
     setData(d => d ? { ...d, ai: { ...d.ai, ...patch } } : d);
+  }, []);
+
+  const updateCustomProviders = useCallback((providers: import('@/lib/custom-endpoints').CustomProvider[]) => {
+    setData(d => d ? { ...d, customProviders: providers } : d);
   }, []);
 
   const updateAgent = useCallback((patch: Partial<AgentSettings>) => {
@@ -230,7 +234,7 @@ export default function SettingsContent({ visible, initialTab, variant, onClose 
         </div>
       ) : (
         <>
-          {tab === 'ai' && data?.ai && <AiTab data={data} updateAi={updateAi} updateAgent={updateAgent} t={t} />}
+          {tab === 'ai' && data?.ai && <AiTab data={data} updateAi={updateAi} updateAgent={updateAgent} updateCustomProviders={updateCustomProviders} t={t} />}
           {tab === 'appearance' && <AppearanceTab font={font} setFont={setFont} fontSize={fontSize} setFontSize={setFontSize} contentWidth={contentWidth} setContentWidth={setContentWidth} dark={dark} setDark={setDark} locale={locale} setLocale={setLocale} t={t} />}
           {tab === 'knowledge' && data && <KnowledgeTab data={data} setData={setData} t={t} />}
           {tab === 'sync' && <SyncTab t={t} />}

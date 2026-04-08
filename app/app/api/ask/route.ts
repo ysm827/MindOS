@@ -22,6 +22,7 @@ import { getFileContent, getMindRoot, collectAllFiles } from '@/lib/fs';
 import { getModelConfig, hasImages } from '@/lib/agent/model';
 import { isProviderId, type ProviderId, toPiProvider } from '@/lib/agent/providers';
 import { getRequestScopedTools, getOrganizeTools, getChatTools, WRITE_TOOLS, truncate } from '@/lib/agent/tools';
+import { isCustomProviderId, findCustomProvider } from '@/lib/custom-endpoints';
 import { AGENT_SYSTEM_PROMPT, ORGANIZE_SYSTEM_PROMPT, CHAT_SYSTEM_PROMPT } from '@/lib/agent/prompt';
 import type { AskModeApi } from '@/lib/types';
 import { toAgentMessages } from '@/lib/agent/to-agent-messages';
@@ -706,6 +707,8 @@ export async function POST(req: NextRequest) {
     selectedAcpAgent?: { id: string; name: string } | null;
     /** Per-request provider override from the chat panel capsule */
     providerOverride?: string;
+    /** Per-request model override from the inline model picker */
+    modelOverride?: string;
   };
   try {
     body = await req.json();
@@ -985,11 +988,37 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const provOverride = body.providerOverride && isProviderId(body.providerOverride)
-      ? body.providerOverride as ProviderId
-      : undefined;
+    let provOverride: ProviderId | undefined;
+    let customProviderConfig: { apiKey: string; model: string; baseUrl: string } | undefined;
+
+    // Handle custom provider (cp_*) or built-in provider override
+    if (body.providerOverride) {
+      if (isCustomProviderId(body.providerOverride)) {
+        const settings = readSettings();
+        const customProvider = findCustomProvider(settings.customProviders ?? [], body.providerOverride);
+        if (!customProvider) {
+          return apiError(ErrorCodes.INVALID_REQUEST, 'Custom provider not found', 400);
+        }
+        provOverride = customProvider.baseProviderId;
+        customProviderConfig = {
+          apiKey: customProvider.apiKey,
+          model: customProvider.model,
+          baseUrl: customProvider.baseUrl,
+        };
+      } else if (isProviderId(body.providerOverride)) {
+        provOverride = body.providerOverride as ProviderId;
+      }
+    }
+
+    // Per-request model override (from chat capsule model picker)
+    const modelOverride = (body.modelOverride && typeof body.modelOverride === 'string')
+      ? body.modelOverride.trim() : undefined;
+
     const { model, modelName, apiKey, provider, baseUrl } = getModelConfig({
       provider: provOverride,
+      apiKey: customProviderConfig?.apiKey,
+      model: modelOverride ?? customProviderConfig?.model,
+      baseUrl: customProviderConfig?.baseUrl,
       hasImages: hasImages(messages),
     });
 

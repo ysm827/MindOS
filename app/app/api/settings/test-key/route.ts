@@ -4,6 +4,7 @@ import { complete } from '@mariozechner/pi-ai';
 import { effectiveAiConfig, readBaseUrlCompat, writeSettings, readSettings } from '@/lib/settings';
 import { getModelConfig } from '@/lib/agent/model';
 import { type ProviderId, isProviderId } from '@/lib/agent/providers';
+import { isCustomProviderId, findCustomProvider } from '@/lib/custom-endpoints';
 
 const TIMEOUT = 15_000;
 
@@ -45,6 +46,46 @@ export async function POST(req: NextRequest) {
       model?: string;
       baseUrl?: string;
     };
+
+    // Support custom provider IDs (cp_*)
+    if (provider && isCustomProviderId(provider)) {
+      const settings = readSettings();
+      const cp = findCustomProvider(settings.customProviders ?? [], provider);
+      if (!cp) {
+        return NextResponse.json(
+          { ok: false, code: 'unknown', error: 'Custom provider not found' },
+          { status: 400 },
+        );
+      }
+      const resolvedKey = (apiKey && apiKey !== '***set***') ? apiKey : cp.apiKey;
+      const resolvedModel = model || cp.model;
+      const resolvedBaseUrl = baseUrl || cp.baseUrl;
+      if (!resolvedKey) {
+        return NextResponse.json({ ok: false, code: 'auth_error', error: 'No API key configured' });
+      }
+      const start = Date.now();
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), TIMEOUT);
+      try {
+        const { model: piModel } = getModelConfig({
+          provider: cp.baseProviderId,
+          apiKey: resolvedKey,
+          model: resolvedModel || undefined,
+          baseUrl: resolvedBaseUrl || undefined,
+        });
+        await complete(piModel, {
+          messages: [{ role: 'user', content: 'hi', timestamp: Date.now() }],
+        }, {
+          apiKey: resolvedKey,
+          signal: ctrl.signal,
+        });
+        return NextResponse.json({ ok: true, latency: Date.now() - start });
+      } catch (e) {
+        return NextResponse.json({ ok: false, ...classifyPiAiError(e) });
+      } finally {
+        clearTimeout(timer);
+      }
+    }
 
     if (!provider || !isProviderId(provider)) {
       return NextResponse.json(

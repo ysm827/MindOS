@@ -7,6 +7,7 @@ import type { SetupState, SetupMessages, PortStatus, ProviderSetupConfig } from 
 import type { ProviderId } from '@/lib/agent/providers';
 import { PROVIDER_PRESETS, isProviderId, getApiKeyEnvVar, getDefaultBaseUrl } from '@/lib/agent/providers';
 import ProviderSelect from '@/components/shared/ProviderSelect';
+import ModelInput from '@/components/shared/ModelInput';
 import StepPorts from './StepPorts';
 import { useLocale } from '@/lib/stores/locale-store';
 
@@ -106,10 +107,16 @@ export default function StepAI({ state, update, s, onCopyToken, webPortStatus, m
 
           {/* Model */}
           <Field label={s.model}>
-            <Input
+            <ModelInput
               value={currentConfig.model}
-              onChange={e => patchConfig({ model: e.target.value })}
+              onChange={v => patchConfig({ model: v })}
               placeholder={currentPreset.defaultModel}
+              provider={currentProvider}
+              apiKey={currentConfig.apiKey}
+              baseUrl={currentConfig.baseUrl}
+              supportsListModels={currentPreset.supportsListModels}
+              browseLabel={s.listModels}
+              noModelsLabel={s.noModelsFound}
             />
           </Field>
         </div>

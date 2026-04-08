@@ -98,6 +98,9 @@ export const aiChatEn = {
     providerCapsule: 'Switch model provider',
     providerDefault: 'Default',
     providerNoKey: 'No configured providers',
+    selectModel: 'Select model',
+    searchModels: 'Search models...',
+    loadingModels: 'Loading models...',
   },
   changes: {
     unreadBanner: (n: number) => `${n} content change${n === 1 ? '' : 's'} unread`,
@@ -299,6 +302,9 @@ export const aiChatZh = {
     providerCapsule: '切换模型服务商',
     providerDefault: '默认',
     providerNoKey: '暂无已配置的服务商',
+    selectModel: '选择模型',
+    searchModels: '搜索模型...',
+    loadingModels: '加载模型中...',
   },
   changes: {
     unreadBanner: (n: number) => `${n} 条内容变更未读`,

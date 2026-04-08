@@ -356,7 +356,7 @@ export default function AgentDetailContent({ agentKey }: { agentKey: string }) {
       <section className="rounded-xl border border-border bg-card p-4 space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h2 className="text-xs font-semibold text-foreground flex items-center gap-2 shrink-0">
-            <Server size={12} className="text-muted-foreground/50" />
+            <div className="w-6 h-6 rounded-md bg-[var(--amber-subtle)] flex items-center justify-center"><Server size={13} className="text-[var(--amber)]" /></div>
             {a.detail.mcpManagement}
           </h2>
           <div className="flex flex-wrap items-center gap-1.5">
@@ -455,7 +455,7 @@ export default function AgentDetailContent({ agentKey }: { agentKey: string }) {
       <section className="rounded-xl border border-border bg-card p-4 space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h2 className="text-xs font-semibold text-foreground flex items-center gap-2 shrink-0">
-            <Zap size={12} className="text-muted-foreground/50" />
+            <div className="w-6 h-6 rounded-md bg-[var(--amber-subtle)] flex items-center justify-center"><Zap size={13} className="text-[var(--amber)]" /></div>
             {a.detail.skillAssignments}
           </h2>
           <div className="flex items-center gap-1.5 text-2xs text-muted-foreground/50 tabular-nums">
@@ -623,7 +623,7 @@ export default function AgentDetailContent({ agentKey }: { agentKey: string }) {
       <section className="rounded-xl border border-border bg-card p-4 space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h2 className="text-xs font-semibold text-foreground flex items-center gap-2 shrink-0">
-            <Globe size={12} className="text-muted-foreground/50" />
+            <div className="w-6 h-6 rounded-md bg-[var(--amber-subtle)] flex items-center justify-center"><Globe size={13} className="text-[var(--amber)]" /></div>
             {p.a2aCapabilities}
           </h2>
           <span className={`text-2xs px-1.5 py-0.5 rounded font-medium shrink-0 ${
@@ -797,7 +797,7 @@ function RuntimeDiagSection({
     <section className="rounded-xl border border-border bg-card p-4 space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 className="text-xs font-semibold text-foreground flex items-center gap-2 shrink-0">
-          <Activity size={12} className="text-muted-foreground/50" />
+          <div className="w-6 h-6 rounded-md bg-[var(--amber-subtle)] flex items-center justify-center"><Activity size={13} className="text-[var(--amber)]" /></div>
           {d.runtimeDiagTitle}
         </h2>
         <button
@@ -875,7 +875,7 @@ function EnvPermSection({
   return (
     <section className="rounded-xl border border-border bg-card p-4 space-y-3">
       <h2 className="text-xs font-semibold text-foreground flex items-center gap-2 shrink-0">
-        <Key size={12} className="text-muted-foreground/50" />
+        <div className="w-6 h-6 rounded-md bg-[var(--amber-subtle)] flex items-center justify-center"><Key size={13} className="text-[var(--amber)]" /></div>
         {d.envPermTitle}
       </h2>
 
@@ -1029,7 +1029,7 @@ function KnowledgeInteractionSection() {
     return (
       <section className="rounded-xl border border-border bg-card p-4 space-y-3">
         <h2 className="text-xs font-semibold text-foreground flex items-center gap-2 shrink-0">
-          <BookOpen size={12} className="text-muted-foreground/50" />
+          <div className="w-6 h-6 rounded-md bg-[var(--amber-subtle)] flex items-center justify-center"><BookOpen size={13} className="text-[var(--amber)]" /></div>
           {d?.knowledgeInteraction ?? 'Knowledge Interaction'}
         </h2>
         <div className="rounded-lg border border-border/40 bg-card/30 px-4 py-6 text-center">
@@ -1045,7 +1045,7 @@ function KnowledgeInteractionSection() {
       {/* Header */}
       <div className="flex items-center justify-between px-4 pt-4 pb-2">
         <h2 className="text-xs font-semibold text-foreground flex items-center gap-2 shrink-0">
-          <BookOpen size={12} className="text-muted-foreground/50" />
+          <div className="w-6 h-6 rounded-md bg-[var(--amber-subtle)] flex items-center justify-center"><BookOpen size={13} className="text-[var(--amber)]" /></div>
           {d?.knowledgeInteraction ?? 'Knowledge Interaction'}
         </h2>
         <Link
@@ -1158,7 +1158,7 @@ function ActivitySection({ agent }: { agent: AgentInfo }) {
   return (
     <section className="rounded-xl border border-border bg-card p-4 space-y-3">
       <h2 className="text-xs font-semibold text-foreground flex items-center gap-2 shrink-0">
-        <Activity size={12} className="text-muted-foreground/50" />
+        <div className="w-6 h-6 rounded-md bg-[var(--amber-subtle)] flex items-center justify-center"><Activity size={13} className="text-[var(--amber)]" /></div>
         {d.activityTitle}
       </h2>
 

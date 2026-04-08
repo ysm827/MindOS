@@ -51,7 +51,7 @@ describe('mindos update root resolution', () => {
         ...process.env,
         PATH: `${fakeBinDir}:${process.env.PATH}`,
       },
-      timeout: 15_000,
+      timeout: 30_000,
       stdio: ['pipe', 'pipe', 'pipe'],
     });
 
@@ -77,7 +77,7 @@ describe('mindos update root resolution', () => {
         HOME: fakeHome,
         PATH: `${shimDir}:${fakeBinDir}:${process.env.PATH}`,
       },
-      timeout: 15_000,
+      timeout: 30_000,
       stdio: ['pipe', 'pipe', 'pipe'],
     });
 

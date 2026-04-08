@@ -33,14 +33,16 @@ describe('ACP Registry', () => {
   });
 
   describe('fetchAcpRegistry', () => {
-    it('fetches and parses the registry', async () => {
+    it('fetches and merges with built-in registry', async () => {
       mockFetch.mockResolvedValueOnce({ ok: true, json: async () => MOCK_REGISTRY });
 
       const registry = await fetchAcpRegistry();
       expect(registry).not.toBeNull();
-      expect(registry!.agents).toHaveLength(2);
-      expect(registry!.agents[0].id).toBe('gemini-cli');
-      expect(registry!.agents[0].transport).toBe('npx');
+      // CDN agents are merged with built-in agents
+      expect(registry.agents.length).toBeGreaterThanOrEqual(2);
+      const gemini = registry.agents.find(a => a.id === 'gemini-cli');
+      expect(gemini).toBeDefined();
+      expect(gemini!.transport).toBe('npx');
     });
 
     it('caches the registry for subsequent calls', async () => {
@@ -53,11 +55,14 @@ describe('ACP Registry', () => {
       expect(mockFetch).toHaveBeenCalledTimes(1);
     });
 
-    it('returns null on fetch failure with no cache', async () => {
+    it('returns built-in registry on fetch failure with no cache', async () => {
       mockFetch.mockRejectedValueOnce(new Error('Network error'));
 
       const registry = await fetchAcpRegistry();
-      expect(registry).toBeNull();
+      // Should fall back to built-in registry, never null
+      expect(registry).not.toBeNull();
+      expect(registry.agents.length).toBeGreaterThan(0);
+      expect(registry.version).toBe('builtin');
     });
 
     it('returns stale cache on fetch failure', async () => {
@@ -68,22 +73,26 @@ describe('ACP Registry', () => {
       // (we can't easily expire cache in test, so just test that cache works)
       const cached = await fetchAcpRegistry();
       expect(cached).not.toBeNull();
-      expect(cached!.agents).toHaveLength(2);
+      expect(cached!.agents.length).toBeGreaterThanOrEqual(2);
     });
 
-    it('returns null for non-ok HTTP response with no cache', async () => {
+    it('returns built-in registry for non-ok HTTP response with no cache', async () => {
       mockFetch.mockResolvedValueOnce({ ok: false, status: 500 });
 
       const registry = await fetchAcpRegistry();
-      expect(registry).toBeNull();
+      // Should fall back to built-in registry, never null
+      expect(registry).not.toBeNull();
+      expect(registry.agents.length).toBeGreaterThan(0);
+      expect(registry.version).toBe('builtin');
     });
 
-    it('handles empty registry', async () => {
+    it('merges empty CDN registry with built-in agents', async () => {
       mockFetch.mockResolvedValueOnce({ ok: true, json: async () => ({ version: '1', agents: [] }) });
 
       const registry = await fetchAcpRegistry();
       expect(registry).not.toBeNull();
-      expect(registry!.agents).toHaveLength(0);
+      // Even with empty CDN, built-in agents should be present
+      expect(registry.agents.length).toBeGreaterThan(0);
     });
 
     it('handles object-keyed registry format', async () => {
@@ -95,8 +104,8 @@ describe('ACP Registry', () => {
 
       const registry = await fetchAcpRegistry();
       expect(registry).not.toBeNull();
-      expect(registry!.agents.length).toBeGreaterThanOrEqual(1);
-      expect(registry!.agents.find(a => a.id === 'my-agent')).toBeDefined();
+      expect(registry.agents.length).toBeGreaterThanOrEqual(1);
+      expect(registry.agents.find(a => a.id === 'my-agent')).toBeDefined();
     });
 
     it('handles malformed entries gracefully', async () => {
@@ -113,25 +122,26 @@ describe('ACP Registry', () => {
 
       const registry = await fetchAcpRegistry();
       expect(registry).not.toBeNull();
-      // Only the valid entry should survive
-      expect(registry!.agents).toHaveLength(1);
-      expect(registry!.agents[0].id).toBe('good');
+      // Valid CDN entry should be present (merged with built-in)
+      expect(registry.agents.find(a => a.id === 'good')).toBeDefined();
+      // Malformed entries should not be present
+      expect(registry.agents.find(a => a.id === '')).toBeUndefined();
     });
   });
 
   describe('getAcpAgents', () => {
-    it('returns agents from registry', async () => {
+    it('returns agents from registry merged with built-in', async () => {
       mockFetch.mockResolvedValueOnce({ ok: true, json: async () => MOCK_REGISTRY });
 
       const agents = await getAcpAgents();
-      expect(agents).toHaveLength(2);
+      expect(agents.length).toBeGreaterThanOrEqual(2);
     });
 
-    it('returns empty array on failure', async () => {
+    it('returns built-in agents on failure', async () => {
       mockFetch.mockRejectedValueOnce(new Error('down'));
 
       const agents = await getAcpAgents();
-      expect(agents).toHaveLength(0);
+      expect(agents.length).toBeGreaterThan(0);
     });
   });
 

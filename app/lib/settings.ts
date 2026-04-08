@@ -3,6 +3,7 @@ import path from 'path';
 import os from 'os';
 import { parseAcpAgentOverrides } from './acp/agent-descriptors';
 import { type ProviderId, PROVIDER_PRESETS, isProviderId, getApiKeyFromEnv } from './agent/providers';
+import { type CustomProvider, parseCustomProviders, isCustomProviderId, findCustomProvider } from './custom-endpoints';
 
 const SETTINGS_PATH = path.join(os.homedir(), '.mindos', 'config.json');
 
@@ -60,6 +61,8 @@ export interface ServerSettings {
   };
   /** User-defined agents not built into MindOS. */
   customAgents?: import('./custom-agents').CustomAgentDef[];
+  /** User-defined provider configurations (multiple keys/endpoints per provider type). */
+  customProviders?: CustomProvider[];
 }
 
 const DEFAULTS: ServerSettings = {
@@ -219,6 +222,7 @@ export function readSettings(): ServerSettings {
       })(),
       connectionMode: inferConnectionMode(parsed),
       customAgents: Array.isArray(parsed.customAgents) ? parsed.customAgents as import('./custom-agents').CustomAgentDef[] : undefined,
+      customProviders: parseCustomProviders(parsed.customProviders),
     };
   } catch {
     // Config file missing or corrupt → force setup wizard
@@ -250,6 +254,7 @@ export function writeSettings(settings: ServerSettings): void {
   if (settings.baseUrlCompat !== undefined) merged.baseUrlCompat = settings.baseUrlCompat;
   if (settings.connectionMode !== undefined) merged.connectionMode = settings.connectionMode;
   if (settings.customAgents !== undefined) merged.customAgents = settings.customAgents;
+  if (settings.customProviders !== undefined) merged.customProviders = settings.customProviders;
   // setupPending: false/undefined → remove the field (cleanup); true → set it
   if ('setupPending' in settings) {
     if (settings.setupPending) merged.setupPending = true;
@@ -297,18 +302,35 @@ export function recordSkillInstall(agentKey: string, skillName: string, installP
 
 /** Effective AI config — unified interface for all providers.
  *  Resolves: saved config → env var → preset default, in that priority order.
- *  When `providerOverride` is given, resolves that provider's config instead. */
-export function effectiveAiConfig(providerOverride?: ProviderId): {
+ *  When `providerOverride` is given, resolves that provider's config instead.
+ *  Supports custom provider IDs (cp_*) — looks up from customProviders list. */
+export function effectiveAiConfig(providerOverride?: string): {
   provider: ProviderId;
   apiKey: string;
   model: string;
   baseUrl: string;
 } {
   const s = readSettings();
+
+  // Custom provider override (cp_* ID)
+  if (providerOverride && isCustomProviderId(providerOverride)) {
+    const cp = findCustomProvider(s.customProviders ?? [], providerOverride);
+    if (cp) {
+      return {
+        provider: cp.baseProviderId,
+        apiKey: cp.apiKey,
+        model: cp.model,
+        baseUrl: cp.baseUrl,
+      };
+    }
+    // Custom provider not found — fall through to default
+  }
+
   const envProvider = process.env.AI_PROVIDER;
-  const provider: ProviderId = providerOverride
-    ?? (isProviderId(s.ai.provider) ? s.ai.provider
-      : (envProvider && isProviderId(envProvider) ? envProvider : 'anthropic'));
+  const providerRaw = providerOverride ?? s.ai.provider;
+  const provider: ProviderId = (typeof providerRaw === 'string' && isProviderId(providerRaw))
+    ? providerRaw
+    : (envProvider && isProviderId(envProvider) ? envProvider : 'anthropic');
 
   const preset = PROVIDER_PRESETS[provider] ?? PROVIDER_PRESETS.anthropic;
   const provCfg = s.ai.providers[provider] ?? { apiKey: '', model: '' };

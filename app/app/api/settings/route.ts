@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { readSettings, writeSettings, ServerSettings } from '@/lib/settings';
 import { invalidateCache } from '@/lib/fs';
 import { PROVIDER_PRESETS, ALL_PROVIDER_IDS, getApiKeyEnvVar, getApiKeyFromEnv } from '@/lib/agent/providers';
+import { maskCustomProviderKey, parseCustomProviders, type CustomProvider } from '@/lib/custom-endpoints';
 
 function maskToken(token: string | undefined): string {
   if (!token) return '';
@@ -57,6 +58,7 @@ export async function GET() {
     agent: settings.agent ?? {},
     envOverrides,
     envValues,
+    customProviders: (settings.customProviders ?? []).map(maskCustomProviderKey),
   };
   return NextResponse.json(masked);
 }
@@ -108,6 +110,20 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    // Handle customProviders: merge with existing, preserving masked keys
+    let resolvedCustomProviders = current.customProviders ?? [];
+    if (body.customProviders !== undefined) {
+      const incoming = parseCustomProviders(body.customProviders);
+      resolvedCustomProviders = incoming.map(cp => {
+        // If API key is masked, keep existing key
+        if (cp.apiKey === '***set***') {
+          const existing = (current.customProviders ?? []).find(e => e.id === cp.id);
+          return { ...cp, apiKey: existing?.apiKey ?? '' };
+        }
+        return cp;
+      });
+    }
+
     const next: ServerSettings = {
       ai: {
         provider: body.ai?.provider ?? current.ai.provider,
@@ -121,6 +137,7 @@ export async function POST(req: NextRequest) {
       mcpPort: typeof body.mcpPort === 'number' ? body.mcpPort : current.mcpPort,
       startMode: body.startMode ?? current.startMode,
       connectionMode: resolvedConnectionMode,
+      customProviders: resolvedCustomProviders,
     };
 
     writeSettings(next);

@@ -18,7 +18,7 @@ import SessionHistory from '@/components/ask/SessionHistory';
 import AskHeader from '@/components/ask/AskHeader';
 import FileChip from '@/components/ask/FileChip';
 import AgentSelectorCapsule from '@/components/ask/AgentSelectorCapsule';
-import ProviderModelCapsule, { getPersistedProvider } from '@/components/ask/ProviderModelCapsule';
+import ProviderModelCapsule, { getPersistedProviderModel } from '@/components/ask/ProviderModelCapsule';
 import type { ProviderId } from '@/lib/agent/providers';
 import { useAskChat } from '@/hooks/useAskChat';
 import { cn } from '@/lib/utils';
@@ -103,11 +103,14 @@ export default function AskContent({ visible, currentFile, initialMessage, initi
   const selectedAcpAgentRef = useRef(selectedAcpAgent);
   selectedAcpAgentRef.current = selectedAcpAgent;
   const [chatMode, setChatMode] = useState<AskMode>('agent');
-  const [providerOverride, setProviderOverride] = useState<ProviderId | null>(null);
+  const [providerOverride, setProviderOverride] = useState<ProviderId | `cp_${string}` | null>(null);
+  const [modelOverride, setModelOverride] = useState<string | null>(null);
 
   useEffect(() => {
     setChatMode(getPersistedMode());
-    setProviderOverride(getPersistedProvider());
+    const persisted = getPersistedProviderModel();
+    setProviderOverride(persisted.provider);
+    setModelOverride(persisted.model);
   }, []);
 
   const session = useAskSession(currentFile);
@@ -140,6 +143,7 @@ export default function AskContent({ visible, currentFile, initialMessage, initi
     currentFile,
     chatMode,
     providerOverride,
+    modelOverride,
     onFirstMessage,
     refs: chatRefs.current,
     errorLabels: { noResponse: t.ask.errorNoResponse, stopped: t.ask.stopped },
@@ -714,8 +718,13 @@ export default function AskContent({ visible, currentFile, initialMessage, initi
             )}
             {mounted && (
               <ProviderModelCapsule
-                value={providerOverride}
-                onChange={setProviderOverride}
+                providerValue={providerOverride}
+                onProviderChange={(p) => {
+                  setProviderOverride(p);
+                  setModelOverride(null);
+                }}
+                modelValue={modelOverride}
+                onModelChange={setModelOverride}
                 disabled={isLoading}
               />
             )}

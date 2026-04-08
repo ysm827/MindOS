@@ -33,6 +33,8 @@ export const onboardingEn = {
     apiKey: 'API Key',
     apiKeyExisting: 'Existing key configured. Leave blank to keep it.',
     model: 'Model',
+    listModels: 'Browse',
+    noModelsFound: 'No models found',
     baseUrl: 'Base URL',
     baseUrlHint: 'Optional. For proxies or custom API endpoints.',
     // Step 3
@@ -255,6 +257,8 @@ export const onboardingZh = {
     apiKey: 'API 密钥',
     apiKeyExisting: '已配置密钥。留空即保持不变。',
     model: '模型',
+    listModels: '选择模型',
+    noModelsFound: '未找到可用模型',
     baseUrl: '接口地址',
     baseUrlHint: '可选。用于代理或自定义 API 端点。',
     // Step 3

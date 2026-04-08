@@ -70,7 +70,7 @@ body {
   --muted-foreground: #685f52;
   --accent: #d9d3c6;
   --accent-foreground: #1c1a17;
-  --destructive: oklch(0.56 0.14 24);
+  --destructive: #b33b3b;
   --destructive-foreground: #ffffff;
   --border: rgba(28, 26, 23, 0.1);
   --input: rgba(28, 26, 23, 0.12);
@@ -108,7 +108,7 @@ body {
   --muted-foreground: #8a8275;
   --accent: #2e2b22;
   --accent-foreground: #e8e4dc;
-  --destructive: oklch(0.56 0.14 22);
+  --destructive: #b33636;
   --destructive-foreground: #ffffff;
   --border: rgba(232, 228, 220, 0.08);
   --input: rgba(232, 228, 220, 0.1);
@@ -320,8 +320,8 @@ body {
 
 .modal-backdrop {
   background: rgba(10, 9, 6, 0.72);
-  backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
 }
 .dark .modal-backdrop {
   background: rgba(0, 0, 0, 0.65);
@@ -329,8 +329,8 @@ body {
 
 .overlay-backdrop {
   background: rgba(10, 9, 6, 0.35);
-  backdrop-filter: blur(2px);
   -webkit-backdrop-filter: blur(2px);
+  backdrop-filter: blur(2px);
 }
 .dark .overlay-backdrop {
   background: rgba(0, 0, 0, 0.4);

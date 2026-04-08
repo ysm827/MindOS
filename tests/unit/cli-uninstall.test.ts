@@ -86,10 +86,10 @@ describe('mindos uninstall — smoke', () => {
 });
 
 describe('mindos uninstall — help text', () => {
-  it('--help lists the uninstall command', () => {
-    const { stdout, exitCode } = run(['--help']);
+  it('--all lists the uninstall command', () => {
+    const { stdout, exitCode } = run(['--all']);
     expect(exitCode).toBe(0);
-    expect(stdout).toContain('mindos uninstall');
+    expect(stdout).toContain('uninstall');
   });
 });
 

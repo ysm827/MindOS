@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { createPortal } from 'react-dom';
-import { Cpu, ChevronDown, Check, Settings } from 'lucide-react';
+import { Cpu, ChevronDown, ChevronRight, Check, Zap, Loader2, Search, RefreshCw } from 'lucide-react';
 import { useLocale } from '@/lib/stores/locale-store';
 import {
   type ProviderId,
@@ -11,19 +11,18 @@ import {
   isProviderId,
   getApiKeyEnvVar,
 } from '@/lib/agent/providers';
+import { type CustomProvider, isCustomProviderId, findCustomProvider } from '@/lib/custom-endpoints';
 
-const STORAGE_KEY = 'mindos-provider-override';
+const STORAGE_KEY = 'mindos-provider-model';
+
+type ProviderSelection = ProviderId | `cp_${string}` | null;
 
 interface ProviderModelCapsuleProps {
-  value: ProviderId | null;
-  onChange: (provider: ProviderId | null) => void;
+  providerValue: ProviderSelection;
+  onProviderChange: (provider: ProviderSelection) => void;
+  modelValue: string | null;
+  onModelChange: (model: string | null) => void;
   disabled?: boolean;
-}
-
-interface DropdownPos {
-  top: number;
-  left: number;
-  direction: 'up' | 'down';
 }
 
 interface SettingsData {
@@ -31,73 +30,107 @@ interface SettingsData {
     provider?: string;
     providers?: Record<string, { apiKey?: string; model?: string; baseUrl?: string }>;
   };
+  customProviders?: CustomProvider[];
   envOverrides?: Record<string, boolean>;
 }
 
-export function getPersistedProvider(): ProviderId | null {
-  if (typeof window === 'undefined') return null;
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored && isProviderId(stored)) return stored;
-  } catch { /* localStorage unavailable */ }
-  return null;
-}
+/* ── Persistence ── */
 
-export function persistProvider(provider: ProviderId | null): void {
+export function getPersistedProviderModel(): { provider: ProviderSelection; model: string | null } {
+  if (typeof window === 'undefined') return { provider: null, model: null };
   try {
-    if (provider) {
-      localStorage.setItem(STORAGE_KEY, provider);
-    } else {
-      localStorage.removeItem(STORAGE_KEY);
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) {
+      const old = localStorage.getItem('mindos-provider-override');
+      if (old && (isProviderId(old) || isCustomProviderId(old))) return { provider: old as any, model: null };
+      return { provider: null, model: null };
     }
-  } catch { /* localStorage unavailable */ }
+    const parsed = JSON.parse(raw);
+    const provider = parsed?.provider && (isProviderId(parsed.provider) || isCustomProviderId(parsed.provider))
+      ? parsed.provider : null;
+    const model = typeof parsed?.model === 'string' ? parsed.model : null;
+    return { provider, model };
+  } catch { return { provider: null, model: null }; }
 }
 
-/**
- * Determine which providers are configured (have an API key set via settings or env).
- * Providers with apiKeyFallback (e.g. Ollama) only appear if the user has explicitly
- * configured them — having an API key, env var, or a saved model/baseUrl entry.
- */
-function getConfiguredProviders(data: SettingsData): ProviderId[] {
-  const result: ProviderId[] = [];
-  const providers = data.ai?.providers ?? {};
-  const env = data.envOverrides ?? {};
+function persistProviderModel(provider: ProviderSelection, model: string | null): void {
+  try {
+    if (provider || model) localStorage.setItem(STORAGE_KEY, JSON.stringify({ provider, model }));
+    else localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem('mindos-provider-override');
+  } catch {}
+}
 
+/* ── Configured providers ── */
+
+function getConfiguredProviders(data: SettingsData): (ProviderId | `cp_${string}`)[] {
+  const result: (ProviderId | `cp_${string}`)[] = [];
+  const providers = data.ai?.providers ?? {};
+  const customProviders = data.customProviders ?? [];
+  const env = data.envOverrides ?? {};
   for (const id of ALL_PROVIDER_IDS) {
     const preset = PROVIDER_PRESETS[id];
-    const hasSettingsKey = providers[id]?.apiKey === '***set***';
+    const hasKey = providers[id]?.apiKey === '***set***';
     const envVar = getApiKeyEnvVar(id);
-    const hasEnvKey = envVar ? !!env[envVar] : false;
-
-    if (hasSettingsKey || hasEnvKey) {
-      result.push(id);
-    } else if (preset.apiKeyFallback) {
-      // Local providers (Ollama etc.): only show if user has explicitly configured
-      // them (selected as default, or saved a model/baseUrl), not just because
-      // a fallback key exists and they haven't been touched.
-      const isDefault = data.ai?.provider === id;
+    const hasEnv = envVar ? !!env[envVar] : false;
+    if (hasKey || hasEnv) { result.push(id); }
+    else if (preset.apiKeyFallback) {
       const cfg = providers[id];
-      if (isDefault || (cfg && (cfg.model || cfg.baseUrl))) {
-        result.push(id);
-      }
+      if (data.ai?.provider === id || (cfg && (cfg.model || cfg.baseUrl))) result.push(id);
     }
   }
+  for (const cp of customProviders) result.push(cp.id as `cp_${string}`);
   return result;
 }
 
+/* ── Component ── */
+
 export default function ProviderModelCapsule({
-  value,
-  onChange,
-  disabled = false,
+  providerValue, onProviderChange, modelValue, onModelChange, disabled = false,
 }: ProviderModelCapsuleProps) {
   const { t, locale } = useLocale();
   const [open, setOpen] = useState(false);
-  const [pos, setPos] = useState<DropdownPos | null>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
-  const dropdownRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null); // wraps BOTH panels
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const modelListRef = useRef<HTMLDivElement>(null);
 
   const [settingsData, setSettingsData] = useState<SettingsData | null>(null);
 
+  // Flyout state
+  const [hoveredProvider, setHoveredProvider] = useState<ProviderId | null>(null);
+  const [expandedModels, setExpandedModels] = useState<string[] | null>(null);
+  const [modelsLoading, setModelsLoading] = useState(false);
+  const [modelsError, setModelsError] = useState('');
+  const [modelSearch, setModelSearch] = useState('');
+  const [modelHighlight, setModelHighlight] = useState(-1);
+  const fetchVersionRef = useRef(0);
+  const modelsCacheRef = useRef<Record<string, string[]>>({});
+
+  // Debounced flyout close — prevents flicker when mouse crosses gap
+  const closeTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const openTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+
+  const cancelCloseTimer = useCallback(() => {
+    if (closeTimerRef.current) { clearTimeout(closeTimerRef.current); closeTimerRef.current = undefined; }
+  }, []);
+
+  const startCloseTimer = useCallback(() => {
+    cancelCloseTimer();
+    closeTimerRef.current = setTimeout(() => {
+      setHoveredProvider(null);
+      setModelSearch('');
+    }, 300); // 300ms grace period to cross the gap smoothly
+  }, [cancelCloseTimer]);
+
+  // Cleanup timers on unmount
+  useEffect(() => () => {
+    if (closeTimerRef.current) clearTimeout(closeTimerRef.current);
+    if (openTimerRef.current) clearTimeout(openTimerRef.current);
+    if (repositionTimerRef.current) clearTimeout(repositionTimerRef.current);
+  }, []);
+
+  // Fetch settings
   useEffect(() => {
     let cancelled = false;
     const doFetch = () => {
@@ -108,188 +141,418 @@ export default function ProviderModelCapsule({
     };
     doFetch();
     const onVisible = () => { if (document.visibilityState === 'visible') doFetch(); };
-    const onSettingsChanged = () => doFetch();
+    const onChange = () => doFetch();
     document.addEventListener('visibilitychange', onVisible);
-    window.addEventListener('mindos:settings-changed', onSettingsChanged);
-    return () => { cancelled = true; document.removeEventListener('visibilitychange', onVisible); window.removeEventListener('mindos:settings-changed', onSettingsChanged); };
+    window.addEventListener('mindos:settings-changed', onChange);
+    return () => { cancelled = true; document.removeEventListener('visibilitychange', onVisible); window.removeEventListener('mindos:settings-changed', onChange); };
   }, []);
 
   const defaultProvider = (settingsData?.ai?.provider && isProviderId(settingsData.ai.provider))
-    ? settingsData.ai.provider as ProviderId
-    : 'anthropic';
+    ? settingsData.ai.provider as ProviderId : 'anthropic';
+
   const configuredProviders = useMemo(
     () => settingsData ? getConfiguredProviders(settingsData) : [],
     [settingsData],
   );
 
-  // Auto-clear stale override if the provider lost its API key
+  // Auto-clear stale override
   useEffect(() => {
-    if (!settingsData || !value) return;
-    if (!configuredProviders.includes(value)) {
-      onChange(null);
-      persistProvider(null);
+    if (!settingsData || !providerValue) return;
+    if (!configuredProviders.includes(providerValue)) {
+      onProviderChange(null); onModelChange(null);
+      persistProviderModel(null, null);
     }
-  }, [settingsData, value, configuredProviders, onChange]);
+  }, [settingsData, providerValue, configuredProviders, onProviderChange, onModelChange]);
 
-  const activeProvider = value ?? defaultProvider;
-  const activePreset = PROVIDER_PRESETS[activeProvider];
-  const activeModel = settingsData?.ai?.providers?.[activeProvider]?.model || activePreset.defaultModel;
-  const displayName = locale === 'zh' ? activePreset.nameZh : activePreset.name;
+  // Resolve active display
+  const activeProvider = providerValue ?? defaultProvider;
+  const isCustomActive = isCustomProviderId(String(activeProvider));
+  const customProvider = isCustomActive ? findCustomProvider(settingsData?.customProviders ?? [], String(activeProvider)) : null;
+  const activePreset = !isCustomActive ? PROVIDER_PRESETS[activeProvider as ProviderId] : null;
+  const defaultModel = customProvider?.model
+    || settingsData?.ai?.providers?.[activeProvider as ProviderId]?.model
+    || activePreset?.defaultModel || '';
+  const displayModel = modelValue || defaultModel;
+  const displayName = customProvider?.name
+    || (activePreset ? (locale === 'zh' ? activePreset.nameZh : activePreset.name) : String(activeProvider));
+
+  /* ── Dropdown positioning ── */
+  const [dropdownStyle, setDropdownStyle] = useState<React.CSSProperties>({});
+  const repositionTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   const reposition = useCallback(() => {
     if (!triggerRef.current) return;
     const rect = triggerRef.current.getBoundingClientRect();
-    const spaceAbove = rect.top;
-    const spaceBelow = window.innerHeight - rect.bottom;
-    const estimatedH = 240;
-    const direction: 'up' | 'down' = spaceAbove > spaceBelow && spaceAbove > estimatedH ? 'up' : 'down';
-    setPos({
-      left: rect.left,
-      top: direction === 'up' ? rect.top - 6 : rect.bottom + 6,
-      direction,
+    const goUp = rect.top > window.innerHeight - rect.bottom && rect.top > 280;
+    setDropdownStyle({
+      position: 'fixed',
+      left: Math.min(rect.left, window.innerWidth - 460),
+      ...(goUp ? { bottom: window.innerHeight - rect.top + 6 } : { top: rect.bottom + 6 }),
+      zIndex: 50,
     });
   }, []);
 
+  // Debounce repositioning to prevent jank from rapid mouse events
+  const debouncedReposition = useCallback(() => {
+    if (repositionTimerRef.current) clearTimeout(repositionTimerRef.current);
+    repositionTimerRef.current = setTimeout(() => {
+      reposition();
+    }, 0); // Use requestAnimationFrame-like timing
+  }, [reposition]);
+
+  useEffect(() => { if (open) reposition(); }, [open, reposition]);
   useEffect(() => {
     if (!open) return;
-    reposition();
-  }, [open, reposition]);
+    window.addEventListener('scroll', debouncedReposition, true);
+    window.addEventListener('resize', debouncedReposition);
+    return () => { 
+      window.removeEventListener('scroll', debouncedReposition, true); 
+      window.removeEventListener('resize', debouncedReposition); 
+      if (repositionTimerRef.current) clearTimeout(repositionTimerRef.current);
+    };
+  }, [open, debouncedReposition]);
 
+  // Close on outside click — uses the single container ref
   useEffect(() => {
     if (!open) return;
     const handler = (e: MouseEvent) => {
       const target = e.target as Node;
-      if (
-        triggerRef.current && !triggerRef.current.contains(target) &&
-        dropdownRef.current && !dropdownRef.current.contains(target)
-      ) {
-        setOpen(false);
-      }
+      if (triggerRef.current?.contains(target)) return;
+      if (containerRef.current?.contains(target)) return;
+      setOpen(false); setHoveredProvider(null);
     };
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
   }, [open]);
 
+  // Escape key
   useEffect(() => {
     if (!open) return;
     const handler = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setOpen(false);
+      if (e.key === 'Escape') {
+        if (hoveredProvider) { setHoveredProvider(null); setModelSearch(''); }
+        else setOpen(false);
+      }
     };
     document.addEventListener('keydown', handler);
     return () => document.removeEventListener('keydown', handler);
-  }, [open]);
+  }, [open, hoveredProvider]);
+
+  /* ── Model fetching ── */
+  const fetchModels = useCallback(async (providerId: ProviderId, force = false) => {
+    if (!force && modelsCacheRef.current[providerId]) {
+      setExpandedModels(modelsCacheRef.current[providerId]);
+      setModelsLoading(false);
+      return;
+    }
+    if (force) delete modelsCacheRef.current[providerId];
+    setModelsLoading(true); setModelsError(''); setExpandedModels(null);
+    const version = ++fetchVersionRef.current;
+    try {
+      const body: Record<string, string> = { provider: providerId };
+      const provCfg = settingsData?.ai?.providers?.[providerId];
+      if (provCfg?.baseUrl) body.baseUrl = provCfg.baseUrl;
+      const res = await fetch('/api/settings/list-models', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      if (version !== fetchVersionRef.current) return;
+      const json = await res.json();
+      if (version !== fetchVersionRef.current) return;
+      if (json.ok && Array.isArray(json.models)) {
+        modelsCacheRef.current[providerId] = json.models;
+        setExpandedModels(json.models);
+      } else { setModelsError(json.error || 'Failed'); }
+    } catch {
+      if (version === fetchVersionRef.current) setModelsError('Network error');
+    } finally {
+      if (version === fetchVersionRef.current) setModelsLoading(false);
+    }
+  }, [settingsData]);
+
+  // Open flyout for a provider (debounced to prevent flicker)
+  const openFlyout = useCallback((providerId: ProviderId) => {
+    cancelCloseTimer();
+    if (openTimerRef.current) clearTimeout(openTimerRef.current);
+    openTimerRef.current = setTimeout(() => {
+      if (!PROVIDER_PRESETS[providerId]?.supportsListModels) {
+        setHoveredProvider(null); setModelSearch('');
+        return;
+      }
+      setHoveredProvider(providerId);
+      setModelSearch(''); setModelHighlight(-1); setModelsError('');
+      setExpandedModels(modelsCacheRef.current[providerId] ?? null);
+      if (!modelsCacheRef.current[providerId]) fetchModels(providerId);
+      setTimeout(() => searchInputRef.current?.focus(), 80);
+    }, 80); // Reduced delay to 80ms for snappier response
+  }, [cancelCloseTimer, fetchModels]);
+
+  // Close flyout for non-expandable items (immediate, no debounce)
+  const closeFlyoutImmediate = useCallback(() => {
+    cancelCloseTimer();
+    if (openTimerRef.current) { clearTimeout(openTimerRef.current); openTimerRef.current = undefined; }
+    setHoveredProvider(null); setModelSearch('');
+  }, [cancelCloseTimer]);
+
+  /* ── Selection handlers ── */
+  const handleSelectProvider = useCallback((provider: ProviderSelection) => {
+    onProviderChange(provider); onModelChange(null);
+    persistProviderModel(provider, null);
+    setOpen(false); setHoveredProvider(null); setModelSearch('');
+  }, [onProviderChange, onModelChange]);
+
+  const handleSelectModel = useCallback((provider: ProviderId, model: string) => {
+    onProviderChange(provider); onModelChange(model);
+    persistProviderModel(provider, model);
+    setOpen(false); setHoveredProvider(null); setModelSearch('');
+  }, [onProviderChange, onModelChange]);
+
+  /* ── Filtered models ── */
+  const filteredModels = useMemo(() => {
+    if (!expandedModels) return [];
+    if (!modelSearch.trim()) return expandedModels;
+    const q = modelSearch.toLowerCase();
+    return expandedModels.filter(m => m.toLowerCase().includes(q));
+  }, [expandedModels, modelSearch]);
+
+  useEffect(() => { setModelHighlight(-1); }, [filteredModels]);
+
+  const handleModelKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (!filteredModels.length) return;
+    if (e.key === 'ArrowDown') { e.preventDefault(); setModelHighlight(i => (i + 1) % filteredModels.length); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); setModelHighlight(i => (i - 1 + filteredModels.length) % filteredModels.length); }
+    else if (e.key === 'Enter' && modelHighlight >= 0 && modelHighlight < filteredModels.length && hoveredProvider) {
+      e.preventDefault(); handleSelectModel(hoveredProvider, filteredModels[modelHighlight]);
+    } else if (e.key === 'Escape') { e.preventDefault(); setHoveredProvider(null); setModelSearch(''); }
+  }, [filteredModels, modelHighlight, hoveredProvider, handleSelectModel]);
 
   useEffect(() => {
-    if (!open) return;
-    window.addEventListener('scroll', reposition, true);
-    window.addEventListener('resize', reposition);
-    return () => {
-      window.removeEventListener('scroll', reposition, true);
-      window.removeEventListener('resize', reposition);
-    };
-  }, [open, reposition]);
+    if (modelHighlight < 0 || !modelListRef.current) return;
+    const items = modelListRef.current.querySelectorAll('[data-model-item]');
+    items[modelHighlight]?.scrollIntoView({ block: 'nearest' });
+  }, [modelHighlight]);
 
-  const handleSelect = useCallback((provider: ProviderId | null) => {
-    onChange(provider);
-    persistProvider(provider);
-    setOpen(false);
-  }, [onChange]);
-
+  /* ── Guards ── */
   if (!settingsData || configuredProviders.length === 0) return null;
 
-  const modelShort = activeModel.length > 24
-    ? activeModel.slice(0, 22) + '…'
-    : activeModel;
+  const modelShort = (displayModel || '').length > 24
+    ? (displayModel || '').slice(0, 22) + '...' : displayModel;
+  const builtInIds = configuredProviders.filter(id => !isCustomProviderId(String(id)));
+  const customIds = configuredProviders.filter(id => isCustomProviderId(String(id)));
+  const hasModelOverride = !!(modelValue && modelValue !== defaultModel);
 
-  const dropdown = open && pos ? (
-    <div
-      ref={dropdownRef}
-      role="listbox"
-      aria-label={t.ask.providerCapsule}
-      className="fixed z-50 min-w-[200px] max-w-[280px] rounded-lg border border-border bg-card shadow-lg py-1 animate-in fade-in-0 zoom-in-95 duration-100"
-      style={{
-        left: pos.left,
-        ...(pos.direction === 'up'
-          ? { bottom: window.innerHeight - pos.top }
-          : { top: pos.top }),
-      }}
-    >
-      {/* Default (use server settings) */}
-      <button
-        type="button"
-        role="option"
-        aria-selected={value === null}
-        onClick={() => handleSelect(null)}
-        className="flex w-full items-center gap-2.5 px-3 py-2 text-xs text-left transition-colors hover:bg-muted"
+  /* ── Render: flyout (right panel) ── */
+  const renderFlyout = () => {
+    if (!hoveredProvider) return null;
+    const preset = PROVIDER_PRESETS[hoveredProvider];
+    return (
+      <div
+        className="w-[220px] rounded-lg border border-border bg-card shadow-lg py-1"
       >
-        <Settings size={12} className="shrink-0 text-muted-foreground" />
-        <div className="flex-1 min-w-0">
-          <div className="font-medium">{t.ask.providerDefault}</div>
-          <div className="text-2xs text-muted-foreground mt-0.5">
-            {locale === 'zh'
-              ? PROVIDER_PRESETS[defaultProvider].nameZh
-              : PROVIDER_PRESETS[defaultProvider].name} · {settingsData?.ai?.providers?.[defaultProvider]?.model || PROVIDER_PRESETS[defaultProvider].defaultModel}
+        {/* Header */}
+        <div className="flex items-center justify-between px-3 py-1.5 border-b border-border/40">
+          <span className="text-2xs font-medium text-muted-foreground">
+            {locale === 'zh' ? preset?.nameZh : preset?.name}
+          </span>
+          <button
+            type="button"
+            onClick={() => fetchModels(hoveredProvider, true)}
+            disabled={modelsLoading}
+            className="p-1 text-muted-foreground/50 hover:text-foreground transition-colors disabled:opacity-30"
+            title="Refresh"
+          >
+            <RefreshCw size={10} className={modelsLoading ? 'animate-spin' : ''} />
+          </button>
+        </div>
+        {/* Search */}
+        <div className="px-2 pt-1.5 pb-1">
+          <div className="relative">
+            <Search size={10} className="absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground/40" />
+            <input
+              ref={searchInputRef}
+              type="text"
+              value={modelSearch}
+              onChange={e => setModelSearch(e.target.value)}
+              onKeyDown={handleModelKeyDown}
+              placeholder={t.ask?.searchModels ?? 'Search...'}
+              className="w-full text-2xs pl-6 pr-2 py-1 rounded border border-border/50 bg-transparent text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:border-[var(--amber)]/50"
+              autoComplete="off"
+            />
           </div>
         </div>
-        {value === null && <Check size={12} className="shrink-0 text-[var(--amber)]" />}
-      </button>
-
-      {configuredProviders.length > 0 && (
-        <div className="mx-2 my-1 border-t border-border/60" />
-      )}
-
-      {configuredProviders.map((id) => {
-        const preset = PROVIDER_PRESETS[id];
-        const provName = locale === 'zh' ? preset.nameZh : preset.name;
-        const provModel = settingsData?.ai?.providers?.[id]?.model || preset.defaultModel;
-        const isSelected = value === id;
-        return (
-          <button
-            key={id}
-            type="button"
-            role="option"
-            aria-selected={isSelected}
-            onClick={() => handleSelect(id)}
-            className="flex w-full items-center gap-2.5 px-3 py-2 text-xs text-left transition-colors hover:bg-muted"
-          >
-            <Cpu size={12} className="shrink-0 text-muted-foreground" />
-            <div className="flex-1 min-w-0">
-              <div className="font-medium">{provName}</div>
-              <div className="text-2xs text-muted-foreground mt-0.5 truncate">{provModel}</div>
+        {/* List */}
+        <div ref={modelListRef} className="max-h-[240px] overflow-y-auto px-1 pb-1">
+          {modelsLoading && !expandedModels && (
+            <div className="flex items-center gap-1.5 px-2 py-3 text-2xs text-muted-foreground justify-center">
+              <Loader2 size={10} className="animate-spin" />
+              {t.ask?.loadingModels ?? 'Loading...'}
             </div>
-            {isSelected && <Check size={12} className="shrink-0 text-[var(--amber)]" />}
-          </button>
-        );
-      })}
+          )}
+          {modelsError && !modelsLoading && (
+            <div className="px-2 py-3 text-2xs text-destructive text-center">{modelsError}</div>
+          )}
+          {!modelsLoading && !modelsError && filteredModels.length === 0 && expandedModels !== null && (
+            <div className="px-2 py-3 text-2xs text-muted-foreground text-center">
+              {modelSearch ? 'No matches' : 'No models'}
+            </div>
+          )}
+          {filteredModels.map((m, i) => {
+            const isModelSelected = providerValue === hoveredProvider && modelValue === m;
+            const defModel = settingsData?.ai?.providers?.[hoveredProvider]?.model || preset?.defaultModel;
+            return (
+              <button
+                key={m} type="button" data-model-item
+                onClick={() => handleSelectModel(hoveredProvider, m)}
+                className={`w-full text-left px-2 py-1 text-2xs rounded transition-colors flex items-center gap-1 ${
+                  isModelSelected ? 'bg-[var(--amber)]/12 text-foreground font-medium'
+                  : i === modelHighlight ? 'bg-accent' : 'hover:bg-accent/60'
+                }`}
+              >
+                {isModelSelected
+                  ? <Check size={9} className="shrink-0 text-[var(--amber)]" />
+                  : <span className="w-[9px] shrink-0" />}
+                <span className="truncate">{m}</span>
+                {m === defModel && !isModelSelected && (
+                  <span className="ml-auto text-[9px] text-muted-foreground/30 shrink-0">default</span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    );
+  };
+
+  /* ── Render: dropdown ── */
+  const dropdown = open ? (
+    <div
+      ref={containerRef}
+      style={{ ...dropdownStyle, overflow: 'visible' }}
+      className="flex items-start gap-0"
+      onMouseLeave={startCloseTimer}
+    >
+      {/* Left: provider list */}
+      <div
+        role="listbox"
+        aria-label={t.ask?.providerCapsule ?? 'Provider'}
+        className="w-[220px] rounded-lg border border-border bg-card shadow-lg py-1 animate-in fade-in-0 zoom-in-95 duration-100 shrink-0"
+        style={{ maxHeight: '70vh', overflowY: 'auto' }}
+      >
+        {builtInIds.map((id) => {
+          const preset = PROVIDER_PRESETS[id as ProviderId];
+          const provName = locale === 'zh' ? preset.nameZh : preset.name;
+          const provModel = modelValue && providerValue === id ? modelValue
+            : settingsData?.ai?.providers?.[id as ProviderId]?.model || preset.defaultModel;
+          const isSelected = providerValue === id || (!providerValue && defaultProvider === id);
+          const isHovered = hoveredProvider === id;
+          const canExpand = preset.supportsListModels;
+
+          return (
+            <div
+              key={id}
+              onMouseEnter={() => canExpand ? openFlyout(id as ProviderId) : closeFlyoutImmediate()}
+            >
+              <div className={`flex w-full items-center text-xs transition-colors ${isHovered ? 'bg-accent/60' : 'hover:bg-muted/60'}`}>
+                <button
+                  type="button" role="option" aria-selected={isSelected}
+                  onClick={() => handleSelectProvider(id as ProviderId)}
+                  className="flex flex-1 items-center gap-2 px-3 py-1.5 min-w-0"
+                >
+                  <div className="flex-1 min-w-0 truncate">
+                    <span className={`text-xs ${isSelected ? 'font-medium text-foreground' : 'text-foreground/80'}`}>
+                      {provName}
+                    </span>
+                    <span className="text-2xs text-muted-foreground ml-1.5">{provModel}</span>
+                  </div>
+                  {isSelected && <Check size={11} className="shrink-0 text-[var(--amber)]" />}
+                </button>
+                {canExpand && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (hoveredProvider === id) closeFlyoutImmediate();
+                      else openFlyout(id as ProviderId);
+                    }}
+                    className={`shrink-0 px-1.5 py-1.5 mr-1 rounded transition-colors ${
+                      isHovered ? 'text-foreground' : 'text-muted-foreground/40 hover:text-muted-foreground'
+                    }`}
+                    title={t.ask?.selectModel ?? 'Select model'}
+                  >
+                    <ChevronRight size={11} />
+                  </button>
+                )}
+              </div>
+            </div>
+          );
+        })}
+
+        {customIds.length > 0 && (
+          <>
+            <div className="mx-2 my-1 border-t border-border/40" />
+            <div className="px-3 py-1 text-[9px] uppercase tracking-wider font-medium text-muted-foreground/40">Custom</div>
+          </>
+        )}
+        {customIds.map((id) => {
+          const cp = findCustomProvider(settingsData?.customProviders ?? [], String(id));
+          if (!cp) return null;
+          const isSelected = providerValue === id;
+          return (
+            <button
+              key={id} type="button" role="option" aria-selected={isSelected}
+              onClick={() => handleSelectProvider(id)}
+              onMouseEnter={closeFlyoutImmediate}
+              className="flex w-full items-center gap-2 px-3 py-1.5 text-xs text-left transition-colors hover:bg-muted/60"
+            >
+              <Zap size={11} className="shrink-0 text-muted-foreground/50" />
+              <div className="flex-1 min-w-0 truncate">
+                <span className={`text-xs ${isSelected ? 'font-medium text-foreground' : 'text-foreground/80'}`}>
+                  {cp.name}
+                </span>
+                <span className="text-2xs text-muted-foreground ml-1.5">{cp.model}</span>
+              </div>
+              {isSelected && <Check size={11} className="shrink-0 text-[var(--amber)]" />}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Right: flyout model list */}
+      {renderFlyout()}
     </div>
   ) : null;
 
+  /* ── Capsule button ── */
   return (
     <>
       <button
         ref={triggerRef}
         type="button"
-        onClick={() => { if (!disabled) setOpen(v => !v); }}
+        onClick={() => {
+          if (disabled) return;
+          setOpen(v => !v);
+          if (open) { setHoveredProvider(null); setModelSearch(''); }
+        }}
         disabled={disabled}
         className={`
           inline-flex items-center gap-1 rounded-full px-2.5 py-0.5
           text-2xs font-medium transition-colors select-none
           border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring
           disabled:opacity-40 disabled:cursor-not-allowed
-          ${value
+          ${providerValue || hasModelOverride
             ? 'bg-[var(--amber)]/10 border-[var(--amber)]/25 text-foreground hover:bg-[var(--amber)]/15'
             : 'bg-muted/50 border-border/50 text-muted-foreground hover:bg-muted hover:text-foreground'
           }
         `}
-        title={t.ask.providerCapsule}
+        title={t.ask?.providerCapsule ?? 'Provider'}
         aria-expanded={open}
         aria-haspopup="listbox"
       >
-        <Cpu size={11} className="shrink-0" />
-        <span className="truncate max-w-[140px]">
+        {isCustomActive ? <Zap size={11} className="shrink-0" /> : <Cpu size={11} className="shrink-0" />}
+        <span className="truncate max-w-[160px]">
           {displayName}
           <span className="text-muted-foreground"> · </span>
-          <span className="text-muted-foreground">{modelShort}</span>
+          <span className={hasModelOverride ? 'text-[var(--amber)]' : 'text-muted-foreground'}>{modelShort}</span>
         </span>
         <ChevronDown size={10} className="shrink-0 text-muted-foreground" />
       </button>
