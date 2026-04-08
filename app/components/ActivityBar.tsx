@@ -1,7 +1,7 @@
 'use client';
 
 import { useRef, useCallback, useState, useEffect } from 'react';
-import Link from 'next/link';
+import { usePathname, useRouter } from 'next/navigation';
 import { FolderTree, Search, Settings, RefreshCw, Bot, Compass, ChevronLeft, ChevronRight, Radio, Zap } from 'lucide-react';
 import { useLocale } from '@/lib/stores/locale-store';
 import { DOT_COLORS, getStatusLevel } from './SyncStatusBar';
@@ -94,6 +94,9 @@ export default function ActivityBar({
   const lastClickRef = useRef(0);
   const syncBtnRef = useRef<HTMLButtonElement>(null);
   const { t } = useLocale();
+  const pathname = usePathname();
+  const router = useRouter();
+  const isHome = pathname === '/';
 
   // Update badge: Desktop → electron-updater IPC; Browser → npm registry check
   const [hasUpdate, setHasUpdate] = useState(false);
@@ -193,20 +196,28 @@ export default function ActivityBar({
       {/* Content wrapper — overflow-hidden prevents text flash during width transitions */}
       <div className="flex flex-col h-full w-full overflow-hidden">
         {/* ── Top: Logo — h-[45px] aligns divider with PanelHeader h-[46px] border-b (both at y=45) ── */}
-        <Link
-          href="/"
-          className={`flex items-center ${expanded ? 'px-3 gap-2' : 'justify-center'} w-full h-[45px] shrink-0 hover:opacity-80 transition-opacity`}
+        <button
+          type="button"
+          onClick={() => {
+            if (isHome) {
+              onPanelChange(activePanel === 'files' ? null : 'files');
+            } else {
+              onPanelChange('files');
+              router.push('/');
+            }
+          }}
+          className={`flex items-center ${expanded ? 'px-3 gap-2' : 'justify-center'} w-full h-[45px] shrink-0 transition-opacity cursor-pointer ${isHome ? 'opacity-100' : 'opacity-50 hover:opacity-80'}`}
           aria-label="MindOS Home"
         >
           <Logo id="rail" className="w-7 h-3.5 shrink-0" />
           {expanded && <span className="text-sm text-foreground font-brand whitespace-nowrap">MindOS</span>}
-        </Link>
+        </button>
 
         <div className={`${expanded ? 'mx-3' : 'mx-2'} border-t border-border`} />
 
         {/* ── Middle: Core panel toggles ── */}
         <div className={`flex flex-col ${expanded ? 'px-1.5' : 'items-center'} gap-1 py-2`}>
-          <RailButton icon={<FolderTree size={18} />} label={t.sidebar.files} active={activePanel === 'files'} expanded={expanded} onClick={() => onSpacesClick ? debounced(onSpacesClick) : toggle('files')} walkthroughId="files-panel" />
+          <RailButton icon={<FolderTree size={18} />} label={t.sidebar.files} active={!isHome && activePanel === 'files'} expanded={expanded} onClick={() => onSpacesClick ? debounced(onSpacesClick) : toggle('files')} walkthroughId="files-panel" />
           {labsEcho && <RailButton icon={<Radio size={18} />} label={t.sidebar.echo} active={activePanel === 'echo'} expanded={expanded} onClick={() => onEchoClick ? debounced(onEchoClick) : toggle('echo')} walkthroughId="echo-panel" />}
           <RailButton icon={<Search size={18} />} label={t.sidebar.searchTitle} shortcut="⌘K" active={activePanel === 'search'} expanded={expanded} onClick={() => toggle('search')} />
           <RailButton

@@ -251,6 +251,52 @@ describe('POST /api/mcp/install', () => {
       fs.rmSync(absPath);
     }
   });
+
+  it('installs copaw agent with nested mcp.clients structure', async () => {
+    const { POST } = await importInstallRoute();
+
+    // Pre-seed CoPaw config with existing data (like the user's example)
+    const copawDir = path.join(tempHome, '.copaw');
+    fs.mkdirSync(copawDir, { recursive: true });
+    fs.writeFileSync(path.join(copawDir, 'config.json'), JSON.stringify({
+      mcp: {
+        clients: {
+          tavily_search: {
+            name: 'tavily_mcp',
+            enabled: false,
+            transport: 'stdio',
+            command: 'npx',
+            args: ['-y', 'tavily-mcp@latest'],
+          },
+        },
+      },
+    }, null, 2), 'utf-8');
+
+    const req = new NextRequest('http://localhost/api/mcp/install', {
+      method: 'POST',
+      body: JSON.stringify({
+        agents: [{ key: 'copaw', scope: 'global' }],
+        transport: 'stdio',
+      }),
+      headers: { 'content-type': 'application/json' },
+    });
+    const res = await POST(req);
+    const body = await res.json();
+    expect(body.results[0].status).toBe('ok');
+
+    // Verify config uses nested mcp.clients structure
+    const configPath = path.join(copawDir, 'config.json');
+    const config = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
+    // mindos should be under mcp.clients, NOT under a flat "mcp" key
+    expect(config.mcp).toBeDefined();
+    expect(config.mcp.clients).toBeDefined();
+    expect(config.mcp.clients.mindos).toBeDefined();
+    expect(config.mcp.clients.mindos.type).toBe('stdio');
+    expect(config.mcp.clients.mindos.command).toBe('mindos');
+    // Existing entry should be preserved
+    expect(config.mcp.clients.tavily_search).toBeDefined();
+    expect(config.mcp.clients.tavily_search.command).toBe('npx');
+  });
 });
 
 describe('GET /api/mcp/agents', () => {

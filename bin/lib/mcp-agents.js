@@ -259,7 +259,7 @@ export const MCP_AGENTS = {
   'copaw': {
     name: 'CoPaw',
     project: null,
-    global: '~/.copaw/agent.json',
+    global: '~/.copaw/config.json',
     key: 'mcp',
     globalNestedKey: 'mcp.clients',
     preferredTransport: 'stdio',

@@ -163,7 +163,7 @@ export function InboxSection({ isOrganizing: externalOrganizing = false }: Inbox
   }, [history]);
 
   if (loading) return (
-    <section className="mb-10 animate-pulse">
+    <section className="mb-8 animate-pulse">
       <div className="h-4 w-24 bg-muted rounded mb-3" />
       <div className="space-y-2">
         <div className="h-10 bg-muted/50 rounded-lg" />
@@ -173,9 +173,9 @@ export function InboxSection({ isOrganizing: externalOrganizing = false }: Inbox
   );
 
   return (
-    <section className="mb-10">
+    <section className="mb-8">
       {/* Header */}
-      <div className="flex items-center gap-2.5 mb-5">
+      <div className="flex items-center gap-2.5 mb-4">
         <div className="flex items-center justify-center w-6 h-6 rounded-md bg-[var(--amber-subtle)] text-[var(--amber)]">
           <Inbox size={13} />
         </div>
@@ -183,7 +183,7 @@ export function InboxSection({ isOrganizing: externalOrganizing = false }: Inbox
           {t.inbox.title}
         </h2>
         {hasFiles && (
-          <span className="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 text-[10px] font-semibold rounded-full bg-muted text-muted-foreground tabular-nums">
+          <span className="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 text-[10px] font-semibold rounded-full bg-muted text-muted-foreground tabular-nums shadow-sm shadow-black/[0.02]">
             {t.inbox.count(files.length)}
           </span>
         )}
@@ -192,7 +192,7 @@ export function InboxSection({ isOrganizing: externalOrganizing = false }: Inbox
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
-              className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground cursor-pointer"
+              className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground rounded-md px-2 py-1 transition-all duration-150 ease-out hover:text-foreground hover:bg-muted/40 cursor-pointer"
               title={t.inbox.uploadButton}
             >
               <Upload size={12} />
@@ -201,7 +201,7 @@ export function InboxSection({ isOrganizing: externalOrganizing = false }: Inbox
             <button
               onClick={handleOrganize}
               disabled={isOrganizing}
-              className="flex items-center gap-1.5 text-xs font-medium text-[var(--amber)] transition-colors hover:opacity-80 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex items-center gap-1.5 text-xs font-medium text-[var(--amber)] bg-[var(--amber)]/[0.08] rounded-md px-2.5 py-1 transition-all duration-150 ease-out hover:bg-[var(--amber)]/[0.15] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
               title={isOrganizing ? t.inbox.organizing : undefined}
             >
               {isOrganizing ? (
@@ -227,8 +227,8 @@ export function InboxSection({ isOrganizing: externalOrganizing = false }: Inbox
 
       {/* File list */}
       {hasFiles && (
-        <>
-          <div className="flex flex-col gap-0.5 mb-3">
+        <div className="rounded-xl bg-card/50 border border-border/10 p-1 mb-3">
+          <div className="flex flex-col gap-px">
             {visibleFiles.map((file) => (
               <InboxFileRow key={file.path} file={file} onDelete={handleDeleteFile} />
             ))}
@@ -236,24 +236,24 @@ export function InboxSection({ isOrganizing: externalOrganizing = false }: Inbox
           {overflowCount > 0 && (
             <Link
               href="/view/Inbox/"
-              className="flex items-center gap-1 mb-3 text-xs text-muted-foreground hover:text-[var(--amber)] transition-colors"
+              className="flex items-center gap-1 px-3 py-1.5 text-xs text-muted-foreground hover:text-[var(--amber)] transition-colors duration-150"
             >
               <ChevronRight size={12} />
               {t.inbox.viewAllFiles(files.length)}
             </Link>
           )}
-        </>
+        </div>
       )}
 
       {/* Drop zone — always visible */}
       <div
-        className={`rounded-xl border-2 border-dashed transition-all duration-200 cursor-pointer ${
+        className={`rounded-xl border border-dashed transition-all duration-150 ease-out cursor-pointer ${
           dragOver
-            ? 'border-[var(--amber)] bg-[var(--amber-subtle)]'
+            ? 'border-[var(--amber)] bg-[var(--amber-subtle)] shadow-[inset_0_0_0_1px_var(--amber)]'
             : hasFiles
-              ? 'border-border/60 hover:border-[var(--amber)]/40'
-              : 'border-border hover:border-[var(--amber)]/40'
-        } ${hasFiles ? 'px-4 py-4' : 'px-4 py-8'}`}
+              ? 'border-border/40 bg-muted/[0.03] hover:border-[var(--amber)]/30 hover:bg-muted/[0.08]'
+              : 'border-border/60 bg-muted/[0.03] hover:border-[var(--amber)]/30 hover:bg-muted/[0.08]'
+        } ${hasFiles ? 'px-4 py-3.5' : 'px-4 py-8'}`}
         role="button"
         tabIndex={0}
         aria-label={t.inbox.uploadButton}
@@ -288,7 +288,7 @@ export function InboxSection({ isOrganizing: externalOrganizing = false }: Inbox
           </div>
         ) : (
           <div className="flex flex-col items-center gap-2 text-center">
-            <FolderInput size={28} className={`${dragOver ? 'text-[var(--amber)]' : 'text-muted-foreground/20'}`} />
+            <FolderInput size={28} className={`${dragOver ? 'text-[var(--amber)]' : 'text-muted-foreground/15'}`} />
             <p className="text-sm text-muted-foreground/70">
               {t.inbox.emptyTitle}
             </p>
@@ -299,7 +299,7 @@ export function InboxSection({ isOrganizing: externalOrganizing = false }: Inbox
             <button
               type="button"
               onClick={(e) => { e.stopPropagation(); fileInputRef.current?.click(); }}
-              className="mt-1 inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg transition-colors bg-muted text-muted-foreground hover:text-foreground hover:bg-muted/80"
+              className="mt-1 inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg transition-all duration-150 ease-out bg-muted text-muted-foreground hover:text-foreground hover:bg-muted/80 shadow-sm shadow-black/[0.03]"
             >
               <Upload size={12} />
               {t.inbox.uploadButton}
@@ -310,7 +310,7 @@ export function InboxSection({ isOrganizing: externalOrganizing = false }: Inbox
 
       {/* Recently processed — inline history */}
       {history.length > 0 && (
-        <div className="mt-4">
+        <div className="mt-5">
           <div className="flex items-center gap-2 mb-2">
             <Clock size={11} className="text-muted-foreground/40" />
             <span className="text-2xs font-medium text-muted-foreground/60 uppercase tracking-wider">
@@ -365,10 +365,10 @@ function InboxFileRow({ file, onDelete }: { file: InboxFile; onDelete: (name: st
         onClick={handleNavigate}
         onKeyDown={(e) => { if (e.key === 'Enter') handleNavigate(); }}
         onContextMenu={handleContextMenu}
-        className="flex items-center gap-3 px-3 py-2 rounded-lg transition-all duration-100 hover:translate-x-0.5 hover:bg-muted group cursor-pointer"
+        className="flex items-center gap-3 px-3.5 py-2.5 rounded-lg transition-all duration-150 ease-out hover:translate-x-0.5 hover:bg-muted/50 hover:shadow-sm hover:shadow-black/[0.03] group cursor-pointer"
       >
         <span
-          className={`w-1.5 h-1.5 rounded-full shrink-0 ${
+          className={`w-[5px] h-[5px] rounded-full shrink-0 ring-2 ring-background ${
             file.isAging ? 'bg-[var(--amber)]/60' : 'bg-[var(--amber)]'
           }`}
         />
@@ -384,7 +384,7 @@ function InboxFileRow({ file, onDelete }: { file: InboxFile; onDelete: (name: st
         >
           {file.name}
         </span>
-        <span className="text-2xs text-muted-foreground/50 tabular-nums shrink-0 group-hover:hidden">
+        <span className="text-2xs text-muted-foreground/40 tabular-nums shrink-0 group-hover:hidden">
           {age}
         </span>
         {file.isAging && (
@@ -399,7 +399,7 @@ function InboxFileRow({ file, onDelete }: { file: InboxFile; onDelete: (name: st
         <button
           type="button"
           onClick={handleDelete}
-          className="hidden group-hover:flex items-center justify-center w-5 h-5 rounded shrink-0 text-muted-foreground/50 hover:text-destructive hover:bg-destructive/10 transition-colors"
+          className="hidden group-hover:flex items-center justify-center w-5 h-5 rounded shrink-0 text-muted-foreground/50 hover:text-destructive hover:bg-destructive/10 transition-all duration-150 ease-out"
           title={t.inbox.removeFile}
         >
           <X size={12} />
@@ -483,11 +483,11 @@ function HistoryRow({ entry }: { entry: OrganizeHistoryEntry }) {
   });
 
   return (
-    <div className="rounded-lg border border-border/30 overflow-hidden">
+    <div className="rounded-lg border border-border/15 overflow-hidden">
       <button
         type="button"
         onClick={() => setExpanded(v => !v)}
-        className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-muted/20 transition-colors"
+        className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-muted/15 transition-all duration-150 ease-out"
       >
         {isUndone ? (
           <AlertCircle size={12} className="text-muted-foreground/40 shrink-0" />
@@ -516,7 +516,7 @@ function HistoryRow({ entry }: { entry: OrganizeHistoryEntry }) {
       </button>
 
       {expanded && entry.files.length > 0 && (
-        <div className="border-t border-border/20 px-3 py-1.5 space-y-0.5">
+        <div className="border-t border-border/10 px-3 py-1.5 space-y-0.5">
           {entry.files.map((f, idx) => {
             const parts = f.path.split('/');
             const fileName = parts.pop() ?? f.path;

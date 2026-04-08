@@ -8,6 +8,37 @@ import { MCP_AGENTS, SKILL_AGENT_REGISTRY, detectAgentPresence } from './mcp-age
 import { mergeTomlEntry } from './toml.js';
 
 /**
+ * Walk a dot-separated path inside an object, creating intermediate {} as needed.
+ * Returns the leaf object so the caller can set keys on it.
+ * e.g. ensureNestedPath({}, 'mcp.clients') → creates obj.mcp.clients = {} and returns it.
+ */
+function ensureNestedPath(obj, dotPath) {
+  const parts = dotPath.split('.').filter(Boolean);
+  let current = obj;
+  for (const part of parts) {
+    if (!current[part] || typeof current[part] !== 'object') {
+      current[part] = {};
+    }
+    current = current[part];
+  }
+  return current;
+}
+
+/**
+ * Read-only walk of a dot-separated path. Returns null if any segment is missing.
+ */
+function readNestedPath(obj, dotPath) {
+  const parts = dotPath.split('.').filter(Boolean);
+  let current = obj;
+  for (const part of parts) {
+    if (!current || typeof current !== 'object') return null;
+    current = current[part];
+  }
+  if (!current || typeof current !== 'object') return null;
+  return current;
+}
+
+/**
  * Recursively copy a directory using pure Node.js (cross-platform).
  * Uses cpSync on Node >=16.7, falls back to manual walk otherwise.
  */
@@ -272,7 +303,14 @@ export async function mcpInstall() {
               installed = content.includes(`[${agent.key}.mindos]`);
             } else {
               const config = parseJsonc(content);
-              if (config[agent.key]?.mindos) installed = true;
+              // For agents with globalNestedKey (e.g. CoPaw: mcp.clients),
+              // check the nested path for mindos entry
+              if (agent.globalNestedKey) {
+                const nested = readNestedPath(config, agent.globalNestedKey);
+                if (nested?.mindos) installed = true;
+              } else {
+                if (config[agent.key]?.mindos) installed = true;
+              }
             }
             if (installed) break;
           } catch {}
@@ -410,9 +448,15 @@ export async function mcpInstall() {
           continue;
         }
       }
-      if (!config[agent.key]) config[agent.key] = {};
-      existed = !!config[agent.key].mindos;
-      config[agent.key].mindos = entry;
+
+      // For global scope with nested key (e.g. CoPaw: mcp.clients),
+      // write to the nested path instead of the flat key
+      const useNestedKey = isGlobal && agent.globalNestedKey;
+      const container = useNestedKey
+        ? ensureNestedPath(config, agent.globalNestedKey)
+        : (() => { if (!config[agent.key]) config[agent.key] = {}; return config[agent.key]; })();
+      existed = !!container.mindos;
+      container.mindos = entry;
       writeFileSync(absPath, JSON.stringify(config, null, 2) + '\n', 'utf-8');
     }
 

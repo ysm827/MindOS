@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { createPortal } from 'react-dom';
-import { Cpu, ChevronDown, ChevronRight, Check, Zap, Loader2, Search, RefreshCw } from 'lucide-react';
+import { Cpu, ChevronDown, ChevronRight, Check, Loader2, Search, RefreshCw } from 'lucide-react';
 import { useLocale } from '@/lib/stores/locale-store';
 import {
   type ProviderId,
@@ -553,15 +553,10 @@ export default function ProviderModelCapsule({
           );
         })}
 
-        {customIds.length > 0 && (
-          <>
-            <div className="mx-2 my-1 border-t border-border/40" />
-            <div className="px-3 py-1 text-[9px] uppercase tracking-wider font-medium text-muted-foreground/40">Custom</div>
-          </>
-        )}
         {customIds.map((id) => {
           const cp = findCustomProvider(settingsData?.customProviders ?? [], String(id));
           if (!cp) return null;
+          const cpModel = modelValue && providerValue === id ? modelValue : cp.model;
           const isSelected = providerValue === id;
           const isHovered = hoveredProvider === id;
           const canExpand = canProviderExpand(id as `cp_${string}`);
@@ -579,12 +574,11 @@ export default function ProviderModelCapsule({
                   onClick={() => handleSelectProvider(id)}
                   className="flex flex-1 items-center gap-2 px-3 py-1.5 min-w-0"
                 >
-                  <Zap size={11} className="shrink-0 text-muted-foreground/50" />
                   <div className="flex-1 min-w-0 truncate">
                     <span className={`text-xs ${isSelected ? 'font-medium text-foreground' : 'text-foreground/80'}`}>
                       {cp.name}
                     </span>
-                    <span className="text-2xs text-muted-foreground ml-1.5">{cp.model}</span>
+                    <span className="text-2xs text-muted-foreground ml-1.5">{cpModel}</span>
                   </div>
                   {isSelected && <Check size={11} className="shrink-0 text-[var(--amber)]" />}
                 </button>
@@ -638,7 +632,7 @@ export default function ProviderModelCapsule({
         aria-expanded={open}
         aria-haspopup="listbox"
       >
-        {isCustomActive ? <Zap size={11} className="shrink-0" /> : <Cpu size={11} className="shrink-0" />}
+        <Cpu size={11} className="shrink-0" />
         <span className="truncate max-w-[160px]">
           {displayName}
           <span className="text-muted-foreground"> · </span>
