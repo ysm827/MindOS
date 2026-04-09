@@ -614,7 +614,6 @@ function CustomProviderForm({
             }`}
           >
             {testState === 'testing' ? <Loader2 size={12} className="animate-spin" />
-              : testState === 'ok' ? <Check size={13} />
               : <Zap size={13} />}
             {testState === 'testing'
               ? t.settings.ai.testKeyTesting

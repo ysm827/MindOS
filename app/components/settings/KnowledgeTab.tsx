@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useSyncExternalStore, useRef } from '
 import { Copy, Check, RefreshCw, Trash2, Sparkles, ChevronDown, ChevronRight, Loader2, Cpu, Zap, Database as DatabaseIcon, HardDrive, RotateCcw, FlaskConical } from 'lucide-react';
 import { toast } from '@/lib/toast';
 import type { KnowledgeTabProps } from './types';
-import { Field, Input, EnvBadge, SectionLabel, Toggle, SettingCard, SettingRow } from './Primitives';
+import { Field, Input, EnvBadge, SectionLabel, Toggle, SettingCard, SettingRow, ApiKeyInput } from './Primitives';
 import { ConfirmDialog } from '@/components/agents/AgentsPrimitives';
 import { apiFetch } from '@/lib/api';
 import { copyToClipboard } from '@/lib/clipboard';
@@ -103,9 +103,6 @@ export function KnowledgeTab({ data, setData, t }: KnowledgeTabProps) {
     () => 'http://localhost',
   );
 
-  const [showPassword, setShowPassword] = useState(false);
-  const isPasswordMasked = data.webPassword === '***set***';
-
   const [resetting, setResetting] = useState(false);
   // revealed holds the plaintext token after regenerate, until user navigates away
   const [revealedToken, setRevealedToken] = useState<string | null>(null);
@@ -198,22 +195,11 @@ export function KnowledgeTab({ data, setData, t }: KnowledgeTabProps) {
         title={k.securityTitle ?? 'Security'}
       >
         <Field label={k.webPassword} hint={k.webPasswordHint}>
-          <div className="flex gap-2">
-            <Input
-              type={showPassword ? 'text' : 'password'}
-              value={isPasswordMasked ? '••••••••' : (data.webPassword ?? '')}
-              onChange={e => setData(d => d ? { ...d, webPassword: e.target.value } : d)}
-              onFocus={() => { if (isPasswordMasked) setData(d => d ? { ...d, webPassword: '' } : d); }}
-              placeholder={k.passwordPlaceholder ?? 'Leave empty to disable'}
-            />
-            <button
-              type="button"
-              onClick={() => setShowPassword(v => !v)}
-              className="px-3 py-2 text-sm rounded-lg border border-border text-muted-foreground hover:text-foreground hover:bg-muted transition-colors shrink-0"
-            >
-              {showPassword ? (k.passwordHide ?? 'Hide') : (k.passwordShow ?? 'Show')}
-            </button>
-          </div>
+          <ApiKeyInput
+            value={data.webPassword ?? ''}
+            onChange={v => setData(d => d ? { ...d, webPassword: v } : d)}
+            placeholder={k.passwordPlaceholder ?? 'Leave empty to disable'}
+          />
         </Field>
 
         <Field

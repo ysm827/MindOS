@@ -51,7 +51,6 @@ export default function ProviderModal({
       setModel('');
       setBaseUrl('');
     }
-    setShowApiKey(false);
     setTestState('idle');
     setTestError('');
   }, [initialProvider, isOpen]);
@@ -240,7 +239,6 @@ export default function ProviderModal({
             }`}
           >
             {testState === 'testing' ? <Loader2 size={12} className="animate-spin" />
-              : testState === 'ok' ? <Check size={13} />
               : null}
             {testState === 'testing'
               ? (t.settings?.customProviders?.modal?.validating ?? 'Testing...')
