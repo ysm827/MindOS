@@ -4,7 +4,7 @@
 import type { IMAdapter, IMMessage, IMPlatform, IMSendResult } from './types';
 import { isValidRecipientId, PLATFORM_LIMITS } from './types';
 import { getPlatformConfig, getIMConfigMtime, getConfiguredPlatforms } from './config';
-import { preprocessMessage, maskForLog } from './format';
+import { preprocessMessage } from './format';
 import { retryDelay, sleep } from '@/lib/agent/reconnect';
 
 const MAX_RETRIES = 3;
@@ -27,16 +27,13 @@ async function getAdapter(platform: IMPlatform): Promise<IMAdapter> {
 
   if (adapterCache.has(platform)) return adapterCache.get(platform)!;
 
-  const config = getPlatformConfig(platform);
-  if (!config) {
-    throw new Error(`Platform "${platform}" not configured. Add credentials to ~/.mindos/im.json`);
-  }
-
   let adapter: IMAdapter;
   switch (platform) {
     case 'telegram': {
+      const tgConfig = getPlatformConfig('telegram');
+      if (!tgConfig) throw new Error('Platform "telegram" not configured. Add credentials to ~/.mindos/im.json');
       const { TelegramAdapter } = await import('./adapters/telegram');
-      adapter = new TelegramAdapter(config);
+      adapter = new TelegramAdapter(tgConfig);
       break;
     }
     // Phase 2+: feishu, discord, slack, wecom, dingtalk

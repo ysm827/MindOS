@@ -7,7 +7,7 @@ import type { AgentTool, AgentToolResult } from '@mariozechner/pi-agent-core';
 import { getConfiguredPlatforms } from './config';
 import { sendIMMessage, listConfiguredIM } from './executor';
 import { maskForLog } from './format';
-import { PLATFORM_LIMITS } from './types';
+import type { IMPlatform } from './types';
 
 // ─── Schemas ──────────────────────────────────────────────────────────────────
 
@@ -69,7 +69,7 @@ export function getIMTools(): AgentTool[] {
 
         const result = await sendIMMessage(
           {
-            platform: p.platform as never,
+            platform: p.platform as IMPlatform,
             recipientId: p.recipient_id,
             text: p.message,
             format: (p.format as 'text' | 'markdown' | undefined) ?? 'text',
