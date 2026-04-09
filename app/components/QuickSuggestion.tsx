@@ -50,7 +50,7 @@ export default function QuickSuggestion({ recent }: QuickSuggestionProps) {
         <div className="flex-1 min-w-0 flex items-center gap-2 flex-wrap">
           <span className="text-xs text-muted-foreground">{sug.staleFiles(staleCount)}</span>
           <Link
-            href="/changes"
+            href="/changelog"
             className="text-xs font-medium text-[var(--amber)] hover:opacity-80 transition-opacity"
           >
             {sug.reviewStale}

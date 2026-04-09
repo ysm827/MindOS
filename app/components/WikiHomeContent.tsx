@@ -369,7 +369,7 @@ function RecentlyEditedSection({ recent, formatTime }: { recent: RecentFile[]; f
         count={recent.length}
         action={
           <Link
-            href="/changes"
+            href="/changelog"
             className="flex items-center gap-1.5 text-xs font-medium text-[var(--amber)] transition-colors hover:opacity-80"
           >
             <History size={12} />

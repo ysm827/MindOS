@@ -49,7 +49,7 @@ export default function ChangesBanner() {
 
   const shouldShow = useMemo(() => {
     if (unreadCount <= 0) return false;
-    if (pathname?.startsWith('/changes')) return false;
+    if (pathname?.startsWith('/changes') || pathname?.startsWith('/changelog')) return false;
     if (dismissedAtCount !== null && unreadCount <= dismissedAtCount) return false;
     if (autoDismissed) return false;
     return true;
@@ -116,7 +116,7 @@ export default function ChangesBanner() {
             </p>
             <div className="mt-1 flex items-center gap-1.5">
               <Link
-                href="/changes"
+                href="/changelog"
                 className="inline-flex items-center rounded-md px-2.5 py-1 text-xs font-medium bg-[var(--amber)] text-white focus-visible:ring-2 focus-visible:ring-ring hover:opacity-90"
               >
                 {t.changes.reviewNow}
