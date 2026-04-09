@@ -50,6 +50,10 @@ export function useAskPanel(): AskPanelState {
         if (w >= RIGHT_ASK_MIN_WIDTH && w <= RIGHT_ASK_MAX_WIDTH) {
           setAskPanelWidth(w);
           prevWidthRef.current = w;
+        } else if (w > RIGHT_ASK_MAX_WIDTH) {
+          // Stored value exceeds new max (e.g., after config change) — clamp
+          setAskPanelWidth(RIGHT_ASK_DEFAULT_WIDTH);
+          prevWidthRef.current = RIGHT_ASK_DEFAULT_WIDTH;
         }
       }
       const mode = localStorage.getItem('ask-mode');

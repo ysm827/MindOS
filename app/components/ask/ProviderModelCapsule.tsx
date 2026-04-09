@@ -139,14 +139,20 @@ export default function ProviderModelCapsule({
     [settingsData],
   );
 
-  // Auto-clear stale override
+  // Auto-clear stale override — only when settings load/change, not on callback identity changes
+  const onProviderChangeRef = useRef(onProviderChange);
+  onProviderChangeRef.current = onProviderChange;
+  const onModelChangeRef = useRef(onModelChange);
+  onModelChangeRef.current = onModelChange;
   useEffect(() => {
     if (!settingsData || !providerValue) return;
     if (!configuredProviders.includes(providerValue)) {
-      onProviderChange(null); onModelChange(null);
+      onProviderChangeRef.current(null);
+      onModelChangeRef.current(null);
       persistProviderModel(null, null);
     }
-  }, [settingsData, providerValue, configuredProviders, onProviderChange, onModelChange]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [settingsData, providerValue, configuredProviders]);
 
   // Resolve active display
   const activeProvider = providerValue ?? defaultProvider;

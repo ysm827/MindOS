@@ -155,11 +155,12 @@ export default function SidebarLayout({ fileTree, children }: SidebarLayoutProps
     : undefined;
 
   // Auto-exit Ask panel maximize when navigating to a different page
+  // or when left panel opens (content needs to be visible)
   useEffect(() => {
     if (ap.askMaximized) ap.toggleAskMaximized();
-  // Only react to pathname changes, not askMaximized changes
+  // Only react to pathname / left-panel changes, not askMaximized changes
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pathname]);
+  }, [pathname, lp.panelOpen]);
 
   const agentsContentActive = pathname?.startsWith('/agents');
   const railActivePanel = lp.activePanel ?? (agentsContentActive ? 'agents' : null);
