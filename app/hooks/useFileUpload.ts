@@ -94,10 +94,17 @@ async function extractPdfToAttachment(file: File): Promise<LocalAttachment> {
   }
 }
 
-export function useFileUpload() {
+export interface FileUploadLabels {
+  unsupportedType?: string;
+}
+
+export function useFileUpload(labels?: FileUploadLabels) {
   const [localAttachments, setLocalAttachments] = useState<LocalAttachment[]>([]);
   const [uploadError, setUploadError] = useState('');
   const uploadInputRef = useRef<HTMLInputElement>(null);
+
+  const labelsRef = useRef(labels);
+  labelsRef.current = labels;
 
   const pickFiles = useCallback(async (files: FileList | null) => {
     if (!files || files.length === 0) return;
@@ -116,7 +123,8 @@ export function useFileUpload() {
     }
 
     if (rejected.length > 0) {
-      setUploadError(`Unsupported file type: ${rejected.join(', ')}`);
+      const label = labelsRef.current?.unsupportedType ?? 'Unsupported file type';
+      setUploadError(`${label}: ${rejected.join(', ')}`);
     } else {
       setUploadError('');
     }

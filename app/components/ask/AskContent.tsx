@@ -118,7 +118,8 @@ export default function AskContent({ visible, currentFile, initialMessage, initi
   const session = useAskSession(currentFile);
   const sessionRef = useRef(session);
   sessionRef.current = session;
-  const upload = useFileUpload();
+  const uploadLabels = useMemo(() => ({ unsupportedType: t.fileImport?.unsupported }), [t]);
+  const upload = useFileUpload(uploadLabels);
   const uploadRef = useRef(upload);
   uploadRef.current = upload;
   const imageUpload = useImageUpload();
@@ -138,30 +139,21 @@ export default function AskContent({ visible, currentFile, initialMessage, initi
     setSelectedSkill(null);
     setSelectedAcpAgent(null);
     setAttachedFiles(currentFile ? [currentFile] : []);
-    upload.clearAttachments();
-  }, [currentFile, upload]);
+    uploadRef.current.clearAttachments();
+  }, [currentFile]);
 
 
   const handleRestoreInput = useCallback((userMessage: Message) => {
     setInput(userMessage.content);
-    // Restore images if they exist
     if (userMessage.images && userMessage.images.length > 0) {
-      // Reconstruct the images state from the message images
-      imageUpload.clearImages();
-      // Note: we can't directly set images without going through the upload flow
-      // So we just clear them for now - in practice, images are usually small content
-      // and the user can re-add them if needed
+      imageUploadRef.current.clearImages();
     }
     if (userMessage.attachedFiles) setAttachedFiles(userMessage.attachedFiles);
-    // Restore skill selection if it was set
     if (userMessage.skillName) {
-      // The skill is already in the slash command system, just mark as selected
-      // This will be handled through the UI state
-      slash.resetSlash(); // Clear any active slash query
+      slashRef.current.resetSlash();
     }
-    // Focus back to input
     setTimeout(() => inputRef.current?.focus(), 50);
-  }, [imageUpload, slash]);
+  }, []);
 
   const chatRefs = useRef({ inputValueRef, mentionRef, slashRef, imageUploadRef, sessionRef, uploadRef, selectedSkillRef, selectedAcpAgentRef, attachedFilesRef });
   const chat = useAskChat({
@@ -217,7 +209,6 @@ export default function AskContent({ visible, currentFile, initialMessage, initi
 
     if (justOpened) {
       setTimeout(() => inputRef.current?.focus(), 50);
-      // Home variant: also load sessions so user can switch
       void session.initSessions();
       setInput(initialMessage || '');
       chat.firstMessageFired.current = false;
@@ -226,9 +217,9 @@ export default function AskContent({ visible, currentFile, initialMessage, initi
       imageUpload.clearImages();
       mention.resetMention();
       slash.resetSlash();
-    setSelectedSkill(null);
-    setSelectedAcpAgent(initialAcpAgent ?? null);
-    setShowHistory(false);
+      setSelectedSkill(null);
+      setSelectedAcpAgent(initialAcpAgent ?? null);
+      setShowHistory(false);
     } else if (fileChanged) {
       // Update attached file context to match new file (don't reset session/messages)
       setAttachedFiles(currentFile ? [currentFile] : []);
@@ -246,6 +237,8 @@ export default function AskContent({ visible, currentFile, initialMessage, initi
   }, [visible, currentFile]);
 
   // Persist session on message changes (skip if last msg is empty assistant placeholder during loading)
+  const clearPersistTimerRef = useRef(session.clearPersistTimer);
+  clearPersistTimerRef.current = session.clearPersistTimer;
   useEffect(() => {
     if (!visible || !session.activeSessionId) return;
     const msgs = session.messages;
@@ -254,7 +247,7 @@ export default function AskContent({ visible, currentFile, initialMessage, initi
       if (last.role === 'assistant' && !last.content.trim() && (!last.parts || last.parts.length === 0)) return;
     }
     session.persistSession(msgs, session.activeSessionId);
-    return () => session.clearPersistTimer();
+    return () => clearPersistTimerRef.current();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible, session.messages, session.activeSessionId, chat.isLoading]);
 
@@ -441,7 +434,7 @@ export default function AskContent({ visible, currentFile, initialMessage, initi
 
   const handleDragLeave = useCallback(() => setIsDragOver(false), []);
 
-  const handleDrop = useCallback(async (e: React.DragEvent) => {
+  const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
     setIsDragOver(false);
@@ -454,20 +447,23 @@ export default function AskContent({ visible, currentFile, initialMessage, initi
       }
       return;
     }
-    // Try image upload first, then fall back to general file upload
     const files = e.dataTransfer.files;
     if (files.length > 0) {
       const hasImages = Array.from(files).some(f => f.type.startsWith('image/'));
-      if (hasImages) {
-        await imageUploadRef.current.handleDrop(e);
-      }
-      // Upload non-image files as attachments
       const nonImageFiles = Array.from(files).filter(f => !f.type.startsWith('image/'));
-      if (nonImageFiles.length > 0) {
-        const dt = new DataTransfer();
-        nonImageFiles.forEach(f => dt.items.add(f));
-        await uploadRef.current.pickFiles(dt.files);
-      }
+      // Fire-and-forget with error handling to prevent unhandled rejections
+      void (async () => {
+        try {
+          if (hasImages) await imageUploadRef.current.handleDrop(e);
+          if (nonImageFiles.length > 0) {
+            const dt = new DataTransfer();
+            nonImageFiles.forEach(f => dt.items.add(f));
+            await uploadRef.current.pickFiles(dt.files);
+          }
+        } catch (err) {
+          console.warn('[AskContent] Drop file processing failed:', err);
+        }
+      })();
     }
   }, []);
 
@@ -636,6 +632,13 @@ export default function AskContent({ visible, currentFile, initialMessage, initi
                     path={selectedSkill.name}
                     variant="skill"
                     onRemove={() => { setSelectedSkill(null); inputRef.current?.focus(); }}
+                  />
+                )}
+                {selectedAcpAgent && (
+                  <FileChip
+                    path={typeof selectedAcpAgent === 'object' && 'name' in selectedAcpAgent ? (selectedAcpAgent as { name: string }).name : 'Remote Agent'}
+                    variant="skill"
+                    onRemove={() => { setSelectedAcpAgent(null); inputRef.current?.focus(); }}
                   />
                 )}
               </div>

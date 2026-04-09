@@ -34,6 +34,7 @@ async function compressImage(file: File): Promise<{ data: string; mimeType: Imag
   // Compress via canvas
   return new Promise((resolve, reject) => {
     const img = new Image();
+    const objectUrl = URL.createObjectURL(file);
     img.onload = () => {
       let { width, height } = img;
       if (width > MAX_DIMENSION || height > MAX_DIMENSION) {
@@ -45,15 +46,15 @@ async function compressImage(file: File): Promise<{ data: string; mimeType: Imag
       canvas.width = width;
       canvas.height = height;
       const ctx = canvas.getContext('2d');
-      if (!ctx) { reject(new Error('Canvas not supported')); return; }
+      if (!ctx) { URL.revokeObjectURL(objectUrl); reject(new Error('Canvas not supported')); return; }
       ctx.drawImage(img, 0, 0, width, height);
       const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
       const base64 = dataUrl.split(',')[1];
+      URL.revokeObjectURL(objectUrl);
       resolve({ data: base64, mimeType: 'image/jpeg' });
-      URL.revokeObjectURL(img.src);
     };
-    img.onerror = () => { reject(new Error('Failed to load image')); URL.revokeObjectURL(img.src); };
-    img.src = URL.createObjectURL(file);
+    img.onerror = () => { URL.revokeObjectURL(objectUrl); reject(new Error('Failed to load image')); };
+    img.src = objectUrl;
   });
 }
 
