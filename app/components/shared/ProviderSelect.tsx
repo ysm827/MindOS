@@ -13,6 +13,8 @@ interface ProviderSelectProps {
   compact?: boolean;
   configuredProviders?: Set<ProviderId>;
   customProviders?: CustomProvider[];
+  addPanelOpen?: boolean;
+  onAddPanelToggle?: (open: boolean) => void;
   onAddCustom?: () => void;
   onAddFromPreset?: (id: ProviderId) => void;
   onEditCustom?: (id: string) => void;
@@ -21,10 +23,14 @@ interface ProviderSelectProps {
 
 export default function ProviderSelect({
   value, onChange, showSkip = false, compact = false, configuredProviders,
-  customProviders, onAddCustom, onAddFromPreset, onEditCustom, onDeleteCustom,
+  customProviders, addPanelOpen: addPanelOpenProp, onAddPanelToggle,
+  onAddCustom, onAddFromPreset, onEditCustom, onDeleteCustom,
 }: ProviderSelectProps) {
   const { locale } = useLocale();
-  const [addPanelOpen, setAddPanelOpen] = useState(false);
+  // Use controlled state if provided, otherwise internal
+  const [internalOpen, setInternalOpen] = useState(false);
+  const addPanelOpen = addPanelOpenProp ?? internalOpen;
+  const setAddPanelOpen = (v: boolean) => { onAddPanelToggle ? onAddPanelToggle(v) : setInternalOpen(v); };
   const [showMoreInPanel, setShowMoreInPanel] = useState(false);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const groups = groupedProviders();
@@ -58,7 +64,7 @@ export default function ProviderSelect({
   const renderCompactTab = (id: ProviderId, opts?: { inPanel?: boolean }) => {
     const preset = PROVIDER_PRESETS[id];
     const displayName = locale === 'zh' ? preset.nameZh : preset.name;
-    const isSelected = value === id;
+    const isSelected = value === id && !addPanelOpen;
     const isConfigured = configuredProviders?.has(id);
 
     return (
@@ -169,7 +175,7 @@ export default function ProviderSelect({
 
           {/* Custom providers in the configured list */}
           {customProviders?.map(cp => {
-            const isSelected = value === cp.id;
+            const isSelected = value === cp.id && !addPanelOpen;
             return (
               <button
                 key={cp.id}

@@ -524,8 +524,7 @@ export default function AskContent({ visible, currentFile, initialMessage, initi
       )}
 
       {/* Messages — home variant hides empty state (suggestions rendered externally) */}
-      {/* Flex grow to push composer to bottom when MessageList hidden */}
-      <div className={`flex-1 min-h-0 ${!isHome ? 'flex' : ''}`}>
+      <div className="flex-1 min-h-0 flex flex-col">
         {!isHome && (
           <MessageList
             messages={session.messages}
@@ -576,7 +575,7 @@ export default function AskContent({ visible, currentFile, initialMessage, initi
       )}
 
       {/* Composer card — unified input area */}
-      <div className="shrink-0 px-3 pb-2.5 pt-1">
+      <div className={cn('shrink-0', isHome ? 'px-2 pb-2 pt-0.5' : 'px-3 pb-2.5 pt-1')}>
         <div
           className={cn(
             'rounded-xl bg-muted/40 transition-all focus-within:bg-muted/60',
@@ -624,7 +623,7 @@ export default function AskContent({ visible, currentFile, initialMessage, initi
           <form
             ref={formRef}
             onSubmit={handleSubmit}
-            className="flex items-end gap-1.5 px-3 py-2"
+            className={cn('flex items-end gap-1.5', isHome ? 'px-2 py-1.5' : 'px-3 py-2')}
           >
             {/* + attach button with mini menu */}
             <div className="relative shrink-0">
@@ -693,7 +692,7 @@ export default function AskContent({ visible, currentFile, initialMessage, initi
               onPaste={handlePaste}
               placeholder={t.ask.placeholder}
               rows={1}
-              className="min-w-0 flex-1 resize-none overflow-y-hidden bg-transparent py-2 text-sm leading-relaxed text-foreground placeholder:text-muted-foreground/50 outline-none focus-visible:ring-0"
+              className={cn('min-w-0 flex-1 resize-none overflow-y-hidden bg-transparent py-2 leading-relaxed text-foreground placeholder:text-muted-foreground/50 outline-none focus-visible:ring-0', isHome ? 'text-xs' : 'text-sm')}
             />
 
             {isLoading ? (

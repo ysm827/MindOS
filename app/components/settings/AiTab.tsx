@@ -23,6 +23,7 @@ export function AiTab({ data, updateAi, updateAgent, updateCustomProviders, t }:
   const [testResult, setTestResult] = useState<Record<string, TestResult>>({});
   const [customFormOpen, setCustomFormOpen] = useState(false);
   const [customEditingId, setCustomEditingId] = useState<string | null>(null);
+  const [addPanelOpen, setAddPanelOpen] = useState(false);
   // Pre-fill template when user clicks a built-in provider in the Add panel
   const [customFormTemplate, setCustomFormTemplate] = useState<CustomProvider | undefined>(undefined);
   const okTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
@@ -175,9 +176,11 @@ export function AiTab({ data, updateAi, updateAgent, updateCustomProviders, t }:
             }
           }}
           compact
+          addPanelOpen={addPanelOpen}
+          onAddPanelToggle={open => { setAddPanelOpen(open); if (open) { setCustomFormOpen(false); setCustomEditingId(null); } }}
           configuredProviders={configuredProviders}
           customProviders={customProviders}
-          onAddCustom={() => { setCustomEditingId(null); setCustomFormTemplate(undefined); setCustomFormOpen(true); }}
+          onAddCustom={() => { setAddPanelOpen(false); setCustomEditingId(null); setCustomFormTemplate(undefined); setCustomFormOpen(true); }}
           onAddFromPreset={id => {
             const p = PROVIDER_PRESETS[id];
             const baseName = locale === 'zh' ? p.nameZh : p.name;
@@ -216,8 +219,8 @@ export function AiTab({ data, updateAi, updateAgent, updateCustomProviders, t }:
           />
         )}
 
-        {/* Provider configuration fields */}
-        {preset && !customFormOpen && (
+        {/* Provider configuration fields — hidden when Add panel or custom form is open */}
+        {preset && !customFormOpen && !addPanelOpen && (
           <div className="space-y-3 pt-3 border-t border-border">
             {/* 1. API Key — most essential, enter first */}
             <Field
@@ -290,14 +293,14 @@ export function AiTab({ data, updateAi, updateAgent, updateCustomProviders, t }:
           </div>
         )}
 
-        {/* Inline warnings */}
-        {missingApiKey && (
+        {/* Inline warnings — hidden when Add panel is open */}
+        {!addPanelOpen && !customFormOpen && missingApiKey && (
           <div className="flex items-start gap-2 text-xs text-destructive/80 bg-destructive/8 border border-destructive/20 rounded-lg px-3 py-2.5">
             <AlertCircle size={13} className="shrink-0 mt-0.5" />
             <span>{t.settings.ai.noApiKey}</span>
           </div>
         )}
-        {Object.values(env).some(Boolean) && (
+        {!addPanelOpen && !customFormOpen && Object.values(env).some(Boolean) && (
           <div className="flex items-start gap-2 text-xs text-[var(--amber)] bg-[var(--amber-subtle)] border border-[var(--amber)]/20 rounded-lg px-3 py-2.5">
             <AlertCircle size={13} className="shrink-0 mt-0.5" />
             <span>{t.settings.ai.envHint}</span>
