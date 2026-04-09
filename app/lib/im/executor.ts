@@ -36,7 +36,21 @@ async function getAdapter(platform: IMPlatform): Promise<IMAdapter> {
       adapter = new TelegramAdapter(tgConfig);
       break;
     }
-    // Phase 2+: feishu, discord, slack, wecom, dingtalk
+    case 'feishu': {
+      const fsConfig = getPlatformConfig('feishu');
+      if (!fsConfig) throw new Error('Platform "feishu" not configured. Add credentials to ~/.mindos/im.json');
+      const { FeishuAdapter } = await import('./adapters/feishu');
+      adapter = new FeishuAdapter(fsConfig);
+      break;
+    }
+    case 'discord': {
+      const dcConfig = getPlatformConfig('discord');
+      if (!dcConfig) throw new Error('Platform "discord" not configured. Add credentials to ~/.mindos/im.json');
+      const { DiscordAdapter } = await import('./adapters/discord');
+      adapter = new DiscordAdapter(dcConfig);
+      break;
+    }
+    // Phase 3: slack, wecom, dingtalk
     default:
       throw new Error(`Platform "${platform}" adapter not yet implemented`);
   }
@@ -105,6 +119,14 @@ export async function listConfiguredIM(): Promise<Array<{
       if (platform === 'telegram' && 'getBotInfo' in adapter) {
         const info = (adapter as { getBotInfo(): { username: string } | null }).getBotInfo();
         if (info) botName = `@${info.username}`;
+      }
+      if (platform === 'discord' && 'getBotInfo' in adapter) {
+        const info = (adapter as { getBotInfo(): { username: string } | null }).getBotInfo();
+        if (info) botName = info.username;
+      }
+      if (platform === 'feishu' && 'getAppName' in adapter) {
+        const name = (adapter as { getAppName(): string | null }).getAppName();
+        if (name) botName = name;
       }
     } catch {
       connected = false;
