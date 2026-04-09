@@ -1,7 +1,7 @@
 'use client';
 
 import { useRef, useEffect, memo, useState, useCallback } from 'react';
-import { Sparkles, Loader2, AlertCircle, Wrench, WifiOff, Zap, Copy, Check, ArrowDown, FolderInput, Search, PenLine, Lightbulb } from 'lucide-react';
+import { Sparkles, Loader2, AlertCircle, Wrench, WifiOff, Zap, Copy, Check, ArrowDown, FolderInput, Search, PenLine, Lightbulb, FileText, Paperclip } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import type { Message, ImagePart } from '@/lib/types';
@@ -35,7 +35,7 @@ function CopyMessageButton({ text, label }: { text: string; label?: string }) {
   );
 }
 
-function UserMessageContent({ content, skillName, images }: { content: string; skillName?: string; images?: ImagePart[] }) {
+function UserMessageContent({ content, skillName, images, attachedFiles, uploadedFileNames }: { content: string; skillName?: string; images?: ImagePart[]; attachedFiles?: string[]; uploadedFileNames?: string[] }) {
   const resolved = skillName ?? content.match(SKILL_PREFIX_RE)?.[1];
   const prefixMatch = content.match(SKILL_PREFIX_RE);
   const rest = prefixMatch ? content.slice(prefixMatch[0].length) : content;
@@ -68,6 +68,31 @@ function UserMessageContent({ content, skillName, images }: { content: string; s
         </span>
       )}
       {resolved ? rest : content}
+      {/* File context chips */}
+      {((attachedFiles && attachedFiles.length > 0) || (uploadedFileNames && uploadedFileNames.length > 0)) && (
+        <div className="mt-2 pt-1.5 border-t border-white/15 flex flex-wrap gap-1">
+          {attachedFiles?.map(fp => (
+            <span
+              key={fp}
+              className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] bg-white/10 text-white/80"
+              title={fp}
+            >
+              <FileText size={9} className="shrink-0 opacity-70" />
+              <span className="truncate max-w-[120px]">{fp.split('/').pop()}</span>
+            </span>
+          ))}
+          {uploadedFileNames?.map(name => (
+            <span
+              key={name}
+              className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] bg-white/10 text-white/80"
+              title={name}
+            >
+              <Paperclip size={9} className="shrink-0 opacity-70" />
+              <span className="truncate max-w-[120px]">{name}</span>
+            </span>
+          ))}
+        </div>
+      )}
     </>
   );
 }
@@ -253,7 +278,7 @@ export default memo(function MessageList({
             <div
               className="max-w-[85%] px-3.5 py-2.5 rounded-2xl rounded-br-lg text-sm leading-relaxed whitespace-pre-wrap bg-[var(--amber)] text-[var(--amber-foreground)] shadow-sm shadow-[var(--amber)]/10"
             >
-              <UserMessageContent content={m.content} skillName={m.skillName} images={m.images} />
+              <UserMessageContent content={m.content} skillName={m.skillName} images={m.images} attachedFiles={m.attachedFiles} uploadedFileNames={m.uploadedFileNames} />
             </div>
           ) : m.content.startsWith('__error__') ? (
             <div className="max-w-[85%] px-3.5 py-3 rounded-2xl rounded-bl-md border border-error/30 bg-error/10 text-sm shadow-sm">

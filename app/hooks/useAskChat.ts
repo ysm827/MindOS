@@ -70,12 +70,19 @@ export function useAskChat({
     const skill = refs.selectedSkillRef.current;
     const acpAgent = refs.selectedAcpAgentRef.current;
     const pendingImages = img.images.length > 0 ? [...img.images] : undefined;
+    const pendingAttachedFiles = refs.attachedFilesRef.current.length > 0
+      ? [...refs.attachedFilesRef.current] : undefined;
+    const pendingUploadedNames = upl.localAttachments
+      .filter(f => f.status !== 'loading')
+      .map(f => f.name);
     const userMsg: Message = {
       role: 'user',
       content: text,
       timestamp: Date.now(),
       ...(skill && { skillName: skill.name }),
       ...(pendingImages && { images: pendingImages }),
+      ...(pendingAttachedFiles && { attachedFiles: pendingAttachedFiles }),
+      ...(pendingUploadedNames.length > 0 && { uploadedFileNames: pendingUploadedNames }),
     };
     img.clearImages();
     const requestMessages = [...sess.messages, userMsg];

@@ -246,10 +246,9 @@ export default function ProviderSelect({
                 </>
               )}
 
-              {/* Custom providers list + add button */}
+              {/* Add custom provider button */}
               {hasCustomSection && (
-                <div className="space-y-2 pt-1 border-t border-border/50">
-                  {hasCustom && customProviders!.map(renderCustomItem)}
+                <div className="pt-1 border-t border-border/50">
                   <button
                     type="button"
                     onClick={() => { onAddCustom!(); setAddPanelOpen(false); }}
