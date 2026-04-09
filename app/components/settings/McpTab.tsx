@@ -10,6 +10,7 @@ import type { SelectItem } from '@/components/CustomSelect';
 import type { McpTabProps, McpStatus, AgentInfo, ConnectionMode } from './types';
 import AgentInstall from './McpAgentInstall';
 import SkillsSection from './McpSkillsSection';
+import McpExternalTools from './McpExternalTools';
 
 /* ── Main Connections Tab ────────────────────────────────────────── */
 
@@ -130,7 +131,23 @@ export function McpTab({ t }: McpTabProps) {
         t={t}
       />
 
-      {/* 3. Skills */}
+      {/* 3. External MCP Tools */}
+      <div className="rounded-xl border border-border bg-card overflow-hidden">
+        <div className="flex items-center gap-2.5 px-4 pt-4 pb-3">
+          <div className="w-7 h-7 rounded-lg bg-muted flex items-center justify-center shrink-0">
+            <Plug size={14} className="text-muted-foreground" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <h3 className="text-sm font-semibold text-foreground">{m?.externalToolsTitle ?? 'External MCP Tools'}</h3>
+            <p className="text-2xs text-muted-foreground">{m?.externalToolsDesc ?? 'Configure tool access mode for external MCP servers.'}</p>
+          </div>
+        </div>
+        <div className="px-4 pb-4">
+          <McpExternalTools />
+        </div>
+      </div>
+
+      {/* 4. Skills */}
       <div className="rounded-xl border border-border bg-card overflow-hidden">
         <div className="flex items-center gap-2.5 px-4 pt-4 pb-3">
           <div className="w-7 h-7 rounded-lg bg-muted flex items-center justify-center shrink-0">
