@@ -479,12 +479,12 @@
 
       <!-- Connection method tabs -->
       <div class="conn-tabs">
-        <button class="conn-tab active" id="tab-ssh" data-i18n="sshTab"></button>
-        <button class="conn-tab" id="tab-http" data-i18n="httpTab"></button>
+        <button class="conn-tab" id="tab-ssh" data-i18n="sshTab"></button>
+        <button class="conn-tab active" id="tab-http" data-i18n="httpTab"></button>
       </div>
 
       <!-- SSH Panel -->
-      <div id="ssh-panel">
+      <div id="ssh-panel" class="hidden">
         <div class="field">
           <label data-i18n="sshHost"></label>
           <input id="ssh-host-input" type="text" placeholder="user@hostname" autocomplete="off" spellcheck="false" list="ssh-host-list" data-i18n-placeholder="sshSelectHost" />
@@ -499,8 +499,8 @@
         <p class="ssh-note" id="ssh-note"></p>
       </div>
 
-      <!-- HTTP Panel (hidden when SSH tab active) -->
-      <div id="http-panel" class="hidden">
+      <!-- HTTP Panel (shown by default) -->
+      <div id="http-panel">
         <!-- Recent servers -->
         <div id="recent-section" class="recent hidden">
           <div class="recent-label" data-i18n="recentServers"></div>
