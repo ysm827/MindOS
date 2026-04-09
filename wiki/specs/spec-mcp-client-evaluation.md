@@ -1,5 +1,7 @@
 # Spec: MCP Client 方案评估与优化
 
+> 状态：**已完成** | 日期：2026-04-10 | Commit: `8f9236e3`
+
 ## 目标
 
 评估当前 MindOS 使用的 MCP Client 方案（`mcporter`），与社区流行的替代方案（`pi-mcp-adapter`、直接使用 `@modelcontextprotocol/sdk`）进行对比，确定最优路径。核心诉求：**token 高效、运维简单、适合 Web-based 知识库 Agent（非终端编码 Agent）**。
