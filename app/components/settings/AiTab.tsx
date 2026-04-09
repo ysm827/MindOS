@@ -102,6 +102,8 @@ export function AiTab({ data, updateAi, updateAgent, updateCustomProviders, t }:
       .filter(([id, cfg]) => (cfg && cfg.apiKey) || PROVIDER_PRESETS[id as ProviderId]?.apiKeyFallback)
       .map(([id]) => id as ProviderId),
   );
+  // Always include the current provider so it appears in the configured tab list
+  if (isProviderId(provider)) configuredProviders.add(provider);
 
   const resetProvider = useCallback((name: ProviderId) => {
     setTestResult(prev => ({ ...prev, [name]: { state: 'idle' } }));

@@ -136,7 +136,8 @@ export default function AskContent({ visible, currentFile, initialMessage, initi
     setSelectedSkill(null);
     setSelectedAcpAgent(null);
     setAttachedFiles(currentFile ? [currentFile] : []);
-  }, [currentFile]);
+    upload.clearAttachments();
+  }, [currentFile, upload]);
 
   const chatRefs = useRef({ inputValueRef, mentionRef, slashRef, imageUploadRef, sessionRef, uploadRef, selectedSkillRef, selectedAcpAgentRef, attachedFilesRef });
   const chat = useAskChat({

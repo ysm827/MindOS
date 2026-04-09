@@ -69,6 +69,10 @@ export interface Message {
   images?: ImagePart[];
   /** Skill name used for this user message (rendered as a capsule in the UI) */
   skillName?: string;
+  /** KB file paths (@mentions) sent with this message */
+  attachedFiles?: string[];
+  /** Names of uploaded files (PDFs etc.) sent with this message */
+  uploadedFileNames?: string[];
 }
 
 export interface LocalAttachment {
