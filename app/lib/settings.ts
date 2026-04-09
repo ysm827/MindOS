@@ -168,7 +168,12 @@ export function readSettings(): ServerSettings {
   try {
     const raw = fs.readFileSync(SETTINGS_PATH, 'utf-8');
     const parsed = JSON.parse(raw) as Record<string, unknown>;
-    return {
+
+    // Detect old format and check if migration is needed
+    const ai = parsed.ai as Record<string, unknown> | undefined;
+    const needsMigration = ai && !Array.isArray(ai.providers);
+
+    const settings: ServerSettings = {
       ai: migrateAi(parsed),
       agent: parseAgent(parsed.agent),
       acpAgents: parseAcpAgentsField(parsed.acpAgents),
@@ -193,6 +198,13 @@ export function readSettings(): ServerSettings {
       connectionMode: inferConnectionMode(parsed),
       customAgents: Array.isArray(parsed.customAgents) ? parsed.customAgents as import('./custom-agents').CustomAgentDef[] : undefined,
     };
+
+    // Auto-persist migrated config so migration only runs once
+    if (needsMigration) {
+      try { writeSettings(settings); } catch { /* best-effort */ }
+    }
+
+    return settings;
   } catch {
     // Config file missing or corrupt → force setup wizard
     return {
