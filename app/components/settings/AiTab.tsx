@@ -23,6 +23,8 @@ export function AiTab({ data, updateAi, updateAgent, updateCustomProviders, t }:
   const [testResult, setTestResult] = useState<Record<string, TestResult>>({});
   const [customFormOpen, setCustomFormOpen] = useState(false);
   const [customEditingId, setCustomEditingId] = useState<string | null>(null);
+  // Pre-fill template when user clicks a built-in provider in the Add panel
+  const [customFormTemplate, setCustomFormTemplate] = useState<CustomProvider | undefined>(undefined);
   const okTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
   const prevProviderRef = useRef(provider);
 
@@ -154,16 +156,26 @@ export function AiTab({ data, updateAi, updateAgent, updateCustomProviders, t }:
           compact
           configuredProviders={configuredProviders}
           customProviders={customProviders}
-          onAddCustom={() => { setCustomEditingId(null); setCustomFormOpen(true); }}
-          onEditCustom={id => { setCustomEditingId(id); setCustomFormOpen(true); }}
+          onAddCustom={() => { setCustomEditingId(null); setCustomFormTemplate(undefined); setCustomFormOpen(true); }}
+          onAddFromPreset={id => {
+            const p = PROVIDER_PRESETS[id];
+            setCustomEditingId(null);
+            setCustomFormTemplate({
+              id: '', name: locale === 'zh' ? p.nameZh : p.name,
+              baseProviderId: id, apiKey: '', model: p.defaultModel,
+              baseUrl: p.fixedBaseUrl || getDefaultBaseUrl(id) || '',
+            });
+            setCustomFormOpen(true);
+          }}
+          onEditCustom={id => { setCustomEditingId(id); setCustomFormTemplate(undefined); setCustomFormOpen(true); }}
           onDeleteCustom={handleDeleteCustom}
         />
 
         {/* Inline custom provider form */}
         {customFormOpen && (
           <CustomProviderForm
-            key={customEditingId ?? 'new'}
-            initial={editingCustomProvider ?? undefined}
+            key={customEditingId ?? customFormTemplate?.baseProviderId ?? 'new'}
+            initial={editingCustomProvider ?? customFormTemplate ?? undefined}
             onSave={handleSaveCustom}
             onCancel={() => { setCustomFormOpen(false); setCustomEditingId(null); }}
             t={t}

@@ -70,8 +70,9 @@ export function useAskChat({
     const skill = refs.selectedSkillRef.current;
     const acpAgent = refs.selectedAcpAgentRef.current;
     const pendingImages = img.images.length > 0 ? [...img.images] : undefined;
-    const pendingAttachedFiles = refs.attachedFilesRef.current.length > 0
-      ? [...refs.attachedFilesRef.current] : undefined;
+    // Only store explicitly user-chosen files (filter out auto-included currentFile)
+    const explicitAttached = refs.attachedFilesRef.current.filter(f => f !== currentFile);
+    const pendingAttachedFiles = explicitAttached.length > 0 ? explicitAttached : undefined;
     const pendingUploadedNames = upl.localAttachments
       .filter(f => f.status !== 'loading')
       .map(f => f.name);

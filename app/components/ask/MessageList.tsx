@@ -39,6 +39,13 @@ function UserMessageContent({ content, skillName, images, attachedFiles, uploade
   const resolved = skillName ?? content.match(SKILL_PREFIX_RE)?.[1];
   const prefixMatch = content.match(SKILL_PREFIX_RE);
   const rest = prefixMatch ? content.slice(prefixMatch[0].length) : content;
+
+  // Deduplicate: uploaded files already shown shouldn't repeat as attached
+  const uploadedSet = new Set(uploadedFileNames ?? []);
+  const dedupedAttached = attachedFiles?.filter(fp => !uploadedSet.has(fp.split('/').pop() ?? fp));
+  const hasContext = (dedupedAttached && dedupedAttached.length > 0)
+    || (uploadedFileNames && uploadedFileNames.length > 0);
+
   return (
     <>
       {/* Images */}
@@ -69,12 +76,13 @@ function UserMessageContent({ content, skillName, images, attachedFiles, uploade
       )}
       {resolved ? rest : content}
       {/* File context chips */}
-      {((attachedFiles && attachedFiles.length > 0) || (uploadedFileNames && uploadedFileNames.length > 0)) && (
-        <div className="mt-2 pt-1.5 border-t border-white/15 flex flex-wrap gap-1">
-          {attachedFiles?.map(fp => (
+      {hasContext && (
+        <div className="mt-2 pt-1.5 border-t border-white/15 flex flex-wrap gap-1 whitespace-normal" role="list" aria-label="Attached files">
+          {dedupedAttached?.map(fp => (
             <span
               key={fp}
-              className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] bg-white/10 text-white/80"
+              role="listitem"
+              className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] bg-white/10 text-white/80 min-w-0"
               title={fp}
             >
               <FileText size={9} className="shrink-0 opacity-70" />
@@ -84,7 +92,8 @@ function UserMessageContent({ content, skillName, images, attachedFiles, uploade
           {uploadedFileNames?.map(name => (
             <span
               key={name}
-              className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] bg-white/10 text-white/80"
+              role="listitem"
+              className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] bg-white/10 text-white/80 min-w-0"
               title={name}
             >
               <Paperclip size={9} className="shrink-0 opacity-70" />

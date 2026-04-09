@@ -14,13 +14,14 @@ interface ProviderSelectProps {
   configuredProviders?: Set<ProviderId>;
   customProviders?: CustomProvider[];
   onAddCustom?: () => void;
+  onAddFromPreset?: (id: ProviderId) => void;
   onEditCustom?: (id: string) => void;
   onDeleteCustom?: (id: string) => void;
 }
 
 export default function ProviderSelect({
   value, onChange, showSkip = false, compact = false, configuredProviders,
-  customProviders, onAddCustom, onEditCustom, onDeleteCustom,
+  customProviders, onAddCustom, onAddFromPreset, onEditCustom, onDeleteCustom,
 }: ProviderSelectProps) {
   const { locale } = useLocale();
   const [addPanelOpen, setAddPanelOpen] = useState(false);
@@ -45,7 +46,11 @@ export default function ProviderSelect({
   const unconfiguredMore = groups.more.filter(id => !configuredProviders?.has(id));
 
   const handleAddSelect = (id: ProviderId) => {
-    onChange(id);
+    if (onAddFromPreset) {
+      onAddFromPreset(id);
+    } else {
+      onChange(id);
+    }
     setAddPanelOpen(false);
     setShowMoreInPanel(false);
   };
