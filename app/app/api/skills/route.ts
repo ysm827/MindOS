@@ -6,6 +6,7 @@ import os from 'os';
 import { readSettings, writeSettings } from '@/lib/settings';
 import { parseSkillMd, readSkillContentByName } from '@/lib/pi-integration/skills';
 import { loadSkills, type Skill } from '@mariozechner/pi-coding-agent';
+import { handleRouteErrorSimple } from '@/lib/errors';
 
 const PROJECT_ROOT = process.env.MINDOS_PROJECT_ROOT || path.resolve(process.cwd(), '..');
 
@@ -57,7 +58,7 @@ export async function GET() {
 
     return NextResponse.json({ skills });
   } catch (err) {
-    return NextResponse.json({ error: String(err) }, { status: 500 });
+    return handleRouteErrorSimple(err);
   }
 }
 
@@ -180,6 +181,6 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: `Unknown action: ${action}` }, { status: 400 });
     }
   } catch (err) {
-    return NextResponse.json({ error: String(err) }, { status: 500 });
+    return handleRouteErrorSimple(err);
   }
 }

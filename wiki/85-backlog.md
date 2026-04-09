@@ -14,6 +14,7 @@
 
 > 按优先级排序（高 → 低）。已完成项折叠在末尾。
 
+- [x] **第三方 Skill 加载委托给 pi-coding-agent 框架** — 消除自建 `scanSkillDirs`/`list_skills` 轮子，复用框架 `loadSkills()` 发现第三方 skill 并生成 `<available_skills>` XML。核心 skill 保持直接注入。修复 AGENTS.md 重复注入（~2500 tokens/请求）。修复 `additionalSkillPaths` 遗漏 `~/.mindos/skills`。[spec](./specs/spec-delegate-skill-to-framework.md)
 - [x] **CLI 架构重构：cli.js 模块化 + utils.js 拆分** — `bin/cli.js` 从 1466 行巨石文件瘦身为 134 行纯路由。19 个内联命令全部提取为 `bin/commands/*.js` 模块。`utils.js` 拆分为 `shell.js`/`path-expand.js`/`jsonc.js`。`expandHome` 3 处重复定义合并为单一来源。命令自动注册 + 别名支持
 - [x] **CLI Help 系统改进** — `--help` 安全拦截（18 个命令不再因 `--help` 执行实际操作）。支持 `mindos help <cmd>` 和 `mindos --help <cmd>` 两种形式。全局帮助新增 USAGE / Learn More 段。17 个命令的 `meta` 补充 flags + examples，auto-help 自动生成。`isTTY` 改为函数以支持 `NO_COLOR` 延迟求值
 - [x] **测试文件适配 pi-agent-core**：`__tests__/core/context.test.ts` 和 `__tests__/core/tools.test.ts` 已适配 `AgentMessage` + 新 `compactMessages` 签名。511 tests passing.

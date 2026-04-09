@@ -5,6 +5,7 @@ import path from 'path';
 import os from 'os';
 import { copyDir, dirExists } from '@/lib/file-ops';
 import { getMindRoot } from '@/lib/fs';
+import { handleRouteErrorSimple } from '@/lib/errors';
 
 /**
  * Find the source path of a skill from the standard search directories.
@@ -104,7 +105,6 @@ export async function POST(req: NextRequest) {
       targetPath: targetSkillPath,
     });
   } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    return NextResponse.json({ error: message }, { status: 500 });
+    return handleRouteErrorSimple(err);
   }
 }

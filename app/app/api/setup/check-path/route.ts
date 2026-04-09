@@ -2,6 +2,7 @@ export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server';
 import { existsSync, readdirSync } from 'node:fs';
 import { expandSetupPathHome } from '../path-utils';
+import { handleRouteErrorSimple } from '@/lib/errors';
 
 export async function POST(req: NextRequest) {
   try {
@@ -25,6 +26,6 @@ export async function POST(req: NextRequest) {
     }
     return NextResponse.json({ exists, empty, count });
   } catch (err) {
-    return NextResponse.json({ error: String(err) }, { status: 500 });
+    return handleRouteErrorSimple(err);
   }
 }

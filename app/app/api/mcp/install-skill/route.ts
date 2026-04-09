@@ -4,6 +4,7 @@ import { execSync } from 'child_process';
 import path from 'path';
 import fs from 'fs';
 import { SKILL_AGENT_REGISTRY } from '@/lib/mcp-agents';
+import { handleRouteErrorSimple } from '@/lib/errors';
 
 /* ── Constants ────────────────────────────────────────────────── */
 
@@ -112,9 +113,6 @@ export async function POST(req: NextRequest) {
       stderr: lastStderr,
     });
   } catch (e) {
-    return NextResponse.json(
-      { error: e instanceof Error ? e.message : String(e) },
-      { status: 500 },
-    );
+    return handleRouteErrorSimple(e);
   }
 }

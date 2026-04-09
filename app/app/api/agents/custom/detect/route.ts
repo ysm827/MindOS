@@ -2,6 +2,7 @@ export const dynamic = 'force-dynamic';
 
 import { NextRequest, NextResponse } from 'next/server';
 import { detectBaseDir, detectCustomAgentProfile } from '@/lib/custom-agents';
+import { handleRouteErrorSimple } from '@/lib/errors';
 
 /** POST — Auto-detect config files in a baseDir. */
 export async function POST(req: NextRequest) {
@@ -41,6 +42,6 @@ export async function POST(req: NextRequest) {
     
     return NextResponse.json(result);
   } catch (err) {
-    return NextResponse.json({ error: String(err) }, { status: 500 });
+    return handleRouteErrorSimple(err);
   }
 }

@@ -11,6 +11,7 @@ import {
   validateCustomAgentInput,
   type CustomAgentDef,
 } from '@/lib/custom-agents';
+import { handleRouteErrorSimple } from '@/lib/errors';
 
 /** POST — Create a new custom agent. */
 export async function POST(req: NextRequest) {
@@ -57,7 +58,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ agent }, { status: 201 });
   } catch (err) {
-    return NextResponse.json({ error: String(err) }, { status: 500 });
+    return handleRouteErrorSimple(err);
   }
 }
 
@@ -128,7 +129,7 @@ export async function PUT(req: NextRequest) {
 
     return NextResponse.json({ agent: updated });
   } catch (err) {
-    return NextResponse.json({ error: String(err) }, { status: 500 });
+    return handleRouteErrorSimple(err);
   }
 }
 
@@ -153,6 +154,6 @@ export async function DELETE(req: NextRequest) {
 
     return NextResponse.json({ removed: key });
   } catch (err) {
-    return NextResponse.json({ error: String(err) }, { status: 500 });
+    return handleRouteErrorSimple(err);
   }
 }

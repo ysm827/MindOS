@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
 import { MCP_AGENTS, expandHome } from '@/lib/mcp-agents';
+import { handleRouteErrorSimple } from '@/lib/errors';
 
 /** Parse JSONC — strips comments before JSON.parse. Returns {} for empty/whitespace-only input. */
 function parseJsonc(text: string): Record<string, unknown> {
@@ -125,6 +126,6 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ results });
   } catch (err) {
-    return NextResponse.json({ error: String(err) }, { status: 500 });
+    return handleRouteErrorSimple(err);
   }
 }

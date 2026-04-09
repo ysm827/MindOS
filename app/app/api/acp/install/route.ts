@@ -46,3 +46,4 @@ export async function POST(request: Request) {
   } catch (err) {
     return handleRouteErrorSimple(err);
   }
+}

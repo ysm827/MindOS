@@ -4,6 +4,7 @@ import { getModels as piGetModels } from '@mariozechner/pi-ai';
 import { effectiveAiConfig, readSettings } from '@/lib/settings';
 import { type ProviderId, isProviderId, PROVIDER_PRESETS, toPiProvider, getDefaultBaseUrl } from '@/lib/agent/providers';
 import { isProviderEntryId, findProvider } from '@/lib/custom-endpoints';
+import { handleRouteErrorSimple } from '@/lib/errors';
 
 const TIMEOUT = 10_000;
 
@@ -80,7 +81,7 @@ export async function POST(req: NextRequest) {
       clearTimeout(timer);
     }
   } catch (err) {
-    return NextResponse.json({ ok: false, error: String(err) }, { status: 500 });
+    return handleRouteErrorSimple(err);
   }
 }
 

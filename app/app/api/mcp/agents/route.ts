@@ -19,6 +19,7 @@ import { getAllAgents, loadCustomAgents, scanCustomAgentSkills, toAgentDef } fro
 import { readSettings } from '@/lib/settings';
 import { loadSkills } from '@mariozechner/pi-coding-agent';
 import { getMindRoot } from '@/lib/fs';
+import { handleRouteErrorSimple } from '@/lib/errors';
 
 async function enrichMindOsAgent(agent: Record<string, unknown>) {
   agent.present = true;
@@ -261,6 +262,6 @@ export async function GET() {
 
     return NextResponse.json({ agents });
   } catch (err) {
-    return NextResponse.json({ error: String(err) }, { status: 500 });
+    return handleRouteErrorSimple(err);
   }
 }

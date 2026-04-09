@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { readSettings } from '@/lib/settings';
 import { maskToken } from '@/lib/format';
 import { networkInterfaces } from 'os';
+import { handleRouteErrorSimple } from '@/lib/errors';
 
 /** Parse hostname from Host header, handling IPv6 brackets */
 function parseHostname(host: string): string {
@@ -69,6 +70,6 @@ export async function GET(req: NextRequest) {
       connectionMode: settings.connectionMode ?? { cli: true, mcp: false },
     });
   } catch (err) {
-    return NextResponse.json({ error: String(err) }, { status: 500 });
+    return handleRouteErrorSimple(err);
   }
 }

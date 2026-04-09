@@ -5,6 +5,7 @@ import { effectiveAiConfig, readBaseUrlCompat, writeSettings, readSettings } fro
 import { getModelConfig } from '@/lib/agent/model';
 import { type ProviderId, isProviderId } from '@/lib/agent/providers';
 import { isProviderEntryId, findProvider } from '@/lib/custom-endpoints';
+import { handleRouteErrorSimple } from '@/lib/errors';
 
 const TIMEOUT = 15_000;
 
@@ -179,6 +180,6 @@ export async function POST(req: NextRequest) {
       clearTimeout(timer);
     }
   } catch (err) {
-    return NextResponse.json({ ok: false, code: 'unknown', error: String(err) }, { status: 500 });
+    return handleRouteErrorSimple(err);
   }
 }

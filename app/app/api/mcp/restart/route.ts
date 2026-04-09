@@ -4,6 +4,7 @@ import { execSync, spawn } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { homedir } from 'node:os';
+import { handleRouteErrorSimple } from '@/lib/errors';
 
 const CONFIG_PATH = resolve(homedir(), '.mindos', 'config.json');
 
@@ -97,8 +98,7 @@ export async function POST() {
 
     return NextResponse.json({ ok: true, pid: child.pid, port: mcpPort });
   } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    return NextResponse.json({ error: message }, { status: 500 });
+    return handleRouteErrorSimple(err);
   }
 }
 

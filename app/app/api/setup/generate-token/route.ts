@@ -1,6 +1,7 @@
 export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { randomBytes, createHash } from 'crypto';
+import { handleRouteErrorSimple } from '@/lib/errors';
 
 export async function POST(req: Request) {
   try {
@@ -15,9 +16,6 @@ export async function POST(req: Request) {
     const token = raw.match(/.{4}/g)!.join('-');
     return NextResponse.json({ token });
   } catch (e) {
-    return NextResponse.json(
-      { error: e instanceof Error ? e.message : String(e) },
-      { status: 500 },
-    );
+    return handleRouteErrorSimple(e);
   }
 }

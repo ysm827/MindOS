@@ -2,6 +2,7 @@ export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { spawn } from 'node:child_process';
 import { resolve } from 'node:path';
+import { handleRouteErrorSimple } from '@/lib/errors';
 
 /**
  * Strip ALL MINDOS_ and MIND_ prefixed env vars so the update child
@@ -49,7 +50,6 @@ export async function POST() {
     // kills this process. Exiting early would break the response.
     return NextResponse.json({ ok: true });
   } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    return NextResponse.json({ error: message }, { status: 500 });
+    return handleRouteErrorSimple(err);
   }
 }

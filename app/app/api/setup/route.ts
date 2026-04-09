@@ -7,6 +7,7 @@ import { applyTemplate } from '@/lib/template';
 import { expandSetupPathHome } from './path-utils';
 import { type ProviderId, isProviderId, PROVIDER_PRESETS } from '@/lib/agent/providers';
 import { type Provider, generateProviderId, findProvider } from '@/lib/custom-endpoints';
+import { handleRouteErrorSimple } from '@/lib/errors';
 
 function maskApiKey(key: string): string {
   if (!key || key.length < 6) return key ? '***' : '';
@@ -43,10 +44,7 @@ export async function GET() {
       guideState: s.guideState ?? null,
     });
   } catch (e) {
-    return NextResponse.json(
-      { error: e instanceof Error ? e.message : String(e) },
-      { status: 500 },
-    );
+    return handleRouteErrorSimple(e);
   }
 }
 
@@ -212,10 +210,7 @@ export async function POST(req: NextRequest) {
     });
   } catch (e) {
     console.error('[/api/setup] Error:', e);
-    return NextResponse.json(
-      { error: e instanceof Error ? e.message : String(e) },
-      { status: 500 },
-    );
+    return handleRouteErrorSimple(e);
   }
 }
 
@@ -244,9 +239,6 @@ export async function PATCH(req: NextRequest) {
     writeSettings({ ...current, guideState: updated });
     return NextResponse.json({ ok: true, guideState: updated });
   } catch (e) {
-    return NextResponse.json(
-      { error: e instanceof Error ? e.message : String(e) },
-      { status: 500 },
-    );
+    return handleRouteErrorSimple(e);
   }
 }

@@ -5,6 +5,7 @@ import path from 'path';
 import fs from 'fs';
 import os from 'os';
 import { resolveScript } from '@/lib/core/resolve-script';
+import { handleRouteErrorSimple } from '@/lib/errors';
 
 export const runtime = 'nodejs';
 
@@ -87,9 +88,6 @@ export async function POST(req: NextRequest) {
     });
   } catch (err) {
     console.error('[extract-pdf] Error:', err);
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : 'Failed to extract PDF text' },
-      { status: 500 },
-    );
+    return handleRouteErrorSimple(err);
   }
 }

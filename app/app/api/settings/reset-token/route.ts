@@ -2,6 +2,7 @@ export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { readSettings, writeSettings } from '@/lib/settings';
 import { randomBytes } from 'crypto';
+import { handleRouteErrorSimple } from '@/lib/errors';
 
 function generateToken(): string {
   const hex = randomBytes(12).toString('hex'); // 24 hex chars
@@ -16,6 +17,6 @@ export async function POST() {
     writeSettings({ ...current, authToken: newToken });
     return NextResponse.json({ ok: true, token: newToken });
   } catch (err) {
-    return NextResponse.json({ error: String(err) }, { status: 500 });
+    return handleRouteErrorSimple(err);
   }
 }

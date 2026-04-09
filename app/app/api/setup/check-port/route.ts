@@ -1,6 +1,7 @@
 export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server';
 import { createConnection } from 'net';
+import { handleRouteErrorSimple } from '@/lib/errors';
 
 function isPortInUse(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -82,6 +83,6 @@ export async function POST(req: NextRequest) {
     const suggestion = await findFreePort(port + 1, skipPorts);
     return NextResponse.json({ available: false, isSelf: false, suggestion });
   } catch (err) {
-    return NextResponse.json({ error: String(err) }, { status: 500 });
+    return handleRouteErrorSimple(err);
   }
 }

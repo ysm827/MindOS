@@ -2,6 +2,7 @@ export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server';
 import { getFileContent } from '@/lib/fs';
 import path from 'path';
+import { handleRouteErrorSimple } from '@/lib/errors';
 
 function tryRead(filePath: string): string | undefined {
   try {
@@ -35,6 +36,6 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json(result);
   } catch (e) {
-    return NextResponse.json({ error: (e as Error).message }, { status: 500 });
+    return handleRouteErrorSimple(e);
   }
 }

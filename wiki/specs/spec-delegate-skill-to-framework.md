@@ -330,18 +330,27 @@ POST handler（create/update/delete/toggle/read）操作的是 `{mindRoot}/.skil
 
 ## 验收标准
 
-- [ ] `skills/mindos*/SKILL.md` 和 `app/data/skills/mindos*/SKILL.md`（共 8 个文件）含 `disable-model-invocation: true`
-- [ ] Agent mode 的 system prompt 包含 `<available_skills>` XML 块（含第三方 skill，不含 mindos/mindos-zh/mindos-max/mindos-max-zh）
-- [ ] `<available_skills>` 前导文本指示 "Use the **load_skill** tool"（不是 "read" 工具）
-- [ ] MindOS core skill（mindos/mindos-zh）仍然完整注入到 prompt 中（行为不变）
-- [ ] 删除 `list_skills` 后，LLM 仍能通过 `<available_skills>` 发现第三方 skill，并通过 `load_skill` 工具读取
-- [ ] `/skill:mindos` 手动调用仍然正常工作（框架 `_expandSkillCommand` 未受影响）
-- [ ] Settings → Skills 页面正常显示所有 skill（来源、启用状态）
-- [ ] Agent Matrix 页面正常显示 skill 列表
-- [ ] Chat mode 和 Organize mode 不受影响（不注入 skill 列表）
-- [ ] Ollama 小 context 模型下不因 `<available_skills>` 块导致溢出（Ollama compact 能正确 strip 该段）
-- [ ] `npx vitest run` 全部通过
-- [ ] TypeScript 编译无新增错误
-- [ ] `load_skill` 工具能按 name 读取 `<available_skills>` 中列出的第三方 skill
-- [ ] System prompt 不含 `# Project Context` 段落（AGENTS.md 重复注入已被抑制）
-- [ ] Skill name collision diagnostic 为 0（或仅来自预期的核心 skill 重复目录）
+- [x] `skills/mindos*/SKILL.md` 和 `app/data/skills/mindos*/SKILL.md`（共 8 个文件）含 `disable-model-invocation: true`
+- [x] Agent mode 的 system prompt 包含 `<available_skills>` XML 块（含第三方 skill，不含 mindos/mindos-zh/mindos-max/mindos-max-zh）
+- [x] `<available_skills>` 前导文本指示 "Use the **load_skill** tool"（不是 "read" 工具）
+- [x] MindOS core skill（mindos/mindos-zh）仍然完整注入到 prompt 中（行为不变）
+- [x] 删除 `list_skills` 后，LLM 仍能通过 `<available_skills>` 发现第三方 skill，并通过 `load_skill` 工具读取
+- [x] `/skill:mindos` 手动调用仍然正常工作（框架 `_expandSkillCommand` 未受影响）
+- [x] Settings → Skills 页面正常显示所有 skill（来源、启用状态）
+- [x] Agent Matrix 页面正常显示 skill 列表
+- [x] Chat mode 和 Organize mode 不受影响（不注入 skill 列表）
+- [x] Ollama 小 context 模型下不因 `<available_skills>` 块导致溢出（Ollama compact 能正确 strip 该段）
+- [x] `npx vitest run` 全部通过 — 1252 tests, 108 files
+- [x] TypeScript 编译无新增错误（仅 2 个 pre-existing ACP errors）
+- [x] `load_skill` 工具能按 name 读取 `<available_skills>` 中列出的第三方 skill
+- [x] System prompt 不含 `# Project Context` 段落（AGENTS.md 重复注入已被抑制）
+- [x] Skill name collision diagnostic 为 0（或仅来自预期的核心 skill 重复目录）
+
+## 实现记录
+
+**实现日期**：2026-04-10
+
+**实现差异**（spec vs 实际）：
+1. `generateSkillsXml()` 提取为独立模块 `lib/agent/skills-xml.ts`（而非 spec 中描述的内联在 route.ts）—— Next.js route 文件禁止导出非路由函数
+2. 发现并修复 `systemPromptOverride` 闭包缓存问题：reload() 在修改 systemPrompt 之前调用了闭包，导致 skills XML 不会被框架看到。解法：修改 systemPrompt 后再调用一次 reload()
+3. 修复 `additionalSkillPaths` 遗漏 `~/.mindos/skills`：原代码只有 3 个路径，但 `readSkillContentByName` 搜索 4 个路径。现已对齐

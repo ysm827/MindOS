@@ -20,6 +20,16 @@
 
 ## Agent / LLM API
 
+### DefaultResourceLoader.systemPromptOverride 闭包缓存陷阱 (2026-04-10)
+
+**症状**：修改 `systemPrompt` 变量后追加内容（如 `<available_skills>` XML），但 LLM 始终看不到追加的内容。
+
+**根因**：`systemPromptOverride: () => systemPrompt` 是闭包，但 `reload()` 调用时只执行一次并缓存结果到 `this.systemPrompt`。后续 `_rebuildSystemPrompt()` 调用 `getSystemPrompt()` 读取的是缓存值，不会重新执行闭包。
+
+**修复**：在修改 `systemPrompt` 后再调用一次 `resourceLoader.reload()` 刷新缓存。
+
+**规则**：凡是 `DefaultResourceLoader` 的 `*Override` 回调，都只在 `reload()` 时执行一次。如果需要动态修改 override 的返回值，必须在修改后重新调用 `reload()`。
+
 ### Non-streaming API fallback message format mismatch (2026-04-07)
 
 **症状**：用户配置非官方 LLM API 代理（例：`https://api.ikuncode.cc/v1`），启用 non-streaming 模式后报错或返回错误内容。MindOS 内部 runNonStreamingFallback() 函数无法正确调用第三方 API。

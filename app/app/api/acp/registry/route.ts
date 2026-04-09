@@ -26,3 +26,4 @@ export async function GET(req: Request) {
   } catch (err) {
     return handleRouteErrorSimple(err);
   }
+}
