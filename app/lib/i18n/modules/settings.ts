@@ -463,6 +463,16 @@ export const settingsEn = {
       coreDesktopTooOldHint: 'Please update MindOS Desktop first.',
       coreHint: 'Core updates only restart services — no app restart needed.',
       shellTitle: 'MindOS Desktop',
+      // Update Toast Notification
+      updateToast: {
+        titleSingle: (type: string, version: string) => `${type} v${version} available`,
+        titleMultiple: 'Updates available',
+        desktopLabel: 'Desktop',
+        coreLabel: 'Core',
+        viewDetails: 'View Details',
+        skipVersion: 'Skip Version',
+        skipAll: 'Skip All',
+      },
     },
     uninstall: {
       title: 'Uninstall MindOS',
@@ -953,6 +963,16 @@ export const settingsZh = {
       coreDesktopTooOldHint: '请先更新 MindOS Desktop。',
       coreHint: '核心更新只需重启服务，无需重启应用。',
       shellTitle: 'MindOS Desktop',
+      // Update Toast Notification
+      updateToast: {
+        titleSingle: (type: string, version: string) => `${type} v${version} 可用`,
+        titleMultiple: '有可用更新',
+        desktopLabel: '桌面版',
+        coreLabel: '运行时',
+        viewDetails: '查看详情',
+        skipVersion: '跳过此版本',
+        skipAll: '全部跳过',
+      },
     },
     uninstall: {
       title: '卸载 MindOS',

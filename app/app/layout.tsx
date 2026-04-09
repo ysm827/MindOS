@@ -9,6 +9,7 @@ import ErrorBoundary from '@/components/ErrorBoundary';
 import Toaster from '@/components/ui/Toaster';
 import RegisterSW from './register-sw';
 import UpdateOverlay from '@/components/UpdateOverlay';
+import UpdateToast from '@/components/UpdateToast';
 import { cookies, headers } from 'next/headers';
 import type { Locale } from '@/lib/i18n';
 import '@/lib/renderers/index'; // globally register built-in renderers once
@@ -120,9 +121,10 @@ export default async function RootLayout({
               </ShellLayout>
             </ErrorBoundary>
           </TooltipProvider>
-          <Toaster />
-          <RegisterSW />
-          <UpdateOverlay />
+        <Toaster />
+        <RegisterSW />
+        <UpdateOverlay />
+        <UpdateToast />
       </body>
     </html>
   );
