@@ -36,13 +36,7 @@ import { MindOSError, apiError, ErrorCodes } from '@/lib/errors';
 import { metrics } from '@/lib/metrics';
 import { assertNotProtected } from '@/lib/core';
 import { scanExtensionPaths } from '@/lib/pi-integration/extensions';
-
-// Ensure pi-mcp-adapter reads MindOS's MCP config (~/.mindos/mcp.json) instead of its
-// default (~/.pi/agent/mcp.json). getConfigPathFromArgv() in the adapter checks process.argv
-// at module-load time, so this must run before DefaultResourceLoader.reload().
-if (!process.argv.includes('--mcp-config')) {
-  process.argv.push('--mcp-config', path.join(os.homedir(), '.mindos', 'mcp.json'));
-}
+import '@/lib/pi-integration/mcp-config'; // Injects --mcp-config argv before extension load
 import { createSession, promptStream, closeSession } from '@/lib/acp/session';
 import type { AcpSessionUpdate } from '@/lib/acp/types';
 import type { Message as FrontendMessage } from '@/lib/types';

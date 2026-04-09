@@ -251,26 +251,14 @@ export default function IMPanel({ active, maximized, onMaximize }: IMPanelProps)
           <div className="flex items-center justify-center h-32">
             <Loader2 size={20} className="animate-spin text-muted-foreground" />
           </div>
-        ) : statuses.length === 0 ? (
-          /* ── Empty State ── */
-          <div className="flex flex-col items-center justify-center px-6 py-16 text-center">
-            <div className="w-12 h-12 rounded-xl bg-muted flex items-center justify-center mb-4">
-              <MessageSquare size={24} className="text-muted-foreground" />
-            </div>
-            <h3 className="text-sm font-medium text-foreground mb-1.5">{im.emptyTitle}</h3>
-            <p className="text-xs text-muted-foreground leading-relaxed max-w-[240px] mb-5">
-              {im.emptyDesc}
-            </p>
-            <button
-              type="button"
-              onClick={() => toggleExpand('telegram')}
-              className="h-8 px-4 text-xs rounded-md bg-[var(--amber)] text-[var(--amber-foreground)] hover:opacity-90 transition-opacity duration-150"
-            >
-              {im.getStarted}
-            </button>
-          </div>
         ) : (
-          <div className="flex flex-col gap-0.5 p-1.5">
+          <div className="flex flex-col p-1.5">
+            {/* Subtitle when nothing is configured */}
+            {configuredCount === 0 && (
+              <p className="text-xs text-muted-foreground px-3 py-2 mb-1">{im.emptyDesc}</p>
+            )}
+
+            <div className="flex flex-col gap-0.5">
             {PLATFORMS.map((platform) => {
               const status = getStatus(platform.id);
               const configured = isConfigured(platform.id);
@@ -478,6 +466,7 @@ export default function IMPanel({ active, maximized, onMaximize }: IMPanelProps)
                 </div>
               );
             })}
+            </div>
           </div>
         )}
       </div>
