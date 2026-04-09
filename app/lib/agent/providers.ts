@@ -31,6 +31,8 @@ export interface ProviderPreset {
   name: string;
   nameZh: string;
   shortLabel: string; // 3-8 char label for capsule display (e.g., 'Claude', 'GPT', 'GLM-CN')
+  description?: string; // Helper text for settings (e.g., "China region version")
+  descriptionZh?: string; // Chinese helper text
   defaultModel: string;
   /** If ProviderId differs from pi-ai's KnownProvider (e.g. deepseek → openai) */
   piProviderOverride?: KnownProvider;
@@ -157,6 +159,8 @@ export const PROVIDER_PRESETS: Record<ProviderId, ProviderPreset> = {
     name: 'ZhipuAI (GLM China)',
     nameZh: '智谱 AI (GLM 国内版)',
     shortLabel: '智谱GLM-CN',
+    description: 'China region version',
+    descriptionZh: '中国区版本',
     defaultModel: 'glm-4-plus',
     piProviderOverride: 'zai' as KnownProvider,
     fixedBaseUrl: 'https://open.bigmodel.cn/api/coding/paas/v4',
@@ -204,6 +208,8 @@ export const PROVIDER_PRESETS: Record<ProviderId, ProviderPreset> = {
     name: 'MiniMax (China)',
     nameZh: 'MiniMax (国内版)',
     shortLabel: 'MiniMax-CN',
+    description: 'China region version',
+    descriptionZh: '中国区版本',
     defaultModel: 'MiniMax-M2.5',
     supportsBaseUrl: false,
     supportsThinking: true,
@@ -226,6 +232,8 @@ export const PROVIDER_PRESETS: Record<ProviderId, ProviderPreset> = {
     name: 'Ollama',
     nameZh: 'Ollama (本地)',
     shortLabel: 'Ollama',
+    description: 'Local server (requires setup)',
+    descriptionZh: '本地服务器 (需要本地部署)',
     defaultModel: 'llama3.2',
     piProviderOverride: 'openai' as KnownProvider,
     fixedBaseUrl: 'http://localhost:11434/v1',

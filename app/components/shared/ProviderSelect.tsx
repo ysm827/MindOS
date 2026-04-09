@@ -30,6 +30,7 @@ export default function ProviderSelect({
   const renderItem = (id: ProviderId) => {
     const preset = PROVIDER_PRESETS[id];
     const displayName = locale === 'zh' ? preset.nameZh : preset.name;
+    const description = locale === 'zh' ? preset.descriptionZh : preset.description;
     const isSelected = value === id;
     const isConfigured = configuredProviders?.has(id);
 
@@ -71,7 +72,12 @@ export default function ProviderSelect({
       >
         <div className="flex-1 min-w-0">
           <p className="text-sm font-medium" style={{ color: 'var(--foreground)' }}>{displayName}</p>
-          <p className="text-xs mt-0.5" style={{ color: 'var(--muted-foreground)' }}>
+          {description && (
+            <p className="text-xs mt-0.5" style={{ color: 'var(--muted-foreground)' }}>
+              {description}
+            </p>
+          )}
+          <p className={`text-xs ${description ? 'mt-1' : 'mt-0.5'}`} style={{ color: 'var(--muted-foreground)' }}>
             {preset.defaultModel}
           </p>
         </div>
