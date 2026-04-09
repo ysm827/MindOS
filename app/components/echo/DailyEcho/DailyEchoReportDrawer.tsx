@@ -60,11 +60,11 @@ export default function DailyEchoReportDrawer({
                 id="daily-echo-drawer-title"
                 className="font-display text-lg font-semibold text-foreground"
               >
-                {t.dailyReportTitle || '每日回响'}
+                {t.dailyReportTitle || 'Echo Report'}
               </h2>
               {report && (
                 <p className="mt-1 text-xs text-muted-foreground">
-                  {t.dailyReportGenerated || '生成于'}{' '}
+                  {t.dailyReportGenerated || 'Generated at'}{' '}
                   {new Date(report.generatedAt).toLocaleTimeString()}
                 </p>
               )}
@@ -86,7 +86,7 @@ export default function DailyEchoReportDrawer({
             <div className="text-center">
               <Loader2 size={24} className="mx-auto mb-4 animate-spin text-[var(--amber)]" />
               <p className="text-sm text-muted-foreground">
-                {t.dailyReportGenerating || '生成中...'}
+                {t.dailyReportGenerating || 'Generating…'}
               </p>
             </div>
           </div>
@@ -111,7 +111,7 @@ export default function DailyEchoReportDrawer({
               className="flex-1 rounded-lg bg-[var(--amber)] text-[var(--amber-foreground)] px-4 py-2.5 text-sm font-medium transition-colors hover:bg-[var(--amber)]/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
               type="button"
             >
-              {t.dailyReportContinueAgent || '聊聊这个'}
+              {t.dailyReportContinueAgent || 'Chat about this'}
             </button>
             <button
               onClick={onRegenerate}

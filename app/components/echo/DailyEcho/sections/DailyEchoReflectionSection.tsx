@@ -14,7 +14,7 @@ export function DailyEchoReflectionSection({
   return (
     <section className="mb-8">
       <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-4">
-        {t.reflectionTitle || '明天思考'}
+        {t.reportReflectionTitle || 'For tomorrow'}
       </h3>
 
       <ol className="space-y-3 list-none">

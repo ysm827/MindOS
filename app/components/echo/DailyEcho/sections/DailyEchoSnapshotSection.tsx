@@ -16,13 +16,13 @@ export function DailyEchoSnapshotSection({
   return (
     <section className="mb-8">
       <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-4">
-        {t.snapshotTitle || '今日动向'}
+        {t.reportSnapshotTitle || 'Activity'}
       </h3>
       <div className="grid grid-cols-3 gap-3">
         {[
-          { value: snapshot.filesEdited, label: t.snapshotFilesEdited || 'Files edited' },
-          { value: snapshot.filesCreated, label: t.snapshotFilesCreated || 'Files created' },
-          { value: snapshot.sessionCount, label: t.snapshotSessions || 'Chat sessions' },
+          { value: snapshot.filesEdited, label: t.reportSnapshotFilesEdited || 'Files edited' },
+          { value: snapshot.filesCreated, label: t.reportSnapshotFilesCreated || 'Files created' },
+          { value: snapshot.sessionCount, label: t.reportSnapshotSessions || 'Chat sessions' },
         ].map((stat) => (
           <div key={stat.label} className="rounded-lg bg-muted/50 p-3 text-center">
             <div className="text-lg font-semibold text-foreground">{stat.value}</div>
@@ -31,7 +31,7 @@ export function DailyEchoSnapshotSection({
         ))}
       </div>
       <div className="mt-3 rounded-lg bg-muted/25 px-3 py-2.5 text-sm text-muted-foreground">
-        <span className="font-medium text-foreground">{t.snapshotKbGrowth || 'KB growth'}:</span>{' '}
+        <span className="font-medium text-foreground">{t.reportSnapshotKbGrowth || 'KB growth'}:</span>{' '}
         {snapshot.kbGrowth}
       </div>
     </section>

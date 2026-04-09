@@ -57,8 +57,8 @@ export default function DailyEchoReportButton({
         <AlertCircle size={16} className="shrink-0" />
         <span>
           {isLoading
-            ? t.dailyReportGenerating || '重试中...'
-            : t.dailyReportRetry || '重试'}
+            ? t.dailyReportGenerating || 'Generating…'
+            : t.dailyReportRetry || 'Retry'}
         </span>
       </button>
     );
@@ -75,12 +75,12 @@ export default function DailyEchoReportButton({
       {isLoading ? (
         <>
           <Loader2 size={16} className="animate-spin shrink-0" />
-          <span>{t.dailyReportGenerating || '生成中...'}</span>
+          <span>{t.dailyReportGenerating || 'Generating…'}</span>
         </>
       ) : (
         <>
           <Zap size={16} />
-          <span>{t.dailyReportGenerate || '生成今日回响'}</span>
+          <span>{t.dailyReportGenerate || 'Generate report'}</span>
         </>
       )}
     </button>

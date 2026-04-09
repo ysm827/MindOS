@@ -17,22 +17,22 @@ export function DailyEchoAlignmentSection({
 
   let colorClass = 'bg-destructive/25 text-destructive';
   let barColorClass = 'bg-destructive';
-  let labelText = t.alignmentMisaligned || '偏离';
+  let labelText = t.reportAlignmentMisaligned || 'Drifted';
 
   if (score >= 70) {
     colorClass = 'bg-success/25 text-success';
     barColorClass = 'bg-success';
-    labelText = t.alignmentAligned || '对齐';
+    labelText = t.reportAlignmentAligned || 'Aligned';
   } else if (score >= 40) {
     colorClass = 'bg-[var(--amber)]/25 text-[var(--amber)]';
     barColorClass = 'bg-[var(--amber)]';
-    labelText = t.alignmentPartial || '部分对齐';
+    labelText = t.reportAlignmentPartial || 'Partial';
   }
 
   return (
     <section className="mb-8">
       <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-4">
-        {t.alignmentTitle || '对齐度分析'}
+        {t.reportAlignmentTitle || 'Alignment'}
       </h3>
 
       <div className="rounded-lg border border-border bg-card/50 p-4 space-y-4">
@@ -40,7 +40,7 @@ export function DailyEchoAlignmentSection({
         <div>
           <div className="flex items-center justify-between mb-2">
             <span className="text-sm font-medium text-foreground">
-              {t.alignmentScore || '对齐度'}
+              {t.reportAlignmentScore || 'Alignment'}
             </span>
             <span className={`inline-flex px-2.5 py-0.5 rounded text-sm font-semibold ${colorClass}`}>
               {percentage}/100
