@@ -27,10 +27,10 @@ export const LEFT_PANEL: { DEFAULT: number; MIN: number; MAX_RATIO: number; MAX_
 // ── Right Ask Panel ──
 
 export const RIGHT_ASK_PANEL: { DEFAULT: number; MIN: number; MAX_ABS: number; MIN_CONTENT: number } = {
-  DEFAULT: 420,
-  MIN: 400,
+  DEFAULT: 380,
+  MIN: 320,
   MAX_ABS: 4000, // Unlikely but safe upper bound
-  MIN_CONTENT: 360, // Minimum content width when panel is resized
+  MIN_CONTENT: 200, // Minimum content width — only auto-maximize when user drags near edge
 };
 
 // ── Right Agent Detail Panel ──

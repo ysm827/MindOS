@@ -503,6 +503,11 @@ export default function AskContent({ visible, currentFile, initialMessage, initi
     copyMessage: t.ask.copyMessage,
   }), [t, reconnectAttempt]);
 
+  const handleProviderChange = useCallback((p: ProviderId | `p_${string}` | null) => {
+    setProviderOverride(p);
+    setModelOverride(null);
+  }, []);
+
   return (
     <div className="flex min-h-0 w-full flex-col h-full">
       {/* Header — home variant shows session switcher + new/history/fullscreen buttons */}
@@ -750,10 +755,7 @@ export default function AskContent({ visible, currentFile, initialMessage, initi
             {mounted && (
               <ProviderModelCapsule
                 providerValue={providerOverride}
-                onProviderChange={(p) => {
-                  setProviderOverride(p);
-                  setModelOverride(null);
-                }}
+                onProviderChange={handleProviderChange}
                 modelValue={modelOverride}
                 onModelChange={setModelOverride}
                 disabled={isLoading}
