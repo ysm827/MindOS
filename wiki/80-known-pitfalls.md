@@ -1436,3 +1436,17 @@ rootcause: app/api/ask/route.ts:143 直接传递 llmHistoryMessages（pi-ai Mess
 - **解决：** 将 `launchedByDaemon` 提前到 `isDaemon` 计算之前：`const isDaemon = !launchedByDaemon && (Boolean(flags.daemon) || isDaemonMode())`
 - **规则：** 环境检测守卫必须在分支决策之前；daemon 管理器启动的进程不应再次尝试安装自己
 
+### 对话附件文件（@ mention）在 organize 模式下丢失 + 全模式读取失败静默吞错
+
+- **严重等级：** 🟠 High — 用户看到附件图标但 AI 说读不到文件
+- **现象：** 对话框中使用 `@` 或点选知识库文件后，UI 显示附件标签，但 AI 回复"无法读取文件内容"
+- **根因 1（organize 模式）：** `route.ts` organize 分支遗漏了 `attachedFiles` 读取循环，chat/agent 模式都有但 organize 没有
+- **根因 2（全模式）：** `getFileContent()` 的 catch 块使用 `catch {}` 静默吞掉所有错误，文件读取失败时无任何日志
+- **根因 3（Ollama 等本地模型）：** 系统提示词可能超出本地模型的实际 context window，Ollama 会静默截断输入，导致附件内容丢失
+- **解决：**
+  1. organize 模式添加 `attachedFiles` 读取循环（与 chat/agent 一致）
+  2. 所有模式的 catch 块改为 `catch (err) { console.warn(...) }` 记录失败详情
+  3. 添加 systemPrompt 尺寸日志便于诊断 context truncation
+- **文件：** `app/app/api/ask/route.ts`
+- **规则：** 不要用空 `catch {}` 吞掉可能有用的错误信息；三路分支（organize/chat/agent）修改时要对齐检查
+

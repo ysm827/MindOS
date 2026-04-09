@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect, useCallback, useMemo, useId } from 'react';
-import { ChevronDown, Check } from 'lucide-react';
+import { ChevronDown, Check, Eye, EyeOff } from 'lucide-react';
 
 export function SectionLabel({ children }: { children: React.ReactNode }) {
   return <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">{children}</p>;
@@ -205,6 +205,7 @@ export function ApiKeyInput({ value, onChange, placeholder, disabled, labels }: 
   const isMasked = value === '***set***';
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const prevValueRef = useRef(value);
 
@@ -214,6 +215,7 @@ export function ApiKeyInput({ value, onChange, placeholder, disabled, labels }: 
       prevValueRef.current = value;
       setEditing(false);
       setDraft('');
+      setShowPassword(false);
     }
   }, [value]);
 
@@ -262,7 +264,7 @@ export function ApiKeyInput({ value, onChange, placeholder, disabled, labels }: 
       <div className="flex items-center gap-2">
         <input
           ref={inputRef}
-          type="password"
+          type={showPassword ? 'text' : 'password'}
           value={draft}
           onChange={e => setDraft(e.target.value)}
           onKeyDown={e => { if (e.key === 'Enter') commitDraft(); }}
@@ -271,6 +273,15 @@ export function ApiKeyInput({ value, onChange, placeholder, disabled, labels }: 
           disabled={disabled}
           className="flex-1 px-3 py-2 text-sm bg-background border border-border rounded-lg text-foreground placeholder:text-muted-foreground outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:opacity-50"
         />
+        <button
+          type="button"
+          onClick={() => setShowPassword(!showPassword)}
+          disabled={disabled}
+          className="shrink-0 p-2 text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
+          title={showPassword ? 'Hide' : 'Show'}
+        >
+          {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+        </button>
         <button
           type="button"
           onMouseDown={e => e.preventDefault()}
@@ -285,14 +296,26 @@ export function ApiKeyInput({ value, onChange, placeholder, disabled, labels }: 
 
   // Normal (no masked key) — direct editing
   return (
-    <input
-      type="password"
-      value={value}
-      onChange={e => onChange(e.target.value)}
-      placeholder={placeholder ?? 'sk-...'}
-      disabled={disabled}
-      className="w-full px-3 py-2 text-sm bg-background border border-border rounded-lg text-foreground placeholder:text-muted-foreground outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:opacity-50"
-    />
+    <div className="flex items-center gap-2">
+      <input
+        ref={inputRef}
+        type={showPassword ? 'text' : 'password'}
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        placeholder={placeholder ?? 'sk-...'}
+        disabled={disabled}
+        className="flex-1 px-3 py-2 text-sm bg-background border border-border rounded-lg text-foreground placeholder:text-muted-foreground outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:opacity-50"
+      />
+      <button
+        type="button"
+        onClick={() => setShowPassword(!showPassword)}
+        disabled={disabled}
+        className="shrink-0 p-2 text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
+        title={showPassword ? 'Hide' : 'Show'}
+      >
+        {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+      </button>
+    </div>
   );
 }
 

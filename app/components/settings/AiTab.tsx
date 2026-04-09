@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
-import { AlertCircle, Loader2, Sparkles, Bot, Monitor, ExternalLink, RotateCcw, Check, Zap, X } from 'lucide-react';
+import { AlertCircle, Loader2, Sparkles, Bot, Monitor, ExternalLink, RotateCcw, Check, Zap, X, Eye, EyeOff } from 'lucide-react';
 import type { AiSettings, AgentSettings, ProviderConfig, SettingsData, AiTabProps } from './types';
 import { Field, Select, Input, EnvBadge, ApiKeyInput, Toggle, SettingCard, SettingRow } from './Primitives';
 import { useLocale } from '@/lib/stores/locale-store';
@@ -462,6 +462,7 @@ function CustomProviderForm({
   const [apiKey, setApiKey] = useState(initial?.apiKey === '***set***' ? '' : initial?.apiKey ?? '');
   const [model, setModel] = useState(initial?.model ?? '');
   const [baseUrl, setBaseUrl] = useState(initial?.baseUrl ?? '');
+  const [showApiKey, setShowApiKey] = useState(false);
   const [testState, setTestState] = useState<'idle' | 'testing' | 'ok' | 'error'>('idle');
   const [testError, setTestError] = useState('');
 
@@ -567,12 +568,23 @@ function CustomProviderForm({
         <Field
           label={<>{t.settings?.customProviders?.modal?.fieldApiKey ?? 'API Key'} <span className="text-muted-foreground/50 font-normal">{locale === 'zh' ? '(可选)' : '(optional)'}</span></>}
         >
-          <Input
-            type="password"
-            value={apiKey}
-            onChange={e => setApiKey(e.target.value)}
-            placeholder="sk-..."
-          />
+          <div className="flex items-center gap-2">
+            <Input
+              type={showApiKey ? 'text' : 'password'}
+              value={apiKey}
+              onChange={e => setApiKey(e.target.value)}
+              placeholder="sk-..."
+              className="flex-1"
+            />
+            <button
+              type="button"
+              onClick={() => setShowApiKey(!showApiKey)}
+              className="shrink-0 p-2 text-muted-foreground hover:text-foreground transition-colors"
+              title={showApiKey ? 'Hide' : 'Show'}
+            >
+              {showApiKey ? <EyeOff size={16} /> : <Eye size={16} />}
+            </button>
+          </div>
         </Field>
 
         {/* Model */}

@@ -722,6 +722,11 @@ export async function POST(req: NextRequest) {
     : body.mode === 'chat' ? 'chat'
     : 'agent';
 
+  // Diagnostic: log attached files so silent failures are visible
+  if (Array.isArray(attachedFiles) && attachedFiles.length > 0) {
+    console.log(`[ask] mode=${askMode} attachedFiles=${JSON.stringify(attachedFiles)} currentFile=${currentFile ?? 'none'}`);
+  }
+
   // Read agent config from settings
   const serverSettings = readSettings();
   const agentConfig = serverSettings.agent ?? {};
@@ -758,7 +763,7 @@ export async function POST(req: NextRequest) {
   let systemPrompt: string;
 
   if (askMode === 'organize') {
-    // Organize mode: minimal prompt — only KB structure + uploaded files
+    // Organize mode: minimal prompt — only KB structure + attached/uploaded files
     const promptParts: string[] = [ORGANIZE_SYSTEM_PROMPT];
 
     promptParts.push(`---\n\nmind_root=${getMindRoot()}`);
@@ -767,6 +772,34 @@ export async function POST(req: NextRequest) {
     const bootstrapIndex = readKnowledgeFile('README.md');
     if (bootstrapIndex.ok) {
       promptParts.push(`---\n\n## Knowledge Base Structure\n\n${bootstrapIndex.content}`);
+    }
+
+    // Include attached KB files (@ mentions) — same pattern as chat/agent modes
+    const contextParts: string[] = [];
+    const seen = new Set<string>();
+    if (Array.isArray(attachedFiles) && attachedFiles.length > 0) {
+      for (const filePath of attachedFiles!) {
+        if (seen.has(filePath)) continue;
+        seen.add(filePath);
+        try {
+          const content = truncate(getFileContent(filePath));
+          contextParts.push(`## Attached: ${filePath}\n\n${content}`);
+        } catch (err) {
+          console.warn(`[ask] organize: failed to read attached file "${filePath}":`, err instanceof Error ? err.message : err);
+        }
+      }
+    }
+    if (currentFile && !seen.has(currentFile)) {
+      seen.add(currentFile);
+      try {
+        const content = truncate(getFileContent(currentFile));
+        contextParts.push(`## Current file: ${currentFile}\n\n${content}`);
+      } catch (err) {
+        console.warn(`[ask] organize: failed to read currentFile "${currentFile}":`, err instanceof Error ? err.message : err);
+      }
+    }
+    if (contextParts.length > 0) {
+      promptParts.push(`---\n\nThe user is currently viewing these files:\n\n${contextParts.join('\n\n---\n\n')}`);
     }
 
     if (uploadedParts.length > 0) {
@@ -803,7 +836,9 @@ export async function POST(req: NextRequest) {
         try {
           const content = truncate(getFileContent(filePath));
           contextParts.push(`## Attached: ${filePath}\n\n${content}`);
-        } catch { /* ignore missing files */ }
+        } catch (err) {
+          console.warn(`[ask] chat: failed to read attached file "${filePath}":`, err instanceof Error ? err.message : err);
+        }
       }
     }
     if (currentFile && !seen.has(currentFile)) {
@@ -811,7 +846,9 @@ export async function POST(req: NextRequest) {
       try {
         const content = truncate(getFileContent(currentFile));
         contextParts.push(`## Current file: ${currentFile}\n\n${content}`);
-      } catch { /* ignore */ }
+      } catch (err) {
+        console.warn(`[ask] chat: failed to read currentFile "${currentFile}":`, err instanceof Error ? err.message : err);
+      }
     }
     if (contextParts.length > 0) {
       promptParts.push(`---\n\nThe user is currently viewing these files:\n\n${contextParts.join('\n\n---\n\n')}`);
@@ -938,7 +975,9 @@ export async function POST(req: NextRequest) {
         try {
           const content = truncate(getFileContent(filePath));
           contextParts.push(`## Attached: ${filePath}\n\n${content}`);
-        } catch { /* ignore missing files */ }
+        } catch (err) {
+          console.warn(`[ask] agent: failed to read attached file "${filePath}":`, err instanceof Error ? err.message : err);
+        }
       }
     }
 
@@ -947,7 +986,9 @@ export async function POST(req: NextRequest) {
       try {
         const content = truncate(getFileContent(currentFile));
         contextParts.push(`## Current file: ${currentFile}\n\n${content}`);
-      } catch { /* ignore */ }
+      } catch (err) {
+        console.warn(`[ask] agent: failed to read currentFile "${currentFile}":`, err instanceof Error ? err.message : err);
+      }
     }
 
     const now = new Date();
@@ -986,6 +1027,9 @@ export async function POST(req: NextRequest) {
 
     systemPrompt = promptParts.join('\n\n');
   }
+
+  // Log system prompt size for diagnosing context truncation issues (e.g. Ollama)
+  console.log(`[ask] mode=${askMode} systemPrompt=${systemPrompt.length} chars (~${Math.ceil(systemPrompt.length / 4)} tokens)`);
 
   try {
     let provOverride: ProviderId | undefined;

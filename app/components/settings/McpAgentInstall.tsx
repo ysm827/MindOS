@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { CheckCircle2, AlertCircle, Loader2, Copy } from 'lucide-react';
+import { CheckCircle2, AlertCircle, Loader2, Copy, Eye, EyeOff } from 'lucide-react';
 import CustomSelect from '@/components/CustomSelect';
 import { apiFetch } from '@/lib/api';
 import { copyToClipboard } from '@/lib/clipboard';
@@ -16,6 +16,7 @@ export default function AgentInstall({ agents, t, onRefresh, mode = 'mcp', activ
   const [transport, setTransport] = useState<'auto' | 'stdio' | 'http'>('auto');
   const [httpUrl, setHttpUrl] = useState('http://localhost:8781/mcp');
   const [httpToken, setHttpToken] = useState('');
+  const [showHttpToken, setShowHttpToken] = useState(false);
   const [scopes, setScopes] = useState<Record<string, 'project' | 'global'>>({});
   const [installing, setInstalling] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
@@ -177,8 +178,18 @@ export default function AgentInstall({ agents, t, onRefresh, mode = 'mcp', activ
           </div>
           <div className="space-y-1">
             <label className="text-muted-foreground">{m?.httpToken ?? 'Auth Token'}</label>
-            <input type="password" value={httpToken} onChange={e => setHttpToken(e.target.value)} placeholder="Bearer token"
-              className="w-full px-2.5 py-1.5 text-xs rounded-md border border-border bg-background font-mono text-foreground outline-none focus-visible:ring-1 focus-visible:ring-ring" />
+            <div className="flex items-center gap-2">
+              <input type={showHttpToken ? 'text' : 'password'} value={httpToken} onChange={e => setHttpToken(e.target.value)} placeholder="Bearer token"
+                className="flex-1 px-2.5 py-1.5 text-xs rounded-md border border-border bg-background font-mono text-foreground outline-none focus-visible:ring-1 focus-visible:ring-ring" />
+              <button
+                type="button"
+                onClick={() => setShowHttpToken(!showHttpToken)}
+                className="shrink-0 p-1.5 text-muted-foreground hover:text-foreground transition-colors"
+                title={showHttpToken ? 'Hide' : 'Show'}
+              >
+                {showHttpToken ? <EyeOff size={14} /> : <Eye size={14} />}
+              </button>
+            </div>
           </div>
         </div>
       )}
