@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { readSettings, writeSettings, ServerSettings } from '@/lib/settings';
 import { invalidateCache } from '@/lib/fs';
 import { PROVIDER_PRESETS, ALL_PROVIDER_IDS, getApiKeyEnvVar, getApiKeyFromEnv } from '@/lib/agent/providers';
-import { maskCustomProviderKey, parseCustomProviders, type CustomProvider } from '@/lib/custom-endpoints';
+import { parseCustomProviders, type CustomProvider } from '@/lib/custom-endpoints';
 
 function maskToken(token: string | undefined): string {
   if (!token) return '';
@@ -35,32 +35,31 @@ export async function GET() {
     }
   }
 
-  // Mask API keys for all configured providers
-  const maskedProviders: Record<string, { apiKey: string; model: string; baseUrl?: string }> = {};
+  // Return provider configs with real keys (local app — keys are already in config.json)
+  const providers: Record<string, { apiKey: string; model: string; baseUrl?: string }> = {};
   for (const [id, cfg] of Object.entries(settings.ai.providers)) {
     if (!cfg) continue;
-    maskedProviders[id] = {
-      apiKey: cfg.apiKey ? '***set***' : '',
+    providers[id] = {
+      apiKey: cfg.apiKey ?? '',
       model: cfg.model ?? '',
       ...(cfg.baseUrl !== undefined ? { baseUrl: cfg.baseUrl } : {}),
     };
   }
 
-  const masked = {
+  return NextResponse.json({
     ai: {
       provider: settings.ai.provider,
-      providers: maskedProviders,
+      providers,
     },
     mindRoot: settings.mindRoot,
-    webPassword: settings.webPassword ? '***set***' : '',
+    webPassword: settings.webPassword ?? '',
     authToken: maskToken(settings.authToken),
     mcpPort: settings.mcpPort ?? 8781,
     agent: settings.agent ?? {},
     envOverrides,
     envValues,
-    customProviders: (settings.customProviders ?? []).map(maskCustomProviderKey),
-  };
-  return NextResponse.json(masked);
+    customProviders: settings.customProviders ?? [],
+  });
 }
 
 export async function POST(req: NextRequest) {
@@ -68,7 +67,7 @@ export async function POST(req: NextRequest) {
     const body = await req.json() as Partial<ServerSettings>;
     const current = readSettings();
 
-    // Merge providers dynamically, preserving masked keys ('***set***' = keep existing)
+    // Merge providers dynamically
     const mergedProviders = { ...current.ai.providers };
     if (body.ai?.providers) {
       for (const [id, incoming] of Object.entries(body.ai.providers)) {
@@ -77,19 +76,13 @@ export async function POST(req: NextRequest) {
         mergedProviders[id as keyof typeof mergedProviders] = {
           ...cur,
           ...incoming,
-          apiKey: incoming.apiKey === '***set***'
-            ? (cur.apiKey ?? '')
-            : (incoming.apiKey ?? cur.apiKey ?? ''),
+          apiKey: incoming.apiKey ?? cur.apiKey ?? '',
           model: incoming.model ?? cur.model ?? '',
         };
       }
     }
 
-    // Resolve webPassword: '***set***' means keep existing, '' means clear, anything else = new value
-    const incomingWebPassword = body.webPassword;
-    const resolvedWebPassword = incomingWebPassword === '***set***'
-      ? current.webPassword
-      : (incomingWebPassword ?? current.webPassword);
+    const resolvedWebPassword = body.webPassword ?? current.webPassword;
 
     // authToken is read-only via POST (use /api/settings/reset-token to regenerate)
     // but allow clearing it by passing empty string
@@ -110,18 +103,10 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Handle customProviders: merge with existing, preserving masked keys
+    // Handle customProviders
     let resolvedCustomProviders = current.customProviders ?? [];
     if (body.customProviders !== undefined) {
-      const incoming = parseCustomProviders(body.customProviders);
-      resolvedCustomProviders = incoming.map(cp => {
-        // If API key is masked, keep existing key
-        if (cp.apiKey === '***set***') {
-          const existing = (current.customProviders ?? []).find(e => e.id === cp.id);
-          return { ...cp, apiKey: existing?.apiKey ?? '' };
-        }
-        return cp;
-      });
+      resolvedCustomProviders = parseCustomProviders(body.customProviders);
     }
 
     const next: ServerSettings = {

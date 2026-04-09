@@ -70,7 +70,7 @@ function getConfiguredProviders(data: SettingsData): (ProviderId | `cp_${string}
   const env = data.envOverrides ?? {};
   for (const id of ALL_PROVIDER_IDS) {
     const preset = PROVIDER_PRESETS[id];
-    const hasKey = providers[id]?.apiKey === '***set***';
+    const hasKey = !!providers[id]?.apiKey;
     const envVar = getApiKeyEnvVar(id);
     const hasEnv = envVar ? !!env[envVar] : false;
     if (hasKey || hasEnv) { result.push(id); }

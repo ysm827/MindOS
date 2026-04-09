@@ -7,7 +7,7 @@ describe('isAiConfiguredForAsk', () => {
       isAiConfiguredForAsk({
         ai: {
           provider: 'anthropic',
-          providers: { anthropic: { apiKey: '***set***' }, openai: { apiKey: '' } },
+          providers: { anthropic: { apiKey: 'sk-ant-test' }, openai: { apiKey: '' } },
         },
         envOverrides: {},
       }),
@@ -31,7 +31,7 @@ describe('isAiConfiguredForAsk', () => {
       isAiConfiguredForAsk({
         ai: {
           provider: 'anthropic',
-          providers: { anthropic: { apiKey: '' }, openai: { apiKey: '***set***' } },
+          providers: { anthropic: { apiKey: '' }, openai: { apiKey: 'sk-openai-test' } },
         },
         envOverrides: {},
       }),
@@ -43,7 +43,7 @@ describe('isAiConfiguredForAsk', () => {
       isAiConfiguredForAsk({
         ai: {
           provider: 'openai',
-          providers: { anthropic: { apiKey: '' }, openai: { apiKey: '***set***' } },
+          providers: { anthropic: { apiKey: '' }, openai: { apiKey: 'sk-openai-test' } },
         },
         envOverrides: {},
       }),

@@ -66,7 +66,7 @@ export async function POST(req: NextRequest) {
 
     const cfg = effectiveAiConfig(provider as ProviderId);
     let resolvedKey = apiKey || '';
-    if (!resolvedKey || resolvedKey === '***set***') {
+    if (!resolvedKey) {
       resolvedKey = cfg.apiKey;
     }
 

@@ -46,7 +46,7 @@ export function useCustomProviderForm({
 }): CustomProviderFormState {
   const [name, setName] = useState(initial?.name ?? '');
   const [baseProviderId, setBaseProviderId] = useState<ProviderId>(initial?.baseProviderId ?? 'openai');
-  const [apiKey, setApiKey] = useState(initial?.apiKey === '***set***' ? '' : initial?.apiKey ?? '');
+  const [apiKey, setApiKey] = useState(initial?.apiKey ?? '');
   const [model, setModel] = useState(initial?.model ?? '');
   const [baseUrl, setBaseUrl] = useState(initial?.baseUrl ?? '');
   const [testResult, setTestResult] = useState<TestResult>({ state: 'idle' });

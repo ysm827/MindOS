@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useSyncExternalStore, useRef } from '
 import { Copy, Check, RefreshCw, Trash2, Sparkles, ChevronDown, ChevronRight, Loader2, Cpu, Zap, Database as DatabaseIcon, HardDrive, RotateCcw, FlaskConical } from 'lucide-react';
 import { toast } from '@/lib/toast';
 import type { KnowledgeTabProps } from './types';
-import { Field, Input, EnvBadge, SectionLabel, Toggle, SettingCard, SettingRow, ApiKeyInput } from './Primitives';
+import { Field, Input, EnvBadge, SectionLabel, Toggle, SettingCard, SettingRow, PasswordInput } from './Primitives';
 import { ConfirmDialog } from '@/components/agents/AgentsPrimitives';
 import { apiFetch } from '@/lib/api';
 import { copyToClipboard } from '@/lib/clipboard';
@@ -195,7 +195,7 @@ export function KnowledgeTab({ data, setData, t }: KnowledgeTabProps) {
         title={k.securityTitle ?? 'Security'}
       >
         <Field label={k.webPassword} hint={k.webPasswordHint}>
-          <ApiKeyInput
+          <PasswordInput
             value={data.webPassword ?? ''}
             onChange={v => setData(d => d ? { ...d, webPassword: v } : d)}
             placeholder={k.passwordPlaceholder ?? 'Leave empty to disable'}

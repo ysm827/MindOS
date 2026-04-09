@@ -148,16 +148,6 @@ describe('POST /api/settings/test-key', () => {
     expect(body.error).toBe('Request timed out');
   });
 
-  it('treats ***set*** as masked and falls back to config', async () => {
-    const res = await POST(makeReq({ provider: 'anthropic', apiKey: '***set***' }));
-    const body = await res.json();
-
-    // effectiveAiConfig returns empty apiKey → auth_error
-    expect(body.ok).toBe(false);
-    expect(body.code).toBe('auth_error');
-    expect(body.error).toBe('No API key configured');
-  });
-
   it('accepts new providers like google and deepseek', async () => {
     (complete as ReturnType<typeof vi.fn>).mockResolvedValueOnce({ text: 'ok' });
 

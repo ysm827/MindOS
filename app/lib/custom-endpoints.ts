@@ -52,9 +52,3 @@ export function findCustomProvider(providers: CustomProvider[], id: string): Cus
 }
 
 /** Mask API key for display (same pattern as built-in providers) */
-export function maskCustomProviderKey(provider: CustomProvider): CustomProvider {
-  return {
-    ...provider,
-    apiKey: provider.apiKey ? '***set***' : '',
-  };
-}

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { ChevronDown, ChevronRight, Copy, ExternalLink } from 'lucide-react';
-import { Field, Input, ApiKeyInput } from '@/components/settings/Primitives';
+import { Field, Input, PasswordInput } from '@/components/settings/Primitives';
 import type { SetupState, SetupMessages, PortStatus, ProviderSetupConfig } from './types';
 import type { ProviderId } from '@/lib/agent/providers';
 import { PROVIDER_PRESETS, isProviderId, getApiKeyEnvVar, getDefaultBaseUrl } from '@/lib/agent/providers';
@@ -68,7 +68,7 @@ export default function StepAI({ state, update, s, onCopyToken, webPortStatus, m
         <div className="space-y-4 pt-2">
           {/* API Key */}
           <Field label={s.apiKey}>
-            <ApiKeyInput
+            <PasswordInput
               value={currentConfig.apiKey}
               onChange={v => patchConfig({ apiKey: v })}
               placeholder={currentConfig.apiKeyMask || `${getApiKeyEnvVar(currentProvider as ProviderId) ?? 'API Key'}...`}
