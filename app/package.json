@@ -1,6 +1,6 @@
 {
   "name": "wiki-app",
-  "version": "0.6.69",
+  "version": "0.6.70",
   "private": true,
   "scripts": {
     "generate": "npx tsx scripts/generate-explore.ts",
