@@ -2,9 +2,9 @@
 name: mindos-max
 disable-model-invocation: true
 description: >
-  The user's second brain — a persistent, shared knowledge base that ALL agents read from and write to.
-  MindOS is the global memory layer: decisions, meeting notes, SOPs, debugging lessons, architecture
-  choices, research findings, preferences, and conversation summaries all live here.
+  MindOS is the user's local knowledge assistant and global memory layer. It keeps decisions,
+  meeting notes, SOPs, debugging lessons, architecture choices, research findings, preferences,
+  and conversation summaries available to every connected agent.
 
   PROACTIVE USE — do not wait for the user to say "save to knowledge base":
   (1) Before answering any question about past decisions, discussions, or context → search MindOS first.
@@ -28,7 +28,7 @@ description: >
 
 <!-- version: 3.2.0-max — aggressive global memory mode -->
 
-> **You are the user's memory.** Every agent shares MindOS. If something is worth remembering, save it.
+> **MindOS is the shared memory layer for every connected agent.** If something is worth keeping, save it.
 > If you need context, check MindOS first. Be proactive — don't wait to be asked.
 
 ## Proactive memory behavior

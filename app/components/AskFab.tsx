@@ -5,7 +5,7 @@ import { useLocale } from '@/lib/stores/locale-store';
 import { usePathname } from 'next/navigation';
 
 interface AskFabProps {
-  /** Toggle the right-side Ask AI panel */
+  /** Toggle the right-side MindOS panel */
   onToggle: () => void;
   /** Whether the right panel is currently open (FAB hides when open) */
   askPanelOpen: boolean;
@@ -14,7 +14,7 @@ interface AskFabProps {
 export default function AskFab({ onToggle, askPanelOpen }: AskFabProps) {
   const { t } = useLocale();
   const pathname = usePathname();
-  const label = `${t.ask?.fabLabel ?? 'Ask AI'} (⌘/)`;
+  const label = `${t.ask?.fabLabel ?? 'Ask MindOS'} (⌘/)`;
 
   // Hide on home page — it already has an inline chatbot
   const isHome = pathname === '/' || pathname === '';
@@ -50,7 +50,7 @@ export default function AskFab({ onToggle, askPanelOpen }: AskFabProps) {
         transition-all duration-200 ease-out
         whitespace-nowrap overflow-hidden
       ">
-        {t.ask?.fabLabel ?? 'Ask AI'}
+        {t.ask?.fabLabel ?? 'Ask MindOS'}
       </span>
     </button>
   );

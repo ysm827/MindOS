@@ -2,8 +2,9 @@
 name: mindos
 disable-model-invocation: true
 description: >
-  The user's shared knowledge base — persistent across sessions and agents. MindOS stores decisions,
-  meeting notes, SOPs, debugging lessons, architecture choices, research findings, and preferences.
+  MindOS is the user's local knowledge assistant and shared knowledge base. It keeps decisions,
+  meeting notes, SOPs, debugging lessons, architecture choices, research findings, and preferences
+  available across sessions and agents.
   更新笔记, 搜索知识库, 整理文件, 执行SOP/工作流, 复盘, 追加CSV, 跨Agent交接,
   路由非结构化输入到对应文件, 提炼经验, 同步关联文档.
   NOT for editing app source, project docs, or paths outside the KB.

@@ -20,12 +20,15 @@ import { Ionicons } from '@expo/vector-icons';
 import { useChat } from '@/hooks/useChat';
 import ChatInput from '@/components/ChatInput';
 import MessageBubble from '@/components/MessageBubble';
+import FileAttachmentPicker from '@/components/FileAttachmentPicker';
 import type { AskMode } from '@/lib/types';
 
 export default function ChatScreen() {
   const [mode, setMode] = useState<AskMode>('chat');
   const listRef = useRef<FlatList>(null);
   const [inputText, setInputText] = useState('');
+  const [selectedAttachments, setSelectedAttachments] = useState<string[]>([]);
+  const [showAttachmentPicker, setShowAttachmentPicker] = useState(false);
   const [showScrollBtn, setShowScrollBtn] = useState(false);
   const contentHeightRef = useRef(0);
   const scrollOffsetRef = useRef(0);
@@ -37,9 +40,12 @@ export default function ChatScreen() {
   } = useChat({ mode });
 
   const handleSend = useCallback((message: string) => {
-    send(message);
-    setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 100);
-  }, [send]);
+    const started = send(message, selectedAttachments);
+    if (started) {
+      setSelectedAttachments([]);
+      setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 100);
+    }
+  }, [send, selectedAttachments]);
 
   const handleNewChat = useCallback(() => {
     if (messages.length === 0) return;
@@ -54,6 +60,7 @@ export default function ChatScreen() {
           onPress: () => {
             newChat();
             setInputText('');
+            setSelectedAttachments([]);
           },
         },
       ],
@@ -119,8 +126,18 @@ export default function ChatScreen() {
             mode={mode}
             onModeChange={setMode}
             canSend={!isStreaming}
+            attachedPaths={selectedAttachments}
+            onOpenAttachmentPicker={() => setShowAttachmentPicker(true)}
+            onRemoveAttachment={(path) => setSelectedAttachments((prev) => prev.filter((p) => p !== path))}
           />
         </KeyboardAvoidingView>
+
+        <FileAttachmentPicker
+          visible={showAttachmentPicker}
+          selectedPaths={selectedAttachments}
+          onChangeSelectedPaths={setSelectedAttachments}
+          onClose={() => setShowAttachmentPicker(false)}
+        />
       </SafeAreaView>
     );
   }
@@ -202,8 +219,19 @@ export default function ChatScreen() {
           mode={mode}
           onModeChange={setMode}
           canSend={!isStreaming}
+          attachedPaths={selectedAttachments}
+          onOpenAttachmentPicker={() => setShowAttachmentPicker(true)}
+          onRemoveAttachment={(path) => setSelectedAttachments((prev) => prev.filter((p) => p !== path))}
         />
+
       </KeyboardAvoidingView>
+
+      <FileAttachmentPicker
+        visible={showAttachmentPicker}
+        selectedPaths={selectedAttachments}
+        onChangeSelectedPaths={setSelectedAttachments}
+        onClose={() => setShowAttachmentPicker(false)}
+      />
     </SafeAreaView>
   );
 }

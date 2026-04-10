@@ -42,9 +42,10 @@ export interface GuideState {
 
 export interface EmbeddingConfig {
   enabled: boolean;
-  baseUrl: string;   // e.g. "https://api.openai.com/v1"
-  apiKey: string;
-  model: string;     // e.g. "text-embedding-3-small"
+  provider: 'local' | 'api';  // 'local' = @huggingface/transformers, 'api' = OpenAI-compatible
+  baseUrl: string;   // only used when provider='api'
+  apiKey: string;    // only used when provider='api'
+  model: string;     // e.g. "text-embedding-3-small" (api) or "Xenova/bge-small-zh-v1.5" (local)
 }
 
 export interface ServerSettings {
@@ -133,8 +134,10 @@ function parseEmbedding(raw: unknown): EmbeddingConfig | undefined {
   if (!raw || typeof raw !== 'object') return undefined;
   const obj = raw as Record<string, unknown>;
   if (typeof obj.enabled !== 'boolean') return undefined;
+  const provider = obj.provider === 'local' || obj.provider === 'api' ? obj.provider : 'api';
   return {
     enabled: obj.enabled,
+    provider,
     baseUrl: typeof obj.baseUrl === 'string' ? obj.baseUrl : '',
     apiKey: typeof obj.apiKey === 'string' ? obj.apiKey : '',
     model: typeof obj.model === 'string' ? obj.model : '',

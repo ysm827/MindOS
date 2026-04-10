@@ -149,7 +149,9 @@ vi.mock('@/components/ask/SlashCommandPopover', () => ({ default: () => null }))
 vi.mock('@/components/ask/SessionHistory', () => ({ default: () => null }));
 vi.mock('@/components/ask/SessionHistoryPanel', () => ({ default: () => null }));
 vi.mock('@/components/ask/AskHeader', () => ({ default: () => <div /> }));
-vi.mock('@/components/ask/FileChip', () => ({ default: () => null }));
+vi.mock('@/components/ask/FileChip', () => ({
+  default: ({ path, variant }: { path: string; variant?: string }) => <div data-testid={`chip-${variant ?? 'kb'}`}>{path}</div>,
+}));
 vi.mock('@/components/ask/AgentSelectorCapsule', () => ({
   default: ({ selectedAgent, onSelect }: { selectedAgent: { id: string; name: string } | null; onSelect: (agent: { id: string; name: string } | null) => void }) => (
     <div>
@@ -196,6 +198,32 @@ describe('AskContent ACP session binding', () => {
     });
 
     expect(host.querySelector('[data-testid="agent-selector"]')?.textContent).toBe('Claude Code');
+
+    await act(async () => {
+      root.unmount();
+    });
+  });
+
+  it('renders the selected ACP agent with the agent chip variant', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(<AskContent visible variant="panel" initialMessage="review this diff" />);
+    });
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    const selectButton = Array.from(host.querySelectorAll('button')).find((button) => button.textContent === 'Select Claude') as HTMLButtonElement;
+    await act(async () => {
+      selectButton.click();
+    });
+
+    expect(host.querySelector('[data-testid="chip-agent"]')?.textContent).toBe('Claude Code');
+    expect(host.querySelector('[data-testid="chip-skill"]')).toBeNull();
 
     await act(async () => {
       root.unmount();

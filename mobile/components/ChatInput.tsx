@@ -1,5 +1,5 @@
 /**
- * ChatInput — Message input field with send button and mode selector.
+ * ChatInput — Message input field with send button, mode selector, and file attachments.
  */
 
 import { useRef, useState } from 'react';
@@ -10,7 +10,6 @@ import {
   Pressable,
   StyleSheet,
   Platform,
-  ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import type { AskMode } from '@/lib/types';
@@ -24,6 +23,9 @@ interface ChatInputProps {
   canSend?: boolean;
   mode?: AskMode;
   onModeChange?: (mode: AskMode) => void;
+  attachedPaths?: string[];
+  onOpenAttachmentPicker?: () => void;
+  onRemoveAttachment?: (path: string) => void;
 }
 
 export default function ChatInput({
@@ -35,11 +37,15 @@ export default function ChatInput({
   canSend = true,
   mode = 'chat',
   onModeChange,
+  attachedPaths = [],
+  onOpenAttachmentPicker,
+  onRemoveAttachment,
 }: ChatInputProps) {
   const inputRef = useRef<TextInput>(null);
   const [isFocused, setIsFocused] = useState(false);
 
   const canSubmit = value.trim().length > 0 && !isLoading && canSend;
+  const attachDisabled = isLoading || !canSend;
 
   const handleSend = () => {
     if (canSubmit) {
@@ -71,8 +77,34 @@ export default function ChatInput({
         ))}
       </View>
 
+      {/* Attachment chips */}
+      {attachedPaths.length > 0 && (
+        <View style={styles.attachmentRow}>
+          {attachedPaths.map((path) => (
+            <View key={path} style={styles.attachmentChip}>
+              <Ionicons name="document-outline" size={12} color="#c8873a" />
+              <Text style={styles.attachmentText} numberOfLines={1}>
+                {path.split('/').pop() || path}
+              </Text>
+              <Pressable onPress={() => onRemoveAttachment?.(path)} hitSlop={6}>
+                <Ionicons name="close" size={12} color="#78716c" />
+              </Pressable>
+            </View>
+          ))}
+        </View>
+      )}
+
       {/* Input box */}
       <View style={[styles.inputContainer, isFocused && styles.inputContainerFocused]}>
+        <Pressable
+          style={[styles.attachButton, attachDisabled && styles.attachButtonDisabled]}
+          onPress={onOpenAttachmentPicker}
+          disabled={attachDisabled}
+          hitSlop={6}
+        >
+          <Ionicons name="attach-outline" size={18} color={attachDisabled ? '#78716c' : '#c8873a'} />
+        </Pressable>
+
         <TextInput
           ref={inputRef}
           style={styles.input}
@@ -133,6 +165,30 @@ const styles = StyleSheet.create({
   modeTextActive: {
     color: '#c8873a',
   },
+  attachmentRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    paddingHorizontal: 16,
+    paddingBottom: 8,
+  },
+  attachmentChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    maxWidth: '100%',
+    backgroundColor: '#292524',
+    borderRadius: 16,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderWidth: 1,
+    borderColor: '#44403c',
+  },
+  attachmentText: {
+    maxWidth: 160,
+    fontSize: 12,
+    color: '#d6d3d1',
+  },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'flex-end',
@@ -145,6 +201,17 @@ const styles = StyleSheet.create({
   },
   inputContainerFocused: {
     borderTopColor: '#44403c',
+  },
+  attachButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 8,
+    backgroundColor: '#292524',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  attachButtonDisabled: {
+    opacity: 0.5,
   },
   input: {
     flex: 1,

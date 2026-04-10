@@ -172,4 +172,16 @@ describe('POST /api/settings/test-key', () => {
     expect(body.ok).toBe(false);
     expect(body.code).toBe('model_not_found');
   });
+
+  it('prioritizes model_not_found over generic 404 classification when the message is model-specific', async () => {
+    (complete as ReturnType<typeof vi.fn>).mockRejectedValueOnce(
+      new Error('404 Model not found: nonexistent-model does not exist'),
+    );
+
+    const res = await POST(makeReq({ provider: 'anthropic', apiKey: 'sk-test', model: 'nonexistent-model' }));
+    const body = await res.json();
+
+    expect(body.ok).toBe(false);
+    expect(body.code).toBe('model_not_found');
+  });
 });

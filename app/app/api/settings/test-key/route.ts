@@ -2,7 +2,7 @@ export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server';
 import { complete } from '@mariozechner/pi-ai';
 import { effectiveAiConfig, readBaseUrlCompat, writeSettings, readSettings } from '@/lib/settings';
-import { getModelConfig } from '@/lib/agent/model';
+import { getModelConfig, normalizeBaseUrl } from '@/lib/agent/model';
 import { type ProviderId, isProviderId } from '@/lib/agent/providers';
 import { isProviderEntryId, findProvider } from '@/lib/custom-endpoints';
 import { handleRouteErrorSimple } from '@/lib/errors';
@@ -24,11 +24,11 @@ function classifyPiAiError(err: unknown): { code: ErrorCode; error: string } {
     || lower.includes('api key') && (lower.includes('not valid') || lower.includes('incorrect')))
     return { code: 'auth_error', error: 'Invalid API key' };
 
-  if (lower.includes('404') || lower.includes('page not found') || lower.includes('invalid url'))
-    return { code: 'endpoint_error', error: `Endpoint or protocol mismatch: ${msg.slice(0, 200)}` };
-
   if (lower.includes('model') && (lower.includes('not found') || lower.includes('does not exist')))
     return { code: 'model_not_found', error: `Model not found: ${msg.slice(0, 200)}` };
+
+  if (lower.includes('404') || lower.includes('page not found') || lower.includes('invalid url'))
+    return { code: 'endpoint_error', error: `Endpoint or protocol mismatch: ${msg.slice(0, 200)}` };
 
   if (lower.includes('429') || lower.includes('rate') || lower.includes('quota'))
     return { code: 'rate_limited', error: 'Rate limited — try again later' };
@@ -39,6 +39,23 @@ function classifyPiAiError(err: unknown): { code: ErrorCode; error: string } {
     return { code: 'network_error', error: msg.slice(0, 200) };
 
   return { code: 'unknown', error: msg.slice(0, 200) };
+}
+
+function clearCompatCacheForBaseUrl(baseUrl?: string) {
+  try {
+    const normalized = normalizeBaseUrl(baseUrl ?? '');
+    if (!normalized) return;
+
+    const compat = readBaseUrlCompat();
+    if (!compat[normalized]) return;
+
+    const s = readSettings();
+    const updated = { ...(s.baseUrlCompat ?? {}) };
+    delete updated[normalized];
+    writeSettings({ ...s, baseUrlCompat: updated });
+  } catch {
+    // Cache cleanup must never turn a successful connectivity test into a failure.
+  }
 }
 
 export async function POST(req: NextRequest) {
@@ -77,6 +94,7 @@ export async function POST(req: NextRequest) {
           apiKey,
           signal: ctrl.signal,
         });
+        clearCompatCacheForBaseUrl(baseUrl);
         return NextResponse.json({ ok: true, latency: Date.now() - start });
       } catch (e) {
         return NextResponse.json({ ok: false, ...classifyPiAiError(e) });
@@ -117,6 +135,7 @@ export async function POST(req: NextRequest) {
           apiKey: resolvedKey,
           signal: ctrl.signal,
         });
+        clearCompatCacheForBaseUrl(resolvedBaseUrl);
         return NextResponse.json({ ok: true, latency: Date.now() - start });
       } catch (e) {
         return NextResponse.json({ ok: false, ...classifyPiAiError(e) });
@@ -164,17 +183,7 @@ export async function POST(req: NextRequest) {
         signal: ctrl.signal,
       });
 
-      // Clear stale proxy compat cache for this baseUrl on successful test.
-      // Prevents stale 'non-streaming' cache from forcing the fallback path.
-      if (baseUrl) {
-        const compat = readBaseUrlCompat();
-        if (compat[baseUrl]) {
-          const s = readSettings();
-          const updated = { ...(s.baseUrlCompat ?? {}) };
-          delete updated[baseUrl];
-          writeSettings({ ...s, baseUrlCompat: updated });
-        }
-      }
+      clearCompatCacheForBaseUrl(baseUrl);
 
       return NextResponse.json({ ok: true, latency: Date.now() - start });
     } catch (e) {

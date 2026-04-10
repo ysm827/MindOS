@@ -64,10 +64,9 @@ export class WeChatAdapter implements IMAdapter {
 
   async verify(): Promise<boolean> {
     try {
-      // Use getMe-equivalent endpoint to verify token
-      const res = await fetch(`${WECHAT_API_BASE}/getme`, {
+      const res = await fetchWithTimeout(`${WECHAT_API_BASE}/getme`, {
         headers: { 'Authorization': `Bearer ${this.config.bot_token}` },
-      });
+      }, SEND_TIMEOUT_MS);
       return res.ok;
     } catch {
       return false;
@@ -83,22 +82,46 @@ export class WeChatAdapter implements IMAdapter {
 
 async function fetchWithTimeout(url: string, init: RequestInit, timeoutMs: number): Promise<Response> {
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
-  if (init.signal) {
-    init.signal.addEventListener('abort', () => controller.abort(), { once: true });
-  }
-  try {
-    return await fetch(url, { ...init, signal: controller.signal });
-  } finally {
-    clearTimeout(timer);
-  }
+
+  return await new Promise<Response>((resolve, reject) => {
+    if (init.signal?.aborted) {
+      reject(new DOMException('Aborted', 'AbortError'));
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      controller.abort();
+      reject(new Error('Request timed out'));
+    }, timeoutMs);
+
+    const onAbort = () => {
+      clearTimeout(timer);
+      controller.abort();
+      reject(new DOMException('Aborted', 'AbortError'));
+    };
+
+    init.signal?.addEventListener('abort', onAbort, { once: true });
+
+    fetch(url, { ...init, signal: controller.signal }).then(
+      (response) => {
+        clearTimeout(timer);
+        init.signal?.removeEventListener('abort', onAbort);
+        resolve(response);
+      },
+      (error) => {
+        clearTimeout(timer);
+        init.signal?.removeEventListener('abort', onAbort);
+        reject(error);
+      },
+    );
+  });
 }
 
 function formatWeChatError(err: unknown): string {
   if (!(err instanceof Error)) return String(err);
   if (err.name === 'AbortError') return 'Send cancelled';
   const msg = err.message;
-  if (msg.includes('timed out') || msg.includes('abort')) return 'Send timed out (10s)';
+  if (msg.includes('timed out') || msg.includes('abort')) return 'WeChat request timed out (10s)';
   if (msg.includes('401') || msg.includes('Unauthorized')) return 'Invalid bot_token. Re-scan QR code to refresh.';
   return `WeChat error: ${msg}`;
 }

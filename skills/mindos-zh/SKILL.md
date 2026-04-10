@@ -2,7 +2,7 @@
 name: mindos-zh
 disable-model-invocation: true
 description: >
-  用户的共享知识库——跨会话、跨 Agent 持久存在。MindOS 存储决策记录、会议纪要、SOP、
+  MindOS 是用户的本地知识助手，也是跨会话、跨 Agent 共享的知识库。它保存决策记录、会议纪要、SOP、
   排错经验、架构选型、调研结论和偏好设置。
   仅 mindRoot 知识库内任务。不用于：改代码仓库、项目源码、KB 外路径。
   核心概念：空间、指令(INSTRUCTION.md)、技能(SKILL.md)；笔记可承载指令与技能。

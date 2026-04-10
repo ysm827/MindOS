@@ -7,18 +7,13 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
-import { CHANNEL_FIELD_PATTERNS, CHANNEL_REQUIRED_FIELDS } from './channel-constants.js';
+import { CHANNEL_CREDENTIAL_SETS, CHANNEL_FIELD_PATTERNS } from './channel-constants.js';
 
 const IM_CONFIG_DIR = path.join(os.homedir(), '.mindos');
 const IM_CONFIG_PATH = path.join(IM_CONFIG_DIR, 'im.json');
 
 const createEmptyConfig = () => ({ providers: {} });
 
-/**
- * Read IM config from ~/.mindos/im.json.
- * CLI config files are tiny; prefer correctness over cache complexity.
- * @returns {Record<string, any>}
- */
 export function readChannelConfig() {
   if (!fs.existsSync(IM_CONFIG_PATH)) {
     return createEmptyConfig();
@@ -38,11 +33,6 @@ export function readChannelConfig() {
   }
 }
 
-/**
- * Write IM config atomically
- * Sets 0o600 permissions on Unix
- * @param {Record<string, any>} config
- */
 export function writeChannelConfig(config, options = {}) {
   const expectedMtime = options.expectedMtime ?? null;
   const currentMtime = getChannelConfigMtime();
@@ -56,12 +46,15 @@ export function writeChannelConfig(config, options = {}) {
   const tmpPath = IM_CONFIG_PATH + '.tmp';
   fs.writeFileSync(tmpPath, content, 'utf-8');
   fs.renameSync(tmpPath, IM_CONFIG_PATH);
+
   if (process.platform !== 'win32') {
     try {
       fs.chmodSync(IM_CONFIG_PATH, 0o600);
     } catch {
       // best effort
     }
+  } else {
+    console.warn('[channel] Windows does not support chmod 0600 here. Protect ~/.mindos/im.json with your account permissions.');
   }
 
   const writtenRaw = fs.readFileSync(IM_CONFIG_PATH, 'utf-8');
@@ -71,53 +64,41 @@ export function writeChannelConfig(config, options = {}) {
   }
 }
 
-/**
- * Validate platform config (per-platform validation rules)
- * Pure JavaScript implementation (mirrors app/lib/im/config.ts)
- * @param {string} platform
- * @param {Record<string, any>} config
- * @returns {{valid: boolean, missing?: string[]}}
- */
 export function validateChannelConfig(platform, config) {
   if (!config || typeof config !== 'object') {
     return { valid: false, missing: ['(no config)'] };
   }
 
-  const c = config;
-  const required = CHANNEL_REQUIRED_FIELDS[platform];
-
-  if (!required) {
+  const credentialSets = CHANNEL_CREDENTIAL_SETS[platform];
+  if (!credentialSets) {
     return { valid: false, missing: ['(unknown platform)'] };
   }
 
-  if (platform === 'wecom') {
-    if (typeof c.webhook_key === 'string' && c.webhook_key) return { valid: true };
-    const missing = ['corp_id', 'corp_secret'].filter((f) => typeof c[f] !== 'string' || !String(c[f]).trim());
-    return missing.length === 0 ? { valid: true } : { valid: false, missing };
-  }
-
-  if (platform === 'dingtalk') {
-    if (typeof c.webhook_url === 'string' && c.webhook_url) return { valid: true };
-    const missing = ['client_id', 'client_secret'].filter((f) => typeof c[f] !== 'string' || !String(c[f]).trim());
-    return missing.length === 0 ? { valid: true } : { valid: false, missing };
-  }
-
+  const c = config;
   const platformPatterns = CHANNEL_FIELD_PATTERNS[platform] || {};
-  const missing = required.filter((f) => {
-    const val = c[f];
-    if (typeof val !== 'string' || !val.trim()) return true;
-    const pattern = platformPatterns[f];
-    if (pattern && !pattern.test(val)) return true;
-    return false;
-  });
+  let bestMissing = credentialSets[0];
 
-  return missing.length === 0 ? { valid: true } : { valid: false, missing };
+  for (const fieldSet of credentialSets) {
+    const missing = fieldSet.filter((field) => {
+      const val = c[field];
+      if (typeof val !== 'string' || !val.trim()) return true;
+      const pattern = platformPatterns[field];
+      if (pattern && !pattern.test(val)) return true;
+      return false;
+    });
+
+    if (missing.length === 0) {
+      return { valid: true };
+    }
+
+    if (missing.length < bestMissing.length) {
+      bestMissing = missing;
+    }
+  }
+
+  return { valid: false, missing: bestMissing };
 }
 
-/**
- * Get list of configured platforms
- * @returns {string[]}
- */
 export function getConfiguredPlatforms() {
   const config = readChannelConfig();
   return Object.keys(config.providers || {}).filter((platform) => {
@@ -134,9 +115,6 @@ export function getChannelConfigMtime() {
   }
 }
 
-/**
- * Reset config cache (for testing)
- */
 export function _resetConfigCache() {
   // no-op: retained for compatibility with earlier tests
 }

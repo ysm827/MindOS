@@ -175,7 +175,6 @@ export async function runNonStreamingFallback(opts: NonStreamingOptions): Promis
 
   const toolMap = new Map(tools.map(t => [t.name, t]));
   const endpoints = buildCompatEndpointCandidates(baseUrl, '/chat/completions', 'openai-completions');
-  const attemptedEndpoints = endpoints.join(' , ');
   let step = 0;
 
   while (step < maxSteps) {
@@ -215,7 +214,7 @@ export async function runNonStreamingFallback(opts: NonStreamingOptions): Promis
     }
 
     if (!resp) {
-      throw new Error(`Non-streaming API error ${lastEndpointError || 'all endpoint candidates failed'}; tried ${attemptedEndpoints}`);
+      throw new Error(`Non-streaming API error ${lastEndpointError || 'all endpoint candidates failed'}; tried ${endpoints.length} endpoint candidate(s)`);
     }
 
     const rawText = await resp.text();

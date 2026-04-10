@@ -334,10 +334,13 @@ export function getProviderApiType(id: ProviderId): string {
  * We do not assume whether the user-supplied baseUrl already includes a version
  * prefix. For OpenAI- and Anthropic-compatible gateways we try both forms:
  *   1. base + path
- *   2. base + /v1 + path (if base does not already contain /vN)
+ *   2. base + /v1 + path (if base does not already appear to contain a /vN segment)
  *
- * This avoids breaking providers like GLM/Kimi/MiniMax that may use custom path
- * prefixes, while still handling common OpenAI-compatible gateways that expect /v1.
+ * IMPORTANT: the /vN detection below is heuristic, not semantic. Some providers
+ * (such as GLM's .../v4 path) use version-looking segments as part of their API
+ * base path. We intentionally prefer preserving user/provider paths over forcing
+ * another /v1 segment, because mutating a valid custom path is worse than trying
+ * a conservative fallback.
  */
 export function buildCompatEndpointCandidates(baseUrl: string, path: string, apiType: string): string[] {
   const base = baseUrl.replace(/\/+$/, '');

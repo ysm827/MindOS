@@ -251,7 +251,7 @@ export function useAskSession(currentFile?: string) {
 
     const updatedSession = bindSessionAgent({
       ...currentSession,
-      currentFile,
+      currentFile: currentSession.currentFile ?? currentFile,
       updatedAt: Date.now(),
     }, agent);
 

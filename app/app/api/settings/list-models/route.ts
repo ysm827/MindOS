@@ -54,7 +54,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: true, models });
     }
 
-    const cfg = effectiveAiConfig();
+    const cfg = effectiveAiConfig(provider as ProviderId);
     let resolvedKey = apiKey || '';
     if (!resolvedKey) {
       resolvedKey = cfg.apiKey;
@@ -134,7 +134,7 @@ async function fetchCompatModels(
     if (!res.ok) {
       const errBody = await res.text().catch(() => '');
       lastError = `HTTP ${res.status} @ ${endpoint}: ${errBody.slice(0, 200)}`;
-      if (res.status === 404) continue;
+      if (res.status === 400 || res.status === 404 || res.status === 405) continue;
       throw new Error(`Failed to list models: ${lastError}`);
     }
 
@@ -147,8 +147,8 @@ async function fetchCompatModels(
       return json.models.map((m: any) => (typeof m === 'string' ? m : m?.id)).filter(Boolean).sort();
     }
 
-    throw new Error(`Failed to list models: incompatible response shape from ${endpoint}; tried ${attempted.join(' , ')}`);
+    throw new Error(`Failed to list models: incompatible response shape from ${endpoint}; tried ${attempted.length} endpoint candidate(s)`);
   }
 
-  throw new Error(`Failed to list models: ${lastError}; tried ${attempted.join(' , ')}`);
+  throw new Error(`Failed to list models: ${lastError}; tried ${attempted.length} endpoint candidate(s)`);
 }

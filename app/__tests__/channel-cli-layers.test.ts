@@ -25,14 +25,29 @@ afterEach(() => {
 });
 
 describe('channel config layer', () => {
-  it('accepts wecom webhook-only config', async () => {
+  it('keeps CLI and app validation aligned for alternative credential sets', async () => {
     const { validateChannelConfig } = await import('../../bin/lib/channel-config.js');
+    const { validatePlatformConfig } = await import('@/lib/im/config');
+
     expect(validateChannelConfig('wecom', { webhook_key: 'abc123' })).toEqual({ valid: true });
+    expect(validatePlatformConfig('wecom', { webhook_key: 'abc123' })).toEqual({ valid: true });
+
+    expect(validateChannelConfig('wecom', { corp_id: 'wxcorp', corp_secret: 'corp-secret' })).toEqual({ valid: true });
+    expect(validatePlatformConfig('wecom', { corp_id: 'wxcorp', corp_secret: 'corp-secret' })).toEqual({ valid: true });
+
+    expect(validateChannelConfig('dingtalk', { webhook_url: 'https://example.com/hook' })).toEqual({ valid: true });
+    expect(validatePlatformConfig('dingtalk', { webhook_url: 'https://example.com/hook' })).toEqual({ valid: true });
+
+    expect(validateChannelConfig('dingtalk', { client_id: 'ding-app', client_secret: 'ding-secret' })).toEqual({ valid: true });
+    expect(validatePlatformConfig('dingtalk', { client_id: 'ding-app', client_secret: 'ding-secret' })).toEqual({ valid: true });
   });
 
-  it('accepts dingtalk webhook-url-only config', async () => {
+  it('rejects telegram tokens consistently in CLI and app validation', async () => {
     const { validateChannelConfig } = await import('../../bin/lib/channel-config.js');
-    expect(validateChannelConfig('dingtalk', { webhook_url: 'https://example.com/hook' })).toEqual({ valid: true });
+    const { validatePlatformConfig } = await import('@/lib/im/config');
+
+    expect(validateChannelConfig('telegram', { bot_token: 'bad-token' }).valid).toBe(false);
+    expect(validatePlatformConfig('telegram', { bot_token: 'bad-token' }).valid).toBe(false);
   });
 
   it('writes config with optimistic mtime protection', async () => {
@@ -79,5 +94,15 @@ describe('channel management layer', () => {
 
     const configPath = path.join(fakeHome, '.mindos', 'im.json');
     expect(fs.existsSync(configPath)).toBe(false);
+  });
+
+  it('surfaces timeout guidance when remote verification times out', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(Object.assign(new Error('Request timed out'), { name: 'TimeoutError' })));
+
+    const { channelAdd } = await import('../../bin/lib/channel-mgmt.js');
+    const result = await channelAdd('telegram', { bot_token: '123456789:ABCdefGHIjklMNOpqrSTUvwxYZ' });
+    expect(result.ok).toBe(false);
+    expect(result.error).toContain('Verification timed out');
+    expect(result.error).toContain('Use --skip-verify');
   });
 });

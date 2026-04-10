@@ -539,6 +539,7 @@ export default function AskContent({ visible, currentFile, initialMessage, initi
 
   const handleLoadSession = useCallback((id: string) => {
     if (chat.isLoadingRef.current) return; // Don't switch sessions during streaming
+    const targetSession = session.sessions.find((item) => item.id === id) ?? null;
     sessionRef.current.loadSession(id);
     setShowHistory(false);
     setInput('');
@@ -548,8 +549,9 @@ export default function AskContent({ visible, currentFile, initialMessage, initi
     mentionRef.current.resetMention();
     slashRef.current.resetSlash();
     setSelectedSkill(null);
+    setSelectedAcpAgent(targetSession?.defaultAcpAgent ?? null);
     setTimeout(() => inputRef.current?.focus(), 0);
-  }, [currentFile]);
+  }, [currentFile, session.sessions]);
 
   const toggleHistory = useCallback(() => setShowHistory(v => !v), []);
   const inputIconSize = 15;
@@ -698,7 +700,7 @@ export default function AskContent({ visible, currentFile, initialMessage, initi
                 {selectedAcpAgent && (
                   <FileChip
                     path={typeof selectedAcpAgent === 'object' && 'name' in selectedAcpAgent ? (selectedAcpAgent as { name: string }).name : 'Remote Agent'}
-                    variant="skill"
+                    variant="agent"
                     onRemove={() => { handleSelectAcpAgent(null); inputRef.current?.focus(); }}
                   />
                 )}

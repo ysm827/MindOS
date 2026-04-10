@@ -3,26 +3,26 @@
 export const featuresEn = {
   shortcuts: [
     { keys: ['⌘', 'K'], description: 'Search' },
-    { keys: ['⌘', '/'], description: 'MindOS Agent' },
+    { keys: ['⌘', '/'], description: 'MindOS' },
     { keys: ['⌘', ','], description: 'Settings' },
     { keys: ['E'], description: 'Edit current file' },
     { keys: ['⌘', 'S'], description: 'Save' },
     { keys: ['Esc'], description: 'Cancel edit / close modal' },
-    { keys: ['@'], description: 'Attach file in MindOS Agent' },
+    { keys: ['@'], description: 'Attach file in MindOS' },
   ],
   help: {
     title: 'Help & Guide',
     subtitle: 'Everything you need to get started with MindOS',
     whatIs: {
       title: 'What is MindOS?',
-      body: 'MindOS is where you think, and where your AI agents act. You and AI share the same brain — when you correct AI, that correction is captured automatically; next time AI understands you better, and your own thinking gets sharper along the way. You and AI grow together. In an age of AI anxiety, MindOS focuses on human growth — think clearly, make better decisions, ship faster, and build up knowledge that\'s truly yours.',
+      body: 'MindOS is your local knowledge assistant. It keeps your projects, decisions, SOPs, and preferences in one place so you and your connected agents can work from the same context. Your files stay local, your knowledge stays reusable, and you do not need to restate everything from scratch.',
     },
     quickStart: {
       title: 'Quick Start',
       step1Title: 'Browse your knowledge base',
       step1Desc: 'Click the Spaces icon in the left sidebar to explore your files. Each top-level folder is a "Space" — a themed area like Profile, Notes, or Projects.',
-      step2Title: 'Chat with AI',
-      step2Desc: 'Press ⌘/ (or Ctrl/) to open the AI panel. Ask anything about your knowledge base, or use @ to attach a specific file for context.',
+      step2Title: 'Talk to MindOS',
+      step2Desc: 'Press ⌘/ (or Ctrl/) to open MindOS. Ask about your knowledge base, or use @ to attach a specific file for context.',
       step3Title: 'Connect your AI agents',
       step3Desc: 'Go to Settings → Connections to connect external agents like Claude Code, Cursor, or Windsurf. Once connected, they can read and write your knowledge base directly.',
     },
@@ -51,13 +51,13 @@ export const featuresEn = {
     },
     shortcuts: {
       search: 'Search files',
-      askAI: 'Toggle AI panel',
+      askAI: 'Toggle MindOS',
       settings: 'Open Settings',
       shortcutPanel: 'Keyboard shortcuts panel',
       editFile: 'Edit current file',
       save: 'Save file',
       closePanel: 'Close panel / Exit modal',
-      attachFile: 'Attach file in AI chat',
+      attachFile: 'Attach file in MindOS',
     },
     faq: {
       title: 'FAQ',
@@ -79,7 +79,7 @@ export const featuresEn = {
 export const featuresZh = {
   shortcuts: [
     { keys: ['⌘', 'K'], description: '搜索' },
-    { keys: ['⌘', '/'], description: 'MindOS Agent' },
+    { keys: ['⌘', '/'], description: 'MindOS' },
     { keys: ['⌘', ','], description: '设置' },
     { keys: ['E'], description: '编辑当前文件' },
     { keys: ['⌘', 'S'], description: '保存' },
@@ -91,14 +91,14 @@ export const featuresZh = {
     subtitle: '开始使用 MindOS 所需的一切',
     whatIs: {
       title: '什么是 MindOS？',
-      body: 'MindOS 是你思考的地方，也是 AI Agent 行动的起点。你和 AI 共享同一个大脑——你纠正了 AI，这个纠正自动沉淀；AI 下次更懂你，你自己的思路也跟着变清晰。人和 AI 一起成长。在 AI 焦虑蔓延的时代，MindOS 更关注人的成长——想清楚问题、做好判断、快速实践、攒下属于自己的认知。',
+      body: 'MindOS 是你的本地知识助手。它把项目、决策、SOP 和偏好整理在同一处，让你和已连接的 Agent 都能基于同一份上下文工作。文件保留在本地，知识可以反复复用，也不用每次都从头交代背景。',
     },
     quickStart: {
       title: '快速开始',
       step1Title: '浏览你的知识库',
       step1Desc: '点击左侧边栏的"空间"图标来浏览你的文件。每个顶级文件夹是一个"空间"——比如个人档案、笔记或项目。',
-      step2Title: '和 AI 对话',
-      step2Desc: '按 ⌘/（或 Ctrl/）打开 AI 面板。询问任何关于知识库的问题，或使用 @ 附加特定文件作为上下文。',
+      step2Title: '和 MindOS 对话',
+      step2Desc: '按 ⌘/（或 Ctrl/）打开 MindOS。你可以直接询问知识库相关问题，或用 @ 附加特定文件作为上下文。',
       step3Title: '连接你的 AI Agent',
       step3Desc: '前往 设置 → 连接 以连接外部 Agent，如 Claude Code、Cursor 或 Windsurf。连接后，它们可以直接读写你的知识库。',
     },
@@ -127,13 +127,13 @@ export const featuresZh = {
     },
     shortcuts: {
       search: '搜索文件',
-      askAI: '切换 AI 面板',
+      askAI: '切换 MindOS',
       settings: '打开设置',
       shortcutPanel: '快捷键面板',
       editFile: '编辑当前文件',
       save: '保存文件',
       closePanel: '关闭面板 / 退出弹窗',
-      attachFile: '在 AI 对话中附加文件',
+      attachFile: '在 MindOS 中附加文件',
     },
     faq: {
       title: '常见问题',

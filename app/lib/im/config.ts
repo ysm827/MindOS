@@ -113,7 +113,7 @@ export function validatePlatformConfig(
 
   switch (platform) {
     case 'telegram':
-      return checkFields(c, ['bot_token'], (f) => f === 'bot_token' ? typeof c.bot_token === 'string' && c.bot_token.includes(':') : true);
+      return checkFields(c, ['bot_token'], (f) => f === 'bot_token' ? typeof c.bot_token === 'string' && /^\d+:[A-Za-z0-9_-]{25,}$/.test(c.bot_token) : true);
     case 'feishu':
       return checkFields(c, ['app_id', 'app_secret']);
     case 'discord':
@@ -122,11 +122,11 @@ export function validatePlatformConfig(
       return checkFields(c, ['bot_token'], (f) => f === 'bot_token' ? typeof c.bot_token === 'string' && c.bot_token.startsWith('xoxb-') : true);
     case 'wecom':
       // Either webhook_key OR (corp_id + corp_secret)
-      if (typeof c.webhook_key === 'string' && c.webhook_key) return { valid: true };
+      if (typeof c.webhook_key === 'string' && c.webhook_key.trim()) return { valid: true };
       return checkFields(c, ['corp_id', 'corp_secret']);
     case 'dingtalk':
       // Either (client_id + client_secret) OR webhook_url
-      if (typeof c.webhook_url === 'string' && c.webhook_url) return { valid: true };
+      if (typeof c.webhook_url === 'string' && /^https:\/\//.test(c.webhook_url)) return { valid: true };
       return checkFields(c, ['client_id', 'client_secret']);
     case 'wechat':
       return checkFields(c, ['bot_token']);

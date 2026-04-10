@@ -6,27 +6,65 @@
 import readline from 'node:readline';
 import { stdin as input, stdout as output } from 'node:process';
 
-const rl = readline.createInterface({ input, output });
+let rl = createPromptInterface();
 
-/**
- * Prompt for hidden input (password mode)
- * @param {string} question
- * @returns {Promise<string>}
- */
-export async function promptHidden(question) {
-  return new Promise((resolve) => {
-    rl.question(question, (answer) => {
-      resolve(answer);
+function createPromptInterface() {
+  return readline.createInterface({ input, output, terminal: true });
+}
+
+export async function promptHidden(question, options = {}) {
+  const { maskInput = true } = options;
+  if (!maskInput || !input.isTTY || typeof input.setRawMode !== 'function') {
+    return new Promise((resolve) => {
+      rl.question(question, (answer) => resolve(answer));
     });
+  }
+
+  return new Promise((resolve, reject) => {
+    output.write(question);
+    readline.emitKeypressEvents(input, rl);
+    input.setRawMode(true);
+    input.resume();
+
+    let value = '';
+
+    const cleanup = () => {
+      input.removeListener('keypress', onKeypress);
+      input.setRawMode(false);
+      output.write('\n');
+    };
+
+    const onKeypress = (str, key = {}) => {
+      if (key.ctrl && key.name === 'c') {
+        cleanup();
+        reject(new Error('Aborted by user'));
+        return;
+      }
+
+      if (key.name === 'return' || key.name === 'enter') {
+        cleanup();
+        resolve(value);
+        return;
+      }
+
+      if (key.name === 'backspace') {
+        if (value.length > 0) {
+          value = value.slice(0, -1);
+          output.write('\b \b');
+        }
+        return;
+      }
+
+      if (!key.ctrl && !key.meta && str) {
+        value += str;
+        output.write('*');
+      }
+    };
+
+    input.on('keypress', onKeypress);
   });
 }
 
-/**
- * Prompt for confirmation (y/n)
- * @param {string} question
- * @param {boolean} [defaultValue]
- * @returns {Promise<boolean>}
- */
 export async function promptConfirm(question, defaultValue = false) {
   return new Promise((resolve) => {
     const prompt = defaultValue ? `${question} (Y/n): ` : `${question} (y/N): `;
@@ -41,12 +79,6 @@ export async function promptConfirm(question, defaultValue = false) {
   });
 }
 
-/**
- * Prompt for single choice from options
- * @param {string} question
- * @param {string[]} options
- * @returns {Promise<string | null>}
- */
 export async function promptChoice(question, options) {
   return new Promise((resolve) => {
     console.log(question);
@@ -64,9 +96,11 @@ export async function promptChoice(question, options) {
   });
 }
 
-/**
- * Close readline interface
- */
 export function closePrompts() {
+  if (rl.closed) {
+    rl = createPromptInterface();
+    return;
+  }
   rl.close();
+  rl = createPromptInterface();
 }

@@ -80,8 +80,10 @@ export async function POST(req: NextRequest) {
     let resolvedEmbedding = current.embedding;
     if (body.embedding && typeof body.embedding === 'object') {
       const e = body.embedding;
+      const provider = (e as any).provider === 'local' || (e as any).provider === 'api' ? (e as any).provider : 'api';
       resolvedEmbedding = {
         enabled: (e as any).enabled === true,
+        provider,
         baseUrl: typeof (e as any).baseUrl === 'string' ? (e as any).baseUrl : '',
         apiKey: typeof (e as any).apiKey === 'string' ? (e as any).apiKey : '',
         model: typeof (e as any).model === 'string' ? (e as any).model : '',

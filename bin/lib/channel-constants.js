@@ -14,16 +14,20 @@ export const CHANNEL_PLATFORMS = [
   'qq',
 ];
 
-export const CHANNEL_REQUIRED_FIELDS = {
-  telegram: ['bot_token'],
-  discord: ['bot_token'],
-  feishu: ['app_id', 'app_secret'],
-  slack: ['bot_token'],
-  wecom: [],
-  dingtalk: [],
-  wechat: ['bot_token'],
-  qq: ['app_id', 'app_secret'],
+export const CHANNEL_CREDENTIAL_SETS = {
+  telegram: [['bot_token']],
+  discord: [['bot_token']],
+  feishu: [['app_id', 'app_secret']],
+  slack: [['bot_token']],
+  wecom: [['webhook_key'], ['corp_id', 'corp_secret']],
+  dingtalk: [['webhook_url'], ['client_id', 'client_secret']],
+  wechat: [['bot_token']],
+  qq: [['app_id', 'app_secret']],
 };
+
+export const CHANNEL_REQUIRED_FIELDS = Object.fromEntries(
+  Object.entries(CHANNEL_CREDENTIAL_SETS).map(([platform, sets]) => [platform, sets[0]]),
+);
 
 export const CHANNEL_FIELD_PATTERNS = {
   telegram: {
@@ -35,6 +39,12 @@ export const CHANNEL_FIELD_PATTERNS = {
   slack: {
     bot_token: /^xoxb-/,
   },
+  wecom: {
+    webhook_key: /^[A-Za-z0-9_-]{6,}$/,
+  },
+  dingtalk: {
+    webhook_url: /^https:\/\//,
+  },
 };
 
 export const CHANNEL_FIELD_EXAMPLES = {
@@ -43,6 +53,12 @@ export const CHANNEL_FIELD_EXAMPLES = {
   },
   slack: {
     bot_token: 'xoxb-1234567890-1234567890-abcdef',
+  },
+  wecom: {
+    webhook_key: '3f9f7f6d-robot-key',
+  },
+  dingtalk: {
+    webhook_url: 'https://oapi.dingtalk.com/robot/send?access_token=...',
   },
 };
 
@@ -61,11 +77,14 @@ export const CHANNEL_PLATFORM_HELP = {
     bot_token: 'Get from Slack API settings (https://api.slack.com/apps)',
   },
   wecom: {
-    webhook_key: 'Or use corp_id + corp_secret from WeCom admin',
+    webhook_key: 'Simplest mode: group robot webhook key from WeCom admin',
+    corp_id: 'Alternative mode: enterprise corp_id',
+    corp_secret: 'Alternative mode: enterprise corp_secret',
   },
   dingtalk: {
-    client_id: 'Or use webhook_url from DingTalk Developer Console',
-    client_secret: 'Used with client_id when not using webhook_url',
+    webhook_url: 'Simplest mode: group robot webhook URL from DingTalk Developer Console',
+    client_id: 'Alternative mode: app bot client_id',
+    client_secret: 'Alternative mode: app bot client_secret',
   },
   wechat: {
     bot_token: 'Get via ClawBot QR scan',

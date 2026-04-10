@@ -20,6 +20,7 @@ export interface SettingsData {
   agent?: AgentSettings;
   embedding?: {
     enabled: boolean;
+    provider: 'local' | 'api';
     baseUrl: string;
     apiKey: string;
     model: string;

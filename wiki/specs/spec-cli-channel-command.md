@@ -3,7 +3,7 @@
 **Author**: AI Assistant  
 **Date**: 2026-04-10  
 **Phase**: Implementation Complete  
-**Status**: Ready for Phase 5 Testing & Hardening  
+**Status**: Hardening in progress — `/api/channels/verify`, `--skip-verify`, `--env`, alternative credential sets, and cross-platform regression coverage are implemented.  
 
 **Implementation Status**:
 - ✅ Phase 0: Environment & Research complete
@@ -141,8 +141,10 @@ Step 2: 如果已配置，系统确认 "Platform already configured. Replace? (y
   → 若 n，系统中止并提示 "Aborted."
   → 若 y，继续
 
-Step 3: 系统提示 "Enter Telegram bot token (hidden):"
-  → 用户输入（隐藏回显）
+Step 3: 系统提示凭据输入。
+  - 单一凭据模式（如 Telegram）：直接提示 `Enter Telegram bot token (hidden):`
+  - 多模式平台（如 WeCom / DingTalk）：先提示选择 credential mode，再进入对应字段输入
+  → 用户输入（敏感字段隐藏回显）
   → 系统反馈：正在验证...（进度指示）
 
 Step 4: 系统验证 Token 有效性（调用 Telegram API）
@@ -280,12 +282,15 @@ USAGE
 COMMANDS
   list                     Show configured IM platforms
   add <platform>          Add or update a platform configuration
+  add <platform> --env    Load credentials from environment variables
   remove <platform>       Remove a platform configuration
   verify <platform>       Test if platform credentials are valid
 
 EXAMPLES
   mindos channel list
   mindos channel add telegram
+  mindos channel add telegram --env
+  mindos channel add wecom --env
   mindos channel verify discord
   mindos channel remove feishu
 
@@ -596,6 +601,8 @@ RUN 'mindos channel <command> --help' for details on any command.
 - 正常用途：`mindos channel add telegram` → 交互提示 → 输入（隐藏）→ 验证 → 保存
 - 自动化：`echo '{"bot_token":"..."}' | mindos channel add telegram --json-input` → 验证 → 保存
 - 环境变量：`export TELEGRAM_BOT_TOKEN="..."; mindos channel add telegram --env` → 验证 → 保存
+- WeCom 可用 `WECOM_WEBHOOK_KEY` 或 `WECOM_CORP_ID + WECOM_CORP_SECRET`
+- DingTalk 可用 `DINGTALK_WEBHOOK_URL` 或 `DINGTALK_CLIENT_ID + DINGTALK_CLIENT_SECRET`
 
 **优点**：
 - ⭐⭐⭐⭐⭐ 最佳用户体验（交互 + 安全）
@@ -797,8 +804,8 @@ interface ChannelListResult {
 | Discord | `bot_token` | 调用 `GET /users/@me` |
 | Feishu | `app_id`, `app_secret` | 调用 `POST /auth/v3/tenant_access_token/internal` |
 | Slack | `bot_token` (xoxb-...) | 调用 `POST /api/auth.test` |
-| WeChat Enterprise | `webhook_key` 或 (`corp_id` + `corp_secret`) | 调用 Webhook API |
-| DingTalk | `client_id`, `client_secret` 或 `webhook_url` | 调用 OAuth endpoint |
+| WeChat Enterprise | `webhook_key` 或 (`corp_id` + `corp_secret`) | webhook 模式直接可用；corp 模式走企业凭据 |
+| DingTalk | `webhook_url` 或 (`client_id` + `client_secret`) | webhook 模式或 OAuth app 模式 |
 | WeChat Official | `bot_token` | 调用 WeChat API |
 | QQ | `app_id`, `app_secret` | 调用 QQ OpenID endpoint |
 
@@ -911,7 +918,10 @@ done
 **Post-MVP 可优化**:
 - 添加文件锁或乐观并发控制
 - 实现 `/api/channels/verify` 端点用于真实凭证验证
-- 添加 --skip-verify 标志用于 CI/CD
+- 添加 `--skip-verify` 标志用于 CI/CD 与离线配置
+- 添加 `--env` 标志用于非交互配置
+- WeCom / DingTalk 支持 alternative credential sets
+- 针对 macOS / Linux / Windows 增加 channel 专项回归测试与 CI matrix
 - 完成所有测试用例实现
 
 ### 用户演练结果摘要

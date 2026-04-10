@@ -2,8 +2,8 @@
 
 export const aiChatEn = {
   ask: {
-    title: 'MindOS Agent',
-    fabLabel: 'Ask AI',
+    title: 'MindOS',
+    fabLabel: 'Ask MindOS',
     placeholder: 'Ask a question... @ files, / skills',
     emptyPrompt: 'How can I help?',
     emptyHint: 'Type @ to reference files · / to use skills · drag images',
@@ -22,6 +22,7 @@ export const aiChatEn = {
     attachFileLabel: 'Document',
     attachImageLabel: 'Image',
     uploadedFiles: 'Uploaded',
+    uploadsProcessing: 'Wait for uploaded files to finish processing before sending.',
     skillsHint: 'skills',
     attachCurrent: 'attach current file',
     stopTitle: 'Stop',
@@ -241,8 +242,8 @@ export const aiChatEn = {
 
 export const aiChatZh = {
   ask: {
-    title: 'MindOS Agent',
-    fabLabel: 'AI 助手',
+    title: 'MindOS',
+    fabLabel: '问 MindOS',
     placeholder: '输入问题… @ 附加文件，/ 技能',
     emptyPrompt: '有什么可以帮你？',
     emptyHint: '输入 @ 引用文件 · / 使用技能 · 拖拽图片',
@@ -261,6 +262,7 @@ export const aiChatZh = {
     attachFileLabel: '文档',
     attachImageLabel: '图片',
     uploadedFiles: '已上传',
+    uploadsProcessing: '请等待上传文件处理完成后再发送。',
     skillsHint: '技能',
     attachCurrent: '附加当前文件',
     stopTitle: '停止',

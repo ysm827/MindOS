@@ -481,9 +481,11 @@ export default function SidebarLayout({ fileTree, children }: SidebarLayoutProps
         }}
         onSpacesClick={() => {
           exitAskMaximized();
+          const isHome = pathname === '/';
           const wasActive = lp.activePanel === 'files';
-          const onFilesRoute = pathname === '/' || pathname === '/wiki' || pathname?.startsWith('/view/') || pathname?.startsWith('/wiki/');
-          if (!wasActive) {
+          const onFilesRoute = pathname === '/wiki' || pathname?.startsWith('/view/') || pathname?.startsWith('/wiki/');
+          // On homepage, always navigate to /wiki (don't toggle off)
+          if (isHome || !wasActive) {
             lp.setActivePanel('files');
             router.push('/wiki');
           } else if (!onFilesRoute) {

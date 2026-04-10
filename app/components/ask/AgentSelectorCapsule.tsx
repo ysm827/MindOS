@@ -133,7 +133,7 @@ export default function AgentSelectorCapsule({
           : { top: pos.top }),
       }}
     >
-      {/* Default MindOS Agent option */}
+      {/* Default MindOS option */}
       <button
         type="button"
         role="option"

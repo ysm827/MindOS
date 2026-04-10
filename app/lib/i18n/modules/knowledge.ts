@@ -59,7 +59,7 @@ export const knowledgeEn = {
     createToActivate: 'Create {file} to activate',
     shortcuts: {
       searchFiles: 'Search files',
-      askAI: 'MindOS Agent',
+      askAI: 'MindOS',
       editFile: 'Edit file',
       save: 'Save',
       settings: 'Settings',
@@ -505,7 +505,7 @@ export const knowledgeZh = {
     createToActivate: '创建 {file} 以启用',
     shortcuts: {
       searchFiles: '搜索文件',
-      askAI: 'MindOS Agent',
+      askAI: 'MindOS',
       editFile: '编辑文件',
       save: '保存',
       settings: '设置',

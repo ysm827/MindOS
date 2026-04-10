@@ -44,6 +44,20 @@ export default function MessageBubble({ message }: MessageBubbleProps) {
           <ReasoningBlock parts={reasoning} />
         )}
 
+        {/* Attached files */}
+        {message.attachedFiles && message.attachedFiles.length > 0 && (
+          <View style={styles.attachedSection}>
+            {message.attachedFiles.map((path) => (
+              <View key={path} style={styles.attachedChip}>
+                <Ionicons name="document-outline" size={12} color={isUser ? '#fff' : '#c8873a'} />
+                <RNText style={[styles.attachedText, isUser && styles.attachedTextUser]} numberOfLines={1}>
+                  {path.split('/').pop() || path}
+                </RNText>
+              </View>
+            ))}
+          </View>
+        )}
+
         {/* Main content */}
         {message.content ? (
           isUser ? (
@@ -212,6 +226,30 @@ const styles = StyleSheet.create({
     fontSize: 10,
     color: '#78716c',
     marginTop: 6,
+  },
+  attachedSection: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    marginBottom: 8,
+  },
+  attachedChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    maxWidth: '100%',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    backgroundColor: 'rgba(0,0,0,0.15)',
+  },
+  attachedText: {
+    maxWidth: 160,
+    fontSize: 11,
+    color: '#d6d3d1',
+  },
+  attachedTextUser: {
+    color: '#fff',
   },
   timestampUser: {
     color: 'rgba(255,255,255,0.6)',

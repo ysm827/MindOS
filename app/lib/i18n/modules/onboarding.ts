@@ -159,9 +159,9 @@ export const onboardingEn = {
     healthGoHome: 'Go to MindOS',
     // Welcome banner (shown after first onboard)
     welcomeTitle: 'Welcome to MindOS!',
-    welcomeDesc: 'Setup is complete. Start by asking AI a question, browsing your knowledge base, or configuring MCP agents.',
+    welcomeDesc: 'Setup is complete. Start by asking MindOS a question, browsing your knowledge base, or configuring MCP agents.',
     welcomeLinkReconfigure: 'Reconfigure',
-    welcomeLinkAskAI: 'MindOS Agent',
+    welcomeLinkAskAI: 'MindOS',
     welcomeLinkMCP: 'MCP Settings',
   },
   guide: {
@@ -179,7 +179,7 @@ export const onboardingEn = {
     ai: {
       title: 'Save with AI',
       cta: 'Try it',
-      desc: 'Ask MindOS Agent to capture knowledge from this conversation into your KB:',
+      desc: 'Ask MindOS to capture knowledge from this conversation into your knowledge base:',
       prompt: 'Help me distill the key takeaways from our conversation into a reusable SOP in my knowledge base.',
       promptEmpty: 'Help me design a knowledge base folder structure that fits my needs',
     },
@@ -215,7 +215,7 @@ export const onboardingEn = {
       },
       {
         title: 'AI That Already Knows You',
-        body: 'MindOS Agent reads your entire knowledge base automatically. Ask about your projects — no need to re-explain anything.',
+        body: 'MindOS reads your knowledge base automatically. Ask about your projects without restating the background every time.',
       },
       {
         title: 'Connect Any Agent',
@@ -384,9 +384,9 @@ export const onboardingZh = {
     healthGoHome: '进入 MindOS',
     // Welcome banner
     welcomeTitle: '欢迎使用 MindOS！',
-    welcomeDesc: '初始化完成。可以开始向 AI 提问、浏览知识库，或配置 MCP Agent。',
+    welcomeDesc: '初始化完成。现在可以直接问 MindOS、浏览知识库，或配置 MCP Agent。',
     welcomeLinkReconfigure: '重新配置',
-    welcomeLinkAskAI: 'MindOS Agent',
+    welcomeLinkAskAI: 'MindOS',
     welcomeLinkMCP: 'MCP 设置',
   },
   guide: {
@@ -404,7 +404,7 @@ export const onboardingZh = {
     ai: {
       title: 'AI 帮你沉淀',
       cta: '试试',
-      desc: '让 MindOS Agent 把对话中的经验沉淀到知识库：',
+      desc: '让 MindOS 把对话中的经验沉淀到知识库：',
       prompt: '帮我把这次对话的关键收获整理成一份可复用的 SOP，存到我的知识库里。',
       promptEmpty: '帮我设计一个适合我的知识库目录结构',
     },
@@ -440,7 +440,7 @@ export const onboardingZh = {
       },
       {
         title: '不用重讲背景的 AI',
-        body: 'MindOS Agent 自动读取整个知识库。问它项目相关的事，不需要重复交代背景。',
+        body: 'MindOS 会自动读取你的知识库。问它项目相关的事，不需要每次都重复交代背景。',
       },
       {
         title: '多 Agent 共享记忆',

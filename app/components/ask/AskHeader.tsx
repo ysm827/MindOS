@@ -234,7 +234,7 @@ export default memo(function AskHeader({
               {activeTitle === '(empty session)' ? (t.hints?.newChat ?? 'New chat') : activeTitle}
             </span>
           ) : (
-            /* Placeholder while sessions load — avoids flash of "MindOS Agent" text */
+            /* Placeholder while sessions load — avoids flash of "MindOS" text */
             <span className="text-sm font-medium text-muted-foreground/40">
               {t.hints?.newChat ?? 'New chat'}
             </span>

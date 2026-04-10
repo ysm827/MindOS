@@ -32,7 +32,7 @@ export default function AgentsContentPage({ tab }: { tab: AgentsDashboardTab }) 
     if (tab === 'channels') {
       return {
         title: a.navChannels ?? 'Channels',
-        subtitle: a.channelsSubtitle ?? 'Connect messaging platforms to let MindOS Agent send messages on your behalf.',
+        subtitle: a.channelsSubtitle ?? 'Connect messaging platforms to let MindOS send messages on your behalf.',
       };
     }
     if (tab === 'activity') {

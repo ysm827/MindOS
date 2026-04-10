@@ -20,11 +20,13 @@ import {
 import {
   promptHidden,
   promptConfirm,
+  promptChoice,
   closePrompts,
 } from '../lib/channel-prompts.js';
 import {
   validateFieldFormat,
   getRequiredFields,
+  getCredentialSets,
   getFieldHelp,
 } from '../lib/channel-validate.js';
 import { CHANNEL_PLATFORMS } from '../lib/channel-constants.js';
@@ -36,11 +38,13 @@ export const meta = {
   usage: 'mindos channel [command]',
   flags: {
     '--skip-verify': 'Skip remote credential verification and only save/validate format',
+    '--env': 'Load credentials from environment variables instead of prompting',
   },
   examples: [
     'mindos channel list',
     'mindos channel add telegram',
     'mindos channel add telegram --skip-verify',
+    'mindos channel add telegram --env',
     'mindos channel verify discord',
     'mindos channel remove feishu',
   ],
@@ -171,39 +175,88 @@ async function handleAdd(platform, flags) {
   console.log(bold(`Configuring ${platform} platform`));
   console.log();
 
-  // Prompt for credentials
+  // Gather credentials
   /** @type {Record<string, string>} */
   const credentials = {};
-  const requiredFields = getRequiredFields(platform);
+  const credentialSets = getCredentialSets(platform);
+  let activeFieldSet = getRequiredFields(platform);
 
-  for (const field of requiredFields) {
-    const help = getFieldHelp(platform, field);
-    if (help) {
-      console.log(dim(`Tip: ${help}`));
+  if (credentialSets.length > 1) {
+    console.log(dim(`This platform supports multiple credential modes:`));
+    credentialSets.forEach((fieldSet, index) => {
+      console.log(dim(`  ${index + 1}. ${fieldSet.join(' + ')}`));
+    });
+    console.log();
+  }
+
+  if (flags.env === true) {
+    const matchingSet = credentialSets.find((fieldSet) => fieldSet.every((field) => process.env[buildCredentialEnvKey(platform, field)]?.trim()));
+    if (!matchingSet) {
+      const expected = credentialSets.map((fieldSet) => fieldSet.map((field) => buildCredentialEnvKey(platform, field)).join(' + ')).join('  OR  ');
+      console.log(red(`✗ Missing environment variables for ${platform}`));
+      console.log(dim(`  Provide one complete set: ${expected}`));
+      console.log();
+      return;
     }
 
-    let attempts = 0;
-    const maxAttempts = 3;
+    activeFieldSet = matchingSet;
 
-    while (attempts < maxAttempts) {
-      const prompt = field === 'bot_token' ? `Enter ${field} (hidden): ` : `Enter ${field}: `;
-      const value = await promptHidden(prompt);
-
+    for (const field of matchingSet) {
+      const envKey = buildCredentialEnvKey(platform, field);
+      const value = process.env[envKey];
       const validation = validateFieldFormat(platform, field, value);
       if (!validation.valid) {
         console.log(red(`✗ ${validation.error}`));
-        attempts++;
-        continue;
+        console.log(dim(`  Source: ${envKey}`));
+        console.log();
+        return;
       }
-
       credentials[field] = value;
-      break;
+    }
+  } else {
+    if (credentialSets.length > 1) {
+      const selected = await promptChoice(
+        `Choose credential mode for ${platform}:`,
+        credentialSets.map((fieldSet) => fieldSet.join(' + ')),
+      );
+      if (!selected) {
+        console.log(dim('Aborted.'));
+        console.log();
+        return;
+      }
+      activeFieldSet = selected.split(' + ');
+      console.log();
     }
 
-    if (attempts >= maxAttempts) {
-      console.log(red(`✗ Too many invalid attempts for ${field}`));
-      console.log();
-      return;
+    for (const field of activeFieldSet) {
+      const help = getFieldHelp(platform, field);
+      if (help) {
+        console.log(dim(`Tip: ${help}`));
+      }
+
+      let attempts = 0;
+      const maxAttempts = 3;
+
+      while (attempts < maxAttempts) {
+        const prompt = field === 'bot_token' || field.includes('secret') ? `Enter ${field} (hidden): ` : `Enter ${field}: `;
+        const value = await promptHidden(prompt, { maskInput: field === 'bot_token' || field.includes('secret') });
+
+        const validation = validateFieldFormat(platform, field, value);
+        if (!validation.valid) {
+          console.log(red(`✗ ${validation.error}`));
+          attempts++;
+          continue;
+        }
+
+        credentials[field] = value;
+        break;
+      }
+
+      if (attempts >= maxAttempts) {
+        console.log(red(`✗ Too many invalid attempts for ${field}`));
+        console.log();
+        return;
+      }
     }
   }
 
@@ -311,6 +364,10 @@ async function handleVerify(platform, flags) {
 // HELP TEXT
 // ────────────────────────────────────────────────────────────────────────────
 
+function buildCredentialEnvKey(platform, field) {
+  return `${platform}_${field}`.toUpperCase();
+}
+
 function printHelp() {
   const row = (c, d) => `  ${cyan(c.padEnd(32))}${dim(d)}`;
 
@@ -333,9 +390,13 @@ ${bold('EXAMPLES')}
   ${dim('mindos channel list')}
   ${dim('mindos channel add telegram')}
   ${dim('mindos channel add telegram --skip-verify')}
+  ${dim('mindos channel add telegram --env')}
   ${dim('mindos channel verify discord')}
   ${dim('mindos channel verify discord --skip-verify')}
   ${dim('mindos channel remove feishu')}
+
+${bold('ENV KEYS')}
+  ${dim('TELEGRAM_BOT_TOKEN, FEISHU_APP_ID, FEISHU_APP_SECRET, ...')}
 
 ${dim('Run "mindos channel <command> --help" for details on any command.')}
 `);

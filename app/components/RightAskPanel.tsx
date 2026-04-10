@@ -129,12 +129,12 @@ export default function RightAskPanel({
       `}
       style={{ width: effectiveWidth, minWidth: `${MIN_WIDTH}px` }}
       role="complementary"
-      aria-label="MindOS Agent panel"
+      aria-label="MindOS panel"
     >
       <ErrorBoundary fallback={
         <div className="flex flex-col items-center justify-center h-full gap-3 px-6 text-center">
           <AlertCircle size={20} className="text-muted-foreground" />
-          <p className="text-sm text-muted-foreground">AI panel encountered an error.</p>
+          <p className="text-sm text-muted-foreground">MindOS encountered an error.</p>
           <button
             onClick={() => window.location.reload()}
             className="text-xs px-3 py-1.5 rounded-lg border border-border text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"

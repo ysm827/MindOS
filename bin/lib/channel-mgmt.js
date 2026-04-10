@@ -12,6 +12,7 @@ import {
 import { CHANNEL_PLATFORMS, CHANNEL_PLATFORM_EMOJIS } from './channel-constants.js';
 
 const DEFAULT_WEB_PORT = process.env.MINDOS_WEB_PORT || '3456';
+const VERIFY_TIMEOUT_MS = 10_000;
 
 export async function channelList() {
   const config = readChannelConfig();
@@ -217,17 +218,33 @@ function unsupportedPlatform(platform) {
 }
 
 async function verifyCredentialsRemotely(platform, credentials) {
-  const response = await fetch(buildVerifyUrl(), {
+  const url = buildVerifyUrl();
+  const response = await fetch(url, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ platform, credentials }),
-  }).catch((err) => ({ ok: false, status: 0, json: async () => ({ error: err instanceof Error ? err.message : String(err) }) }));
+    signal: AbortSignal.timeout(VERIFY_TIMEOUT_MS),
+  }).catch((err) => {
+    const error = err instanceof Error ? err : new Error(String(err));
+    if (error.name === 'TimeoutError') {
+      return {
+        ok: false,
+        status: 0,
+        json: async () => ({ error: `Verification timed out after ${VERIFY_TIMEOUT_MS / 1000}s. Is MindOS web running on ${url}?` }),
+      };
+    }
+    return {
+      ok: false,
+      status: 0,
+      json: async () => ({ error: `${error.message}. Is MindOS web running on ${url}?` }),
+    };
+  });
 
   const payload = await response.json().catch(() => ({}));
   if (!response.ok) {
     return {
       ok: false,
-      error: payload.error || `Verification request failed (${response.status}). Is MindOS web running on ${buildVerifyUrl()}?`,
+      error: payload.error || `Verification request failed (${response.status}). Is MindOS web running on ${url}?`,
     };
   }
 
@@ -239,6 +256,6 @@ async function verifyCredentialsRemotely(platform, credentials) {
 }
 
 function buildVerifyUrl() {
-  const base = process.env.MINDOS_URL || `http://127.0.0.1:${DEFAULT_WEB_PORT}`;
+  const base = process.env.MINDOS_URL || `http://localhost:${DEFAULT_WEB_PORT}`;
   return `${base.replace(/\/$/, '')}/api/channels/verify`;
 }

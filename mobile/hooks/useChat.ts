@@ -29,6 +29,7 @@ export function useChat({ mode = 'chat' }: UseChatOptions = {}) {
   const [isStreaming, setIsStreaming] = useState(false);
   const [error, setError] = useState('');
   const [lastFailedMessage, setLastFailedMessage] = useState('');
+  const [lastFailedAttachments, setLastFailedAttachments] = useState<string[]>([]);
   const [loaded, setLoaded] = useState(false);
 
   const cancelRef = useRef<(() => void) | null>(null);
@@ -78,10 +79,11 @@ export function useChat({ mode = 'chat' }: UseChatOptions = {}) {
   // --- Send message ---
   const send = useCallback(
     (userMessage: string, attachedFilePaths?: string[]) => {
-      if (!baseUrl || !sessionId) return;
+      if (!baseUrl || !sessionId) return false;
 
       setError('');
       setLastFailedMessage('');
+      setLastFailedAttachments([]);
       setIsStreaming(true);
 
       const userMsg: Message = {
@@ -97,14 +99,15 @@ export function useChat({ mode = 'chat' }: UseChatOptions = {}) {
         timestamp: Date.now(),
       };
 
-      setMessages((prev) => [...prev, userMsg, placeholder]);
+      const nextHistory = [...messagesRef.current, userMsg];
+      setMessages([...nextHistory, placeholder]);
 
       builderRef.current = new MessageBuilder();
 
       cancelRef.current = streamChat(
         baseUrl,
         {
-          messages: [...messagesRef.current, userMsg],
+          messages: nextHistory,
           mode,
           sessionId,
           attachedFiles: attachedFilePaths,
@@ -130,6 +133,7 @@ export function useChat({ mode = 'chat' }: UseChatOptions = {}) {
               case 'error':
                 setError(event.message || 'Unknown error');
                 setLastFailedMessage(userMessage);
+                setLastFailedAttachments(attachedFilePaths || []);
                 break;
               case 'done':
                 break;
@@ -153,6 +157,7 @@ export function useChat({ mode = 'chat' }: UseChatOptions = {}) {
             }
             setError(err.message);
             setLastFailedMessage(userMessage);
+            setLastFailedAttachments(attachedFilePaths || []);
             setIsStreaming(false);
           },
           onComplete: () => {
@@ -168,6 +173,7 @@ export function useChat({ mode = 'chat' }: UseChatOptions = {}) {
           },
         },
       );
+      return true;
     },
     [baseUrl, mode, sessionId],
   );
@@ -177,9 +183,9 @@ export function useChat({ mode = 'chat' }: UseChatOptions = {}) {
     if (lastFailedMessage) {
       // Remove the failed assistant message + user message
       setMessages((prev) => prev.slice(0, -2));
-      send(lastFailedMessage);
+      send(lastFailedMessage, lastFailedAttachments);
     }
-  }, [lastFailedMessage, send]);
+  }, [lastFailedMessage, lastFailedAttachments, send]);
 
   // --- Cancel streaming ---
   const cancel = useCallback(() => {
@@ -202,6 +208,7 @@ export function useChat({ mode = 'chat' }: UseChatOptions = {}) {
     setMessages([]);
     setError('');
     setLastFailedMessage('');
+    setLastFailedAttachments([]);
     const newId = `s-${Date.now()}`;
     setSessionId(newId);
     await AsyncStorage.setItem(SESSION_STORAGE_KEY, newId);
@@ -213,6 +220,7 @@ export function useChat({ mode = 'chat' }: UseChatOptions = {}) {
     isStreaming,
     error,
     lastFailedMessage,
+    lastFailedAttachments,
     loaded,
     sessionId,
     send,
