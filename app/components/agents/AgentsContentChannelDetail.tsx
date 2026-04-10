@@ -25,7 +25,6 @@ export default function AgentsContentChannelDetail({ platformId }: { platformId:
   const [showSecrets, setShowSecrets] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saveResult, setSaveResult] = useState<{ ok: boolean; msg: string } | null>(null);
-  const [touched, setTouched] = useState<Set<string>>(new Set());
 
   // Test send
   const [testRecipient, setTestRecipient] = useState('');
@@ -300,7 +299,7 @@ export default function AgentsContentChannelDetail({ platformId }: { platformId:
                 <div key={field.key} className="flex flex-col gap-1.5">
                   <label className="text-xs font-medium text-foreground">
                     {field.label}
-                    <span className="text-muted-foreground/50 font-normal"> (required)</span>
+                    <span className="text-muted-foreground/50 font-normal"> ({im.required})</span>
                   </label>
                   <div className="relative">
                     <input
@@ -308,7 +307,6 @@ export default function AgentsContentChannelDetail({ platformId }: { platformId:
                       placeholder={field.placeholder}
                       value={formValues[field.key] ?? ''}
                       onChange={e => setFormValues(prev => ({ ...prev, [field.key]: e.target.value }))}
-                      onBlur={() => setTouched(prev => new Set([...prev, field.key]))}
                       className="h-9 w-full px-3 pr-10 text-sm font-mono bg-background border border-border rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                       autoComplete="off"
                       aria-required="true"
@@ -338,7 +336,7 @@ export default function AgentsContentChannelDetail({ platformId }: { platformId:
                   aria-label={saving ? "Saving..." : im.saveConfig}
                 >
                   {saving ? <Loader2 size={14} className="animate-spin" /> : <Settings2 size={14} />}
-                  {saving ? 'Saving...' : im.saveConfig}
+                  {saving ? im.saving : im.saveConfig}
                 </button>
               </div>
               {saveResult && (

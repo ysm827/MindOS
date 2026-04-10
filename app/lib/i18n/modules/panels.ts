@@ -223,6 +223,8 @@ export const panelsEn = {
       backToChannels: 'Back to Channels',
       setupGuide: 'Setup Guide',
       disconnectHint: 'Remove credentials and disconnect this platform.',
+      required: 'required',
+      saving: 'Saving...',
     },
   },
   echoPages: {
@@ -951,6 +953,8 @@ export const panelsZh = {
       backToChannels: '返回频道',
       setupGuide: '配置指南',
       disconnectHint: '移除凭证并断开此平台的连接。',
+      required: '必填',
+      saving: '保存中...',
     },
   },
   echoPages: {

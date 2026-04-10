@@ -95,7 +95,7 @@ function ChannelsOverview() {
         </div>
         <div className="rounded-lg border border-border bg-card p-4 shadow-sm">
           <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">{im.statsStatus}</div>
-          <div className="text-sm text-foreground mt-1">
+          <div className="text-sm text-foreground">
             {connected > 0 ? (
               <span className="inline-flex items-center gap-1.5 text-success">
                 <CheckCircle2 size={14} /> {im.statsReady}
