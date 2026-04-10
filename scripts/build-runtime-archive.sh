@@ -34,6 +34,30 @@ rm -rf "$WORK/app/.next/standalone/.next/cache" \
        "$WORK/app/.next/standalone/.next/types" \
        "$WORK/app/.next/standalone/__tests__" \
        "$WORK/app/.next/standalone/.next/lock"
+
+# Strip dev-only files from node_modules to reduce archive size
+echo "  Stripping dev-only files from node_modules..."
+STANDALONE_NM="$WORK/app/.next/standalone/node_modules"
+if [ -d "$STANDALONE_NM" ]; then
+  # TypeScript declaration files (only needed for IDE, not runtime)
+  find "$STANDALONE_NM" -name '*.d.ts' -delete
+  find "$STANDALONE_NM" -name '*.d.cts' -delete
+  find "$STANDALONE_NM" -name '*.d.mts' -delete
+  find "$STANDALONE_NM" -name '*.d.ts.map' -delete
+  # Source maps (debugging only)
+  find "$STANDALONE_NM" -name '*.js.map' -delete
+  find "$STANDALONE_NM" -name '*.mjs.map' -delete
+  find "$STANDALONE_NM" -name '*.cjs.map' -delete
+  # TypeScript source files (compiled JS is what runs)
+  find "$STANDALONE_NM" -name '*.ts' ! -name '*.d.ts' -path '*/src/*' -delete
+  # Markdown docs inside packages
+  find "$STANDALONE_NM" -name 'README.md' -delete
+  find "$STANDALONE_NM" -name 'CHANGELOG.md' -delete
+  find "$STANDALONE_NM" -name 'LICENSE' -delete
+  find "$STANDALONE_NM" -name 'LICENSE.md' -delete
+  # Empty directories left after deletion
+  find "$STANDALONE_NM" -type d -empty -delete 2>/dev/null || true
+fi
 # Copy static assets at top level (isBundledRuntimeIntact checks app/.next/static/)
 cp -r app/.next/static "$WORK/app/.next/static"
 # Copy public assets
