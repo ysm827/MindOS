@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useLayoutEffect, useRef, useState, useCallback, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { Send, StopCircle, X, Plus, FileText, ImageIcon } from 'lucide-react';
 import { useLocale } from '@/lib/stores/locale-store';
 import type { AskMode, Message } from '@/lib/types';
@@ -97,6 +98,8 @@ export default function AskContent({ visible, currentFile, initialMessage, initi
   const [showHistory, setShowHistory] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
   const [showAttachMenu, setShowAttachMenu] = useState(false);
+  const attachButtonRef = useRef<HTMLButtonElement>(null);
+  const [attachMenuPos, setAttachMenuPos] = useState<{ top: number; left: number } | null>(null);
 
   const [selectedSkill, setSelectedSkill] = useState<SlashItem | null>(null);
   const selectedSkillRef = useRef(selectedSkill);
@@ -181,6 +184,31 @@ export default function AskContent({ visible, currentFile, initialMessage, initi
     window.addEventListener('mindos:inject-ask-files', handler);
     return () => window.removeEventListener('mindos:inject-ask-files', handler);
   }, []);
+
+  // Position the attach menu popover above the button (using Portal to avoid clipping)
+  useEffect(() => {
+    if (!showAttachMenu || !attachButtonRef.current) {
+      setAttachMenuPos(null);
+      return;
+    }
+    const rect = attachButtonRef.current.getBoundingClientRect();
+    setAttachMenuPos({
+      top: rect.top - 8,  // 8px above button
+      left: rect.left,
+    });
+  }, [showAttachMenu]);
+
+  // Close attach menu when clicking outside
+  useEffect(() => {
+    if (!showAttachMenu) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (attachButtonRef.current && !attachButtonRef.current.contains(e.target as Node)) {
+        setShowAttachMenu(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showAttachMenu]);
 
   // Home suggestion chip click — inject text into input
   useEffect(() => {
@@ -664,6 +692,7 @@ export default function AskContent({ visible, currentFile, initialMessage, initi
             {/* + attach button with mini menu */}
             <div className="relative shrink-0">
               <button
+                ref={attachButtonRef}
                 type="button"
                 onClick={() => setShowAttachMenu(v => !v)}
                 className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
@@ -671,27 +700,38 @@ export default function AskContent({ visible, currentFile, initialMessage, initi
               >
                 <Plus size={inputIconSize} />
               </button>
-              {showAttachMenu && (
-                <div className="absolute bottom-full left-0 mb-1.5 py-1 rounded-xl border border-border/60 bg-card shadow-lg z-50 min-w-[150px] animate-in fade-in-0 slide-in-from-bottom-2 duration-150">
-                  <button
-                    type="button"
-                    className="flex w-full items-center gap-2.5 px-3 py-2 text-xs hover:bg-muted transition-colors text-left rounded-lg"
-                    onClick={() => { setShowAttachMenu(false); upload.uploadInputRef.current?.click(); }}
-                  >
-                    <FileText size={12} className="shrink-0 text-muted-foreground" />
-                    {t.ask.attachFileLabel}
-                  </button>
-                  <button
-                    type="button"
-                    className="flex w-full items-center gap-2.5 px-3 py-2 text-xs hover:bg-muted transition-colors text-left rounded-lg"
-                    onClick={() => { setShowAttachMenu(false); imageInputRef.current?.click(); }}
-                  >
-                    <ImageIcon size={12} className="shrink-0 text-muted-foreground" />
-                    {t.ask.attachImageLabel}
-                  </button>
-                </div>
-              )}
             </div>
+
+            {/* Attach menu rendered as Portal to avoid clipping by overflow-hidden parent */}
+            {mounted && showAttachMenu && attachMenuPos && createPortal(
+              <div
+                className="fixed py-1 rounded-xl border border-border/60 bg-card shadow-lg z-50 min-w-[150px] animate-in fade-in-0 slide-in-from-bottom-2 duration-150"
+                style={{
+                  top: `${attachMenuPos.top}px`,
+                  left: `${attachMenuPos.left}px`,
+                  transform: 'translateY(-100%)',  // Position above the button
+                }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <button
+                  type="button"
+                  className="flex w-full items-center gap-2.5 px-3 py-2 text-xs hover:bg-muted transition-colors text-left rounded-lg"
+                  onClick={() => { setShowAttachMenu(false); upload.uploadInputRef.current?.click(); }}
+                >
+                  <FileText size={12} className="shrink-0 text-muted-foreground" />
+                  {t.ask.attachFileLabel}
+                </button>
+                <button
+                  type="button"
+                  className="flex w-full items-center gap-2.5 px-3 py-2 text-xs hover:bg-muted transition-colors text-left rounded-lg"
+                  onClick={() => { setShowAttachMenu(false); imageInputRef.current?.click(); }}
+                >
+                  <ImageIcon size={12} className="shrink-0 text-muted-foreground" />
+                  {t.ask.attachImageLabel}
+                </button>
+              </div>,
+              document.body
+            )}
 
             <input
               ref={upload.uploadInputRef}
