@@ -1,0 +1,243 @@
+================================================================================
+                   MINDOS SEARCH & RETRIEVAL ARCHITECTURE
+================================================================================
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                        SYSTEM PROMPT LAYER (SKILL.md)                       │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│  PROACTIVE BEHAVIOR:                                                        │
+│  ├─ (1) Past decisions/discussions exist? → Search MindOS FIRST             │
+│  ├─ (2) After valuable work → Offer to save                                │
+│  └─ (3) Long conversation → Suggest persistence                            │
+│                                                                              │
+│  TRIGGERS:                                                                  │
+│  ├─ English: save, record, search, organize, run SOP, capture...          │
+│  ├─ Chinese: 帮我记下来, 搜一下笔记, 查一下之前的...                        │
+│  └─ Implicit: "What did we decide?" → SEARCH automatically                │
+│                                                                              │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                    ↓
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                        DECISION TREE (Read vs Write)                        │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│  Lookup / Summarize / Quote?         →  [READ-ONLY]                        │
+│  │                                        • search → read → answer          │
+│  │                                        • cite file path                  │
+│  │                                                                           │
+│  Save / Record / Update?             →  [WRITE]                            │
+│  │                                        • create/edit files               │
+│  │                                        • sync backlinks                  │
+│  │                                                                           │
+│  Ambiguous?                          →  [ASK]                              │
+│                                          • present 2-3 options              │
+│                                                                              │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                    ↓
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                          AI TOOL INVOCATION LAYER                           │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│  Available Tools:                                                           │
+│  ├─ search("query")              [PRIMARY - Full-text BM25]                │
+│  ├─ list_files(path, depth)      [Directory tree browsing]                 │
+│  ├─ read_file(path)              [Load full content]                       │
+│  ├─ read_file_chunk(path,L1,L2)  [Partial read]                            │
+│  ├─ get_recent(limit)            [Recently modified]                       │
+│  ├─ get_backlinks(path)          [References to this file]                 │
+│  └─ [Write tools...]             [Not in read-only mode]                   │
+│                                                                              │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                    ↓
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                          SEARCH TOOL PIPELINE                               │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│  searchFiles(mindRoot, "query", options)                                    │
+│  │                                                                           │
+│  ├─→ [1] INDEX INITIALIZATION (Lazy)                                       │
+│  │   ├─ isBuiltFor(mindRoot)?                                              │
+│  │   ├─ YES  → Use in-memory index                                         │
+│  │   └─ NO   → Try load from ~/.mindos/search-index.json                   │
+│  │            ├─ SUCCESS → Validate staleness → Use persisted             │
+│  │            └─ FAIL    → rebuild(mindRoot) → rebuild from scratch       │
+│  │                         └─ scan all files, tokenize, build inverted    │
+│  │                                                                          │
+│  ├─→ [2] QUERY TOKENIZATION                                                │
+│  │   ├─ Split on whitespace: "auth bug fix" → ["auth", "bug", "fix"]     │
+│  │   ├─ Latin: split non-alpha, filter <2 chars, lowercase                │
+│  │   └─ CJK:   Intl.Segmenter for word boundaries                          │
+│  │            (fallback to bigrams if unavailable)                         │
+│  │                                                                          │
+│  ├─→ [3] CANDIDATE FILE SELECTION (UNION)                                  │
+│  │   ├─ getCandidatesUnion(query)                                          │
+│  │   ├─ For each token, get files from inverted index                      │
+│  │   ├─ UNION all sets (any file matching ANY term)                        │
+│  │   └─ Result: C candidates << N total files                              │
+│  │       (massive speedup via inverted index)                              │
+│  │                                                                          │
+│  ├─→ [4] BM25 SCORING (per document)                                       │
+│  │   ├─ For each candidate file:                                           │
+│  │   │  ├─ Read file content                                              │
+│  │   │  ├─ For each query term:                                           │
+│  │   │  │  ├─ Count occurrences (TF)                                      │
+│  │   │  │  ├─ Compute IDF = log((N-df+0.5)/(df+0.5)+1)                    │
+│  │   │  │  └─ BM25 = IDF × (TF×(K1+1))/(TF+K1×(1-B+B×L/avgL))            │
+│  │   │  │     where K1=1.2, B=0.75                                        │
+│  │   │  └─ Sum scores across all query terms                              │
+│  │   │                                                                      │
+│  │   ├─ Rare terms score HIGH (low df)                                     │
+│  │   ├─ Common terms score LOW (high df)                                   │
+│  │   └─ Shorter docs rank higher (length normalization)                    │
+│  │                                                                          │
+│  ├─→ [5] SNIPPET EXTRACTION                                                │
+│  │   ├─ Find first match position                                          │
+│  │   ├─ Look for paragraph boundaries (\\n\\n) in context                  │
+│  │   ├─ Fallback to 200-char window if no boundaries                       │
+│  │   └─ Extract ~400 chars total around match                              │
+│  │                                                                          │
+│  ├─→ [6] SORT & TRUNCATE                                                   │
+│  │   ├─ Sort by BM25 score (descending)                                    │
+│  │   ├─ Return top N results (default: 20, max: 50)                        │
+│  │   └─ Output: [{path, snippet, score, occurrences}, ...]                │
+│  │                                                                          │
+│  └─→ [RETURN] Markdown: "- **path**: snippet"                             │
+│                                                                              │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                    ↓
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                        SEARCH INDEX ARCHITECTURE                            │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│  IN-MEMORY INVERTED INDEX:                                                 │
+│  ┌──────────────────────────────────────────┐                              │
+│  │ Map<token, Set<filePath>>                │                              │
+│  ├──────────────────────────────────────────┤                              │
+│  │ "authentication" → {auth.md, oauth.md}  │                              │
+│  │ "jwt"           → {auth.md}              │                              │
+│  │ "decision"      → {decisions.md, ...}   │                              │
+│  │ "知识"          → {knowledge.md, ...}   │                              │
+│  └──────────────────────────────────────────┘                              │
+│                                                                              │
+│  BM25 STATISTICS:                                                          │
+│  ├─ docLengths: Map<filePath, charCount>                                   │
+│  ├─ totalChars: sum of all document lengths                                │
+│  ├─ fileCount: number of indexed files                                     │
+│  └─ avgDocLength = totalChars / fileCount                                   │
+│                                                                              │
+│  REVERSE MAP (for incremental updates):                                    │
+│  ├─ fileTokens: Map<filePath, Set<token>>                                  │
+│  └─ Enables O(tokens-in-file) removal instead of O(all-tokens)             │
+│                                                                              │
+│  PERSISTENCE:                                                              │
+│  ├─ Location: ~/.mindos/search-index.json                                  │
+│  ├─ Format: JSON {version, builtForRoot, fileCount, docLengths, index}     │
+│  ├─ Staleness checks:                                                      │
+│  │  ├─ Version & root must match                                          │
+│  │  ├─ File count must match (detects adds/deletes)                       │
+│  │  └─ Sampled mtimes must be ≤ index timestamp                           │
+│  └─ 5-second debounced write after modifications                           │
+│                                                                              │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                    ↓
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                      INCREMENTAL INDEX UPDATES                              │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│  FILE WRITE:                                                               │
+│  └─ updateSearchIndexFile(mindRoot, filePath)                              │
+│     ├─ Remove old tokens from inverted index (via reverse map)            │
+│     ├─ Read new file content                                              │
+│     ├─ Tokenize & add to inverted index                                    │
+│     └─ Update docLengths, BM25 stats                                       │
+│     Complexity: O(tokens-in-file) ≪ O(all-files)                          │
+│                                                                              │
+│  FILE CREATE:                                                              │
+│  └─ addSearchIndexFile(mindRoot, filePath)                                 │
+│     ├─ Read new file                                                      │
+│     ├─ Tokenize & add to inverted index                                    │
+│     └─ Update counts                                                       │
+│                                                                              │
+│  FILE DELETE:                                                              │
+│  └─ removeSearchIndexFile(filePath)                                        │
+│     ├─ Get tokens from reverse map                                        │
+│     ├─ Remove filePath from each token's set                               │
+│     └─ Update stats                                                       │
+│                                                                              │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                    ↓
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                      FILE TREE NAVIGATION                                   │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│  list_files(path?, depth?) →                                               │
+│  ├─ Build hierarchical tree via getFileTree()                              │
+│  ├─ Filter ignored dirs: .git, node_modules, .next, app, .DS_Store, mcp   │
+│  ├─ Include only: .md, .csv files                                          │
+│  ├─ Sort: directories first, then alphabetical                             │
+│  ├─ Show nested structure up to depth (default: 3)                         │
+│  └─ Beyond depth: "... (N items)"                                          │
+│                                                                              │
+│  collectAllFiles() →                                                       │
+│  ├─ Flat list of all file paths                                           │
+│  ├─ Used by search as initial candidate list                              │
+│  └─ Respects ignored dirs & system files                                   │
+│                                                                              │
+│  EXAMPLE OUTPUT (depth=2):                                                 │
+│  └─ Decisions/                                                             │
+│     ├─ Architecture/                                                       │
+│     │  ├─ authentication.md                                                │
+│     │  └─ database.md                                                      │
+│     └─ Meetings/                                                           │
+│        └─ ... (5 items)                                                    │
+│                                                                              │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                    ↓
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                        READ-ONLY ANSWER PATH                                │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│  [Search results received]                                                 │
+│           ↓                                                                 │
+│  1. AI selects relevant results (top 1-3)                                   │
+│           ↓                                                                 │
+│  2. read_file(path) for full content of top results                         │
+│           ↓                                                                 │
+│  3. Extract relevant excerpt (max 20k chars per file)                       │
+│           ↓                                                                 │
+│  4. Generate answer with CITATIONS                                         │
+│     Example: "Based on Decisions/Architecture/authentication.md, you        │
+│              decided to use JWT tokens because..."                         │
+│           ↓                                                                 │
+│  5. Return answer with file paths cited                                     │
+│                                                                              │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+================================================================================
+                            PERFORMANCE SUMMARY
+================================================================================
+
+Search Complexity:
+├─ Index rebuild:     O(N·T)    [N files, T tokens/file, lazy one-time]
+├─ Index lookup:      O(log T)  [Token map lookup]
+├─ Candidate narrow:  O(C)      [C candidates << N]
+├─ BM25 scoring:      O(C·Q·M)  [C candidates, Q terms, M matches/term]
+└─ TOTAL per search:  O(C·Q·M)  [Fast because C ≪ N]
+
+Memory Usage:
+├─ Inverted index: ~50-100 bytes per unique token
+├─ Doc lengths:    8 bytes per file
+├─ File tokens:    2-3× inverted index size
+└─ TYPICAL: 50-500MB for 10k-100k files
+
+Optimizations:
+├─ Lazy rebuild on first search (not startup)
+├─ Persistent index (loaded from ~/.mindos/search-index.json)
+├─ Staleness validation (file count & mtime sampling)
+├─ Incremental updates O(tokens-in-file) not O(all-files)
+├─ File system watcher (500ms debounce for real-time invalidation)
+├─ Candidate pruning for high-token queries (e.g., CJK bigrams)
+└─ Snippet extraction (avoids loading full files for UI)
+
+================================================================================

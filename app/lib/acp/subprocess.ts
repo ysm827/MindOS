@@ -4,6 +4,8 @@
  */
 
 import { spawn, type ChildProcess } from 'child_process';
+import path from 'path';
+import os from 'os';
 import type {
   AcpJsonRpcRequest,
   AcpJsonRpcResponse,
@@ -362,7 +364,12 @@ export function sendResponse(
  * Without approval, the agent hangs waiting for TTY input that never comes.
  * Returns an unsubscribe function.
  */
-export function installAutoApproval(acpProc: AcpProcess): () => void {
+export function installAutoApproval(
+  acpProc: AcpProcess,
+  options?: { cwd?: string },
+): () => void {
+  const cwd = options?.cwd;
+
   return onRequest(acpProc, (req) => {
     const method = req.method;
     const params = (req.params ?? {}) as Record<string, unknown>;
@@ -373,6 +380,10 @@ export function installAutoApproval(acpProc: AcpProcess): () => void {
         const filePath = String(params.path ?? '');
         if (!filePath) {
           sendResponse(acpProc, req.id, { error: { code: -32602, message: 'path is required' } });
+          return;
+        }
+        if (isSensitivePath(filePath)) {
+          sendResponse(acpProc, req.id, { error: { code: -32001, message: `Access denied: ${filePath} is a sensitive file` } });
           return;
         }
         try {
@@ -401,9 +412,12 @@ export function installAutoApproval(acpProc: AcpProcess): () => void {
           sendResponse(acpProc, req.id, { error: { code: -32602, message: 'path is required' } });
           return;
         }
+        if (cwd && !isWithinAllowedWritePaths(filePath, cwd)) {
+          sendResponse(acpProc, req.id, { error: { code: -32001, message: `Write denied: ${filePath} is outside the working directory` } });
+          return;
+        }
         try {
           const fs = require('fs');
-          const path = require('path');
           const dir = path.dirname(filePath);
           if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
           fs.writeFileSync(filePath, content, 'utf-8');
@@ -542,6 +556,30 @@ export function installAutoApproval(acpProc: AcpProcess): () => void {
         sendResponse(acpProc, req.id, {});
       }
     }
+  });
+}
+
+/* ── Path safety ───────────────────────────────────────────────────────── */
+
+const SENSITIVE_PATH_PATTERNS = [
+  /[/\\]\.ssh[/\\](id_|config$|authorized_keys|known_hosts)/i,
+  /[/\\]\.env(\.[^/\\]*)?$/i,
+  /[/\\]credentials\.json$/i,
+  /[/\\]\.aws[/\\]credentials$/i,
+  /[/\\]\.gnupg[/\\]/i,
+];
+
+function isSensitivePath(filePath: string): boolean {
+  const normalized = path.resolve(filePath);
+  return SENSITIVE_PATH_PATTERNS.some(p => p.test(normalized));
+}
+
+function isWithinAllowedWritePaths(filePath: string, cwd: string): boolean {
+  const normalized = path.resolve(filePath);
+  const allowedRoots = [cwd, os.tmpdir()];
+  return allowedRoots.some(root => {
+    const normalizedRoot = path.resolve(root);
+    return normalized === normalizedRoot || normalized.startsWith(normalizedRoot + path.sep);
   });
 }
 

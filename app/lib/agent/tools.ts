@@ -2,11 +2,12 @@ import path from 'path';
 import { Type, type Static } from '@sinclair/typebox';
 import type { AgentTool, AgentToolResult } from '@mariozechner/pi-agent-core';
 import {
-  searchFiles, getFileContent, getFileTree, getRecentlyModified,
+  getFileContent, getFileTree, getRecentlyModified,
   saveFileContent, createFile, appendToFile, insertAfterHeading, updateSection,
   moveToTrashFile, renameFile, moveFile, findBacklinks, gitLog, gitShowFile, appendCsvRow,
   getMindRoot,
 } from '@/lib/fs';
+import { searchFiles } from '@/lib/core/search';
 import { readSkillContentByName } from '@/lib/pi-integration/skills';
 import { a2aTools } from '@/lib/a2a/a2a-tools';
 import { acpTools } from '@/lib/acp/acp-tools';
@@ -353,9 +354,9 @@ export const knowledgeBaseTools: AgentTool<any>[] = [
     description: 'Full-text search across all files in the knowledge base. Returns matching files with context snippets.',
     parameters: QueryParam,
     execute: safeExecute(async (_id, params: Static<typeof QueryParam>) => {
-      const results = searchFiles(params.query);
+      const results = searchFiles(getMindRoot(), params.query);
       if (results.length === 0) return textResult('No results found.');
-      return textResult(results.map(r => `- **${r.path}**: ${r.snippet}`).join('\n'));
+      return textResult(results.map(r => `- **${r.path}** (score: ${r.score.toFixed(1)}): ${r.snippet}`).join('\n'));
     }),
   },
 

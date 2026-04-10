@@ -3,8 +3,11 @@ import {
   resolveAgentCommand,
   parseAcpAgentOverrides,
   AGENT_DESCRIPTORS,
+  AGENT_ALIASES,
+  resolveAlias,
   getDescriptorBinary,
   getDescriptorInstallCmd,
+  getDetectableAgents,
 } from '@/lib/acp/agent-descriptors';
 import type { AcpRegistryEntry } from '@/lib/acp/types';
 
@@ -177,10 +180,69 @@ describe('AGENT_DESCRIPTORS', () => {
     }
   });
 
-  it('has entries for all critical agents', () => {
-    const critical = ['gemini', 'claude-acp', 'codebuddy-code', 'codebuddy'];
-    for (const id of critical) {
+  it('has entries for all critical canonical agents', () => {
+    const canonical = ['gemini', 'claude', 'codebuddy-code', 'codex-acp'];
+    for (const id of canonical) {
       expect(AGENT_DESCRIPTORS[id], `missing descriptor for ${id}`).toBeDefined();
     }
+  });
+
+  it('has no duplicate entries (aliases in AGENT_ALIASES instead)', () => {
+    const binaries = Object.values(AGENT_DESCRIPTORS).map(d => d.binary);
+    const uniqueBinaries = new Set(binaries);
+    expect(binaries.length).toBe(uniqueBinaries.size);
+  });
+});
+
+/* ── Aliases ──────────────────────────────────────────────────────────── */
+
+describe('resolveAlias', () => {
+  it('resolves known aliases to canonical IDs', () => {
+    expect(resolveAlias('gemini-cli')).toBe('gemini');
+    expect(resolveAlias('claude-code')).toBe('claude');
+    expect(resolveAlias('claude-acp')).toBe('claude');
+    expect(resolveAlias('codebuddy')).toBe('codebuddy-code');
+    expect(resolveAlias('codex')).toBe('codex-acp');
+    expect(resolveAlias('pi-acp')).toBe('pi');
+  });
+
+  it('returns canonical IDs unchanged', () => {
+    expect(resolveAlias('gemini')).toBe('gemini');
+    expect(resolveAlias('claude')).toBe('claude');
+    expect(resolveAlias('codebuddy-code')).toBe('codebuddy-code');
+  });
+
+  it('returns unknown IDs unchanged', () => {
+    expect(resolveAlias('totally-unknown')).toBe('totally-unknown');
+  });
+
+  it('all aliases point to existing descriptors', () => {
+    for (const [alias, canonical] of Object.entries(AGENT_ALIASES)) {
+      expect(AGENT_DESCRIPTORS[canonical], `alias ${alias} → ${canonical} not in AGENT_DESCRIPTORS`).toBeDefined();
+    }
+  });
+});
+
+/* ── getDetectableAgents ─────────────────────────────────────────────── */
+
+describe('getDetectableAgents', () => {
+  it('returns all canonical agents', () => {
+    const agents = getDetectableAgents();
+    expect(agents.length).toBe(Object.keys(AGENT_DESCRIPTORS).length);
+  });
+
+  it('each agent has required detection fields', () => {
+    for (const agent of getDetectableAgents()) {
+      expect(agent.id).toBeTruthy();
+      expect(agent.name).toBeTruthy();
+      expect(agent.binary).toBeTruthy();
+    }
+  });
+
+  it('has no duplicate binaries', () => {
+    const agents = getDetectableAgents();
+    const binaries = agents.map(a => a.binary);
+    const unique = new Set(binaries);
+    expect(binaries.length).toBe(unique.size);
   });
 });

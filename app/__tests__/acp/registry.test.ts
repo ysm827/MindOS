@@ -23,6 +23,14 @@ const MOCK_REGISTRY = {
       command: '@anthropic/claude-code',
       tags: ['coding'],
     },
+    {
+      id: 'new-cdn-only',
+      name: 'CDN Only Agent',
+      description: 'An agent only available from CDN',
+      transport: 'stdio',
+      command: 'cdn-agent',
+      tags: ['new'],
+    },
   ],
 };
 
@@ -38,11 +46,16 @@ describe('ACP Registry', () => {
 
       const registry = await fetchAcpRegistry();
       expect(registry).not.toBeNull();
-      // CDN agents are merged with built-in agents
-      expect(registry.agents.length).toBeGreaterThanOrEqual(2);
-      const gemini = registry.agents.find(a => a.id === 'gemini-cli');
+      // Built-in agents are present with canonical IDs
+      const gemini = registry.agents.find(a => a.id === 'gemini');
       expect(gemini).toBeDefined();
-      expect(gemini!.transport).toBe('npx');
+      expect(gemini!.name).toBe('Gemini CLI');
+      // CDN alias entries (gemini-cli) are deduplicated — built-in 'gemini' covers them
+      expect(registry.agents.find(a => a.id === 'gemini-cli')).toBeUndefined();
+      // CDN-only entries are added
+      const cdnOnly = registry.agents.find(a => a.id === 'new-cdn-only');
+      expect(cdnOnly).toBeDefined();
+      expect(cdnOnly!.name).toBe('CDN Only Agent');
     });
 
     it('caches the registry for subsequent calls', async () => {
@@ -146,12 +159,28 @@ describe('ACP Registry', () => {
   });
 
   describe('findAcpAgent', () => {
-    it('finds agent by ID', async () => {
+    it('finds agent by canonical ID', async () => {
+      mockFetch.mockResolvedValueOnce({ ok: true, json: async () => MOCK_REGISTRY });
+
+      const agent = await findAcpAgent('gemini');
+      expect(agent).not.toBeNull();
+      expect(agent!.name).toBe('Gemini CLI');
+    });
+
+    it('finds agent by alias ID (resolves to canonical)', async () => {
       mockFetch.mockResolvedValueOnce({ ok: true, json: async () => MOCK_REGISTRY });
 
       const agent = await findAcpAgent('gemini-cli');
       expect(agent).not.toBeNull();
       expect(agent!.name).toBe('Gemini CLI');
+    });
+
+    it('finds CDN-only agent', async () => {
+      mockFetch.mockResolvedValueOnce({ ok: true, json: async () => MOCK_REGISTRY });
+
+      const agent = await findAcpAgent('new-cdn-only');
+      expect(agent).not.toBeNull();
+      expect(agent!.name).toBe('CDN Only Agent');
     });
 
     it('returns null for unknown ID', async () => {

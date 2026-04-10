@@ -1,0 +1,232 @@
+/**
+ * File/directory view — renders Markdown content or directory listing.
+ */
+import { useEffect, useRef, useState } from 'react';
+import {
+  View,
+  Text,
+  ScrollView,
+  FlatList,
+  Pressable,
+  ActivityIndicator,
+  StyleSheet,
+} from 'react-native';
+import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
+import Markdown from 'react-native-markdown-display';
+import { mindosClient } from '@/lib/api-client';
+import type { FileNode } from '@/lib/types';
+
+export default function ViewScreen() {
+  const { path: pathSegments } = useLocalSearchParams<{ path: string[] }>();
+  const filePath = Array.isArray(pathSegments) ? pathSegments.join('/') : pathSegments ?? '';
+  const fileName = filePath.split('/').pop() || filePath;
+  const router = useRouter();
+
+  const [content, setContent] = useState('');
+  const [children, setChildren] = useState<FileNode[]>([]);
+  const [isDir, setIsDir] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  // Track current request to prevent stale updates on rapid navigation
+  const requestIdRef = useRef(0);
+
+  useEffect(() => {
+    const currentId = ++requestIdRef.current;
+    const controller = new AbortController();
+
+    (async () => {
+      setLoading(true);
+      setError('');
+      try {
+        // Try to read as file first
+        const data = await mindosClient.getFileContent(filePath, controller.signal);
+        if (currentId !== requestIdRef.current) return; // stale
+        setContent(data.content);
+        setIsDir(false);
+      } catch {
+        if (currentId !== requestIdRef.current) return; // stale
+        // If file read fails, try listing as directory
+        try {
+          const tree = await mindosClient.getFileTree();
+          if (currentId !== requestIdRef.current) return; // stale
+          const node = findNode(tree, filePath);
+          if (node?.children) {
+            setChildren(node.children);
+            setIsDir(true);
+          } else {
+            setError('File not found');
+          }
+        } catch (e) {
+          if (currentId !== requestIdRef.current) return;
+          setError((e as Error).message);
+        }
+      } finally {
+        if (currentId === requestIdRef.current) {
+          setLoading(false);
+        }
+      }
+    })();
+
+    return () => controller.abort();
+  }, [filePath]);
+
+  if (loading) {
+    return (
+      <View style={styles.container}>
+        <Stack.Screen options={{ title: fileName }} />
+        <ActivityIndicator color="#c8873a" style={{ marginTop: 40 }} />
+      </View>
+    );
+  }
+
+  if (error) {
+    return (
+      <View style={styles.container}>
+        <Stack.Screen options={{ title: fileName }} />
+        <View style={styles.errorCenter}>
+          <Ionicons name="alert-circle-outline" size={48} color="#78716c" />
+          <Text style={styles.errorText}>{error}</Text>
+          <Pressable style={styles.retryBtn} onPress={() => router.back()}>
+            <Text style={styles.retryText}>Go Back</Text>
+          </Pressable>
+        </View>
+      </View>
+    );
+  }
+
+  // Directory listing
+  if (isDir) {
+    return (
+      <View style={styles.container}>
+        <Stack.Screen options={{ title: fileName }} />
+        <FlatList
+          data={children}
+          keyExtractor={(item) => item.path}
+          renderItem={({ item }) => (
+            <Pressable
+              style={styles.row}
+              onPress={() => router.push(`/view/${item.path}` as any)}
+            >
+              <Ionicons
+                name={item.type === 'directory'
+                  ? (item.isSpace ? 'layers-outline' : 'folder-outline')
+                  : 'document-text-outline'}
+                size={20}
+                color={item.isSpace ? '#c8873a' : '#a8a29e'}
+              />
+              <Text style={styles.rowName} numberOfLines={1}>{item.name}</Text>
+              {item.type === 'directory' && (
+                <Ionicons name="chevron-forward" size={16} color="#44403c" />
+              )}
+            </Pressable>
+          )}
+        />
+      </View>
+    );
+  }
+
+  // Markdown file content
+  return (
+    <View style={styles.container}>
+      <Stack.Screen options={{ title: fileName }} />
+      <ScrollView style={styles.content} contentContainerStyle={styles.contentInner}>
+        <Markdown style={markdownStyles}>{content}</Markdown>
+      </ScrollView>
+    </View>
+  );
+}
+
+function findNode(tree: FileNode[], targetPath: string): FileNode | null {
+  for (const node of tree) {
+    if (node.path === targetPath) return node;
+    if (node.children) {
+      const found = findNode(node.children, targetPath);
+      if (found) return found;
+    }
+  }
+  return null;
+}
+
+const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: '#1a1917' },
+  content: { flex: 1 },
+  contentInner: { padding: 16, paddingBottom: 40 },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    gap: 12,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: '#292524',
+  },
+  rowName: { flex: 1, fontSize: 15, color: '#fafaf9' },
+  errorCenter: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 12,
+    padding: 32,
+  },
+  errorText: { fontSize: 15, color: '#a8a29e', textAlign: 'center' },
+  retryBtn: {
+    backgroundColor: '#292524',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 8,
+  },
+  retryText: { color: '#fafaf9', fontWeight: '500' },
+});
+
+// react-native-markdown-display requires plain objects, not StyleSheet.create()
+const markdownStyles = {
+  body: { color: '#d6d3d1', fontSize: 15, lineHeight: 24 },
+  heading1: { color: '#fafaf9', fontSize: 24, fontWeight: '700' as const, marginTop: 24, marginBottom: 8 },
+  heading2: { color: '#fafaf9', fontSize: 20, fontWeight: '700' as const, marginTop: 20, marginBottom: 8 },
+  heading3: { color: '#fafaf9', fontSize: 17, fontWeight: '600' as const, marginTop: 16, marginBottom: 6 },
+  strong: { color: '#fafaf9', fontWeight: '600' as const },
+  em: { fontStyle: 'italic' as const },
+  link: { color: '#c8873a' },
+  blockquote: {
+    borderLeftWidth: 3,
+    borderLeftColor: '#c8873a',
+    paddingLeft: 12,
+    marginLeft: 0,
+    opacity: 0.8,
+  },
+  code_inline: {
+    backgroundColor: '#292524',
+    color: '#fbbf24',
+    paddingHorizontal: 4,
+    paddingVertical: 2,
+    borderRadius: 4,
+    fontFamily: 'monospace',
+    fontSize: 13,
+  },
+  code_block: {
+    backgroundColor: '#292524',
+    padding: 12,
+    borderRadius: 8,
+    fontFamily: 'monospace',
+    fontSize: 13,
+    color: '#d6d3d1',
+  },
+  fence: {
+    backgroundColor: '#292524',
+    padding: 12,
+    borderRadius: 8,
+    fontFamily: 'monospace',
+    fontSize: 13,
+    color: '#d6d3d1',
+  },
+  list_item: { marginBottom: 4 },
+  bullet_list: { marginLeft: 8 },
+  ordered_list: { marginLeft: 8 },
+  hr: { borderColor: '#44403c', marginVertical: 16 },
+  table: { borderColor: '#44403c' },
+  thead: { backgroundColor: '#292524' },
+  th: { color: '#fafaf9', fontWeight: '600' as const, padding: 8 },
+  td: { color: '#d6d3d1', padding: 8, borderColor: '#44403c' },
+};

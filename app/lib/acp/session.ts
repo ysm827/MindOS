@@ -36,6 +36,9 @@ const sessions = new Map<string, AcpSession>();
 const sessionProcesses = new Map<string, AcpProcess>();
 const autoApprovalCleanups = new Map<string, () => void>();
 
+const MAX_SESSIONS_PER_AGENT = 3;
+const MAX_TOTAL_SESSIONS = 10;
+
 /* ── Public API — Session Lifecycle ───────────────────────────────────── */
 
 /**
@@ -61,11 +64,12 @@ export async function createSessionFromEntry(
   entry: AcpRegistryEntry,
   options?: { env?: Record<string, string>; cwd?: string },
 ): Promise<AcpSession> {
+  checkSessionLimits(entry.id);
+
   const proc = spawnAcpAgent(entry, options);
 
-  // Install auto-approval BEFORE initialize so any early permission requests
-  // from the agent don't cause a hang waiting for TTY input.
-  const unsubApproval = installAutoApproval(proc);
+  const sessionCwd = options?.cwd ?? process.cwd();
+  const unsubApproval = installAutoApproval(proc, { cwd: sessionCwd });
 
   let agentCapabilities: AcpAgentCapabilities | undefined;
   let authMethods: AcpAuthMethod[] | undefined;
@@ -122,7 +126,7 @@ export async function createSessionFromEntry(
 
   try {
     const newResponse = await sendAndWait(proc, 'session/new', {
-      cwd: options?.cwd ?? process.cwd(),
+      cwd: sessionCwd,
       mcpServers: [],
     }, 15_000);
 
@@ -188,7 +192,8 @@ export async function loadSession(
   }
 
   const proc = spawnAcpAgent(entry, options);
-  const unsubApproval = installAutoApproval(proc);
+  const loadCwd = options?.cwd ?? process.cwd();
+  const unsubApproval = installAutoApproval(proc, { cwd: loadCwd });
 
   let agentCapabilities: AcpAgentCapabilities | undefined;
 
@@ -233,7 +238,7 @@ export async function loadSession(
   try {
     const loadResponse = await sendAndWait(proc, 'session/load', {
       sessionId: existingSessionId,
-      cwd: options?.cwd ?? process.cwd(),
+      cwd: loadCwd,
       mcpServers: [],
     }, 15_000);
 
@@ -399,6 +404,8 @@ export async function promptStream(
   updateSessionState(session, 'active');
   const wireSessionId = session.agentSessionId ?? sessionId;
 
+  const PROMPT_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
+
   return new Promise((resolve, reject) => {
     let aggregatedText = '';
     let stopReason: AcpStopReason = 'end_turn';
@@ -411,6 +418,14 @@ export async function promptStream(
       cleanup();
       fn();
     };
+
+    // ── 0. Timeout guard ──
+    const timeoutTimer = setTimeout(() => {
+      settle(() => {
+        updateSessionState(session, 'error');
+        reject(new Error(`Prompt timed out after ${PROMPT_TIMEOUT_MS / 1000}s — no response from agent`));
+      });
+    }, PROMPT_TIMEOUT_MS);
 
     // ── 1. Notifications: primary streaming channel ──
     const unsubNotify = onNotification(proc, (notif) => {
@@ -502,6 +517,7 @@ export async function promptStream(
     proc.proc.once('exit', onExit);
 
     const cleanup = () => {
+      clearTimeout(timeoutTimer);
       unsubNotify();
       unsubMsg();
       proc.proc.removeListener('exit', onExit);
@@ -630,9 +646,10 @@ export function getSession(sessionId: string): AcpSession | undefined {
 }
 
 /**
- * Get all active sessions.
+ * Get all active sessions. Also reaps stale sessions.
  */
 export function getActiveSessions(): AcpSession[] {
+  reapStaleSessions();
   return [...sessions.values()];
 }
 
@@ -885,6 +902,18 @@ function parseNotificationToUpdate(
   }
 
   return base;
+}
+
+/* ── Internal — Session limits ─────────────────────────────────────────── */
+
+function checkSessionLimits(agentId: string): void {
+  if (sessions.size >= MAX_TOTAL_SESSIONS) {
+    throw new Error(`Maximum concurrent sessions (${MAX_TOTAL_SESSIONS}) reached. Close existing sessions first.`);
+  }
+  const agentCount = [...sessions.values()].filter(s => s.agentId === agentId).length;
+  if (agentCount >= MAX_SESSIONS_PER_AGENT) {
+    throw new Error(`Maximum concurrent sessions for agent "${agentId}" (${MAX_SESSIONS_PER_AGENT}) reached.`);
+  }
 }
 
 /* ── Internal — Session reaping ───────────────────────────────────────── */

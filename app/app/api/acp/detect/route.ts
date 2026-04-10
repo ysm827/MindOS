@@ -2,8 +2,7 @@ export const dynamic = 'force-dynamic';
 
 import { NextResponse } from 'next/server';
 import { exec } from 'child_process';
-import { getAcpAgents } from '@/lib/acp/registry';
-import { getDescriptorBinary, getDescriptorInstallCmd, resolveAgentCommand } from '@/lib/acp/agent-descriptors';
+import { getDetectableAgents, resolveAgentCommand } from '@/lib/acp/agent-descriptors';
 import { readSettings } from '@/lib/settings';
 import { handleRouteErrorSimple } from '@/lib/errors';
 
@@ -43,8 +42,6 @@ function whichBatch(binaries: string[]): Promise<Map<string, string | null>> {
   const unique = [...new Set(binaries)];
   if (unique.length === 0) return Promise.resolve(new Map());
 
-  // Build a shell snippet: for each binary, print path or empty line
-  // e.g. `which gemini 2>/dev/null || echo ""; which claude 2>/dev/null || echo ""`
   const script = unique
     .map(bin => `which ${bin} 2>/dev/null || echo ""`)
     .join('; ');
@@ -53,7 +50,6 @@ function whichBatch(binaries: string[]): Promise<Map<string, string | null>> {
     exec(script, { encoding: 'utf-8', timeout: 3000 }, (err, stdout) => {
       const map = new Map<string, string | null>();
       if (err) {
-        // On total failure, mark all as not found
         for (const bin of unique) map.set(bin, null);
         resolve(map);
         return;
@@ -77,22 +73,22 @@ export async function GET(req: Request) {
       return NextResponse.json(detectCache.data);
     }
 
-    const agents = await getAcpAgents();
+    // Pure local detection — no CDN fetch, instant response
+    const agents = getDetectableAgents();
     const settings = readSettings();
 
-    const binaryNames = agents.map((a) => getDescriptorBinary(a.id)).filter(Boolean) as string[];
+    const binaryNames = [...new Set(agents.map(a => a.binary))];
     const whichMap = await whichBatch(binaryNames);
 
     const installed: InstalledAgent[] = [];
     const notInstalled: NotInstalledAgent[] = [];
 
     for (const agent of agents) {
-      const binary = getDescriptorBinary(agent.id);
-      const binaryPath = binary ? (whichMap.get(binary) ?? null) : null;
+      const binaryPath = whichMap.get(agent.binary) ?? null;
 
       if (binaryPath) {
         const userOverride = settings.acpAgents?.[agent.id];
-        const resolved = resolveAgentCommand(agent.id, agent, userOverride);
+        const resolved = resolveAgentCommand(agent.id, undefined, userOverride);
         installed.push({
           id: agent.id,
           name: agent.name,
@@ -100,14 +96,12 @@ export async function GET(req: Request) {
           resolvedCommand: { cmd: resolved.cmd, args: resolved.args, source: resolved.source },
         });
       } else {
-        const installCmd =
-          getDescriptorInstallCmd(agent.id) ??
-          (agent.packageName ? `npm install -g ${agent.packageName}` : '');
+        const packageName = agent.installCmd?.match(/npm install -g (.+)/)?.[1];
         notInstalled.push({
           id: agent.id,
           name: agent.name,
-          installCmd,
-          packageName: agent.packageName,
+          installCmd: agent.installCmd ?? (packageName ? `npm install -g ${packageName}` : ''),
+          packageName,
         });
       }
     }

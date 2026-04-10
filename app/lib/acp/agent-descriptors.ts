@@ -50,45 +50,45 @@ export interface ResolvedAgentCommand {
   enabled: boolean;
 }
 
+/* ── Aliases ───────────────────────────────────────────────────────────── */
+
+/**
+ * Maps alternative agent IDs to their canonical ID in AGENT_DESCRIPTORS.
+ * This eliminates full duplicate entries while maintaining backward compatibility.
+ */
+export const AGENT_ALIASES: Record<string, string> = {
+  'gemini-cli':  'gemini',
+  'claude-code': 'claude',
+  'claude-acp':  'claude',
+  'codebuddy':   'codebuddy-code',
+  'codex':       'codex-acp',
+  'pi-acp':      'pi',
+};
+
+/** Resolve an agent ID to its canonical form (idempotent for canonical IDs). */
+export function resolveAlias(agentId: string): string {
+  return AGENT_ALIASES[agentId] ?? agentId;
+}
+
 /* ── Canonical Descriptors ─────────────────────────────────────────────── */
 
 /**
  * All known ACP agents with their detection binary, launch command, and install hint.
- * Both detection (`which binary?`) and launch (`spawn cmd args`) read from here.
+ * Only canonical entries — aliases are handled by AGENT_ALIASES above.
  */
 export const AGENT_DESCRIPTORS: Record<string, AcpAgentDescriptor> = {
-  // Gemini CLI — Google's AI coding agent
   'gemini':          { binary: 'gemini',          cmd: 'gemini',    args: ['--experimental-acp'], installCmd: 'npm install -g @google/gemini-cli',
     displayName: 'Gemini CLI',
     description: 'Google Gemini 驱动的编程智能体。支持多文件编辑、代码审查、调试和项目级重构，原生集成 Google 搜索实时查询技术文档。' },
-  'gemini-cli':      { binary: 'gemini',          cmd: 'gemini',    args: ['--experimental-acp'], installCmd: 'npm install -g @google/gemini-cli',
-    displayName: 'Gemini CLI',
-    description: 'Google Gemini 驱动的编程智能体。支持多文件编辑、代码审查、调试和项目级重构，原生集成 Google 搜索实时查询技术文档。' },
-  // Claude Code — Anthropic's AI coding agent
   'claude':          { binary: 'claude',          cmd: 'npx',       args: ['--yes', '@agentclientprotocol/claude-agent-acp'], installCmd: 'npm install -g @anthropic-ai/claude-code',
     displayName: 'Claude Code',
     description: 'Anthropic Claude 驱动的编程智能体。擅长复杂推理、长上下文理解和安全代码生成，支持多文件编辑与 agentic 工作流。' },
-  'claude-code':     { binary: 'claude',          cmd: 'npx',       args: ['--yes', '@agentclientprotocol/claude-agent-acp'], installCmd: 'npm install -g @anthropic-ai/claude-code',
-    displayName: 'Claude Code',
-    description: 'Anthropic Claude 驱动的编程智能体。擅长复杂推理、长上下文理解和安全代码生成，支持多文件编辑与 agentic 工作流。' },
-  'claude-acp':      { binary: 'claude',          cmd: 'npx',       args: ['--yes', '@agentclientprotocol/claude-agent-acp'], installCmd: 'npm install -g @anthropic-ai/claude-code',
-    displayName: 'Claude Code',
-    description: 'Anthropic Claude 驱动的编程智能体。擅长复杂推理、长上下文理解和安全代码生成，支持多文件编辑与 agentic 工作流。' },
-  // CodeBuddy Code — Tencent Cloud's AI coding agent
   'codebuddy-code':  { binary: 'codebuddy',       cmd: 'codebuddy', args: ['--acp'], installCmd: 'npm install -g @tencent-ai/codebuddy-code',
     displayName: 'CodeBuddy Code',
     description: '腾讯云智能编程助手。基于混元大模型，支持代码补全、生成、审查和多文件重构，深度理解中文语境，适配国内开发生态。' },
-  'codebuddy':       { binary: 'codebuddy',       cmd: 'codebuddy', args: ['--acp'], installCmd: 'npm install -g @tencent-ai/codebuddy-code',
-    displayName: 'CodeBuddy Code',
-    description: '腾讯云智能编程助手。基于混元大模型，支持代码补全、生成、审查和多文件重构，深度理解中文语境，适配国内开发生态。' },
-  // Codex — OpenAI's coding agent
   'codex-acp':       { binary: 'codex',           cmd: 'codex',     args: [],        installCmd: 'npm install -g @openai/codex',
     displayName: 'Codex',
     description: 'OpenAI Codex 编程智能体。基于 GPT 系列模型，擅长代码生成、自动化任务和多语言编程支持。' },
-  'codex':           { binary: 'codex',           cmd: 'codex',     args: [],        installCmd: 'npm install -g @openai/codex',
-    displayName: 'Codex',
-    description: 'OpenAI Codex 编程智能体。基于 GPT 系列模型，擅长代码生成、自动化任务和多语言编程支持。' },
-  // Cursor — AI-first code editor agent
   'cursor':          { binary: 'cursor',          cmd: 'cursor',    args: [],
     displayName: 'Cursor',
     description: 'Cursor AI 编程智能体。AI-first 代码编辑器的 CLI 模式，支持上下文感知的代码编辑、Tab 补全和多文件协同修改。' },
@@ -111,9 +111,6 @@ export const AGENT_DESCRIPTORS: Record<string, AcpAgentDescriptor> = {
     displayName: 'OpenClaw',
     description: 'OpenClaw 编程智能体。开源 Claude Code 替代方案，支持多模型后端和完整的 agentic 工作流。' },
   'pi':              { binary: 'pi',              cmd: 'pi',        args: [],
-    displayName: 'Pi Agent',
-    description: 'Pi Agent 编程智能体。轻量级终端编程助手。' },
-  'pi-acp':          { binary: 'pi',              cmd: 'pi',        args: [],
     displayName: 'Pi Agent',
     description: 'Pi Agent 编程智能体。轻量级终端编程助手。' },
   'auggie':          { binary: 'auggie',          cmd: 'auggie',    args: [],
@@ -147,7 +144,7 @@ export function resolveAgentCommand(
   registryEntry?: AcpRegistryEntry,
   userOverride?: AcpAgentOverride,
 ): ResolvedAgentCommand {
-  const descriptor = AGENT_DESCRIPTORS[agentId];
+  const descriptor = AGENT_DESCRIPTORS[resolveAlias(agentId)];
   const enabled = userOverride?.enabled !== false;
 
   // Layer 1: User override
@@ -220,22 +217,47 @@ function registryToCommand(entry: AcpRegistryEntry): { cmd: string; args: string
 
 /** Get the binary name for detection (used by detect endpoint). */
 export function getDescriptorBinary(agentId: string): string | undefined {
-  return AGENT_DESCRIPTORS[agentId]?.binary;
+  return AGENT_DESCRIPTORS[resolveAlias(agentId)]?.binary;
 }
 
 /** Get the install command for UI display. */
 export function getDescriptorInstallCmd(agentId: string): string | undefined {
-  return AGENT_DESCRIPTORS[agentId]?.installCmd;
+  return AGENT_DESCRIPTORS[resolveAlias(agentId)]?.installCmd;
 }
 
 /** Get curated display name (overrides registry name if available). */
 export function getDescriptorDisplayName(agentId: string): string | undefined {
-  return AGENT_DESCRIPTORS[agentId]?.displayName;
+  return AGENT_DESCRIPTORS[resolveAlias(agentId)]?.displayName;
 }
 
 /** Get curated description (overrides registry description if available). */
 export function getDescriptorDescription(agentId: string): string | undefined {
-  return AGENT_DESCRIPTORS[agentId]?.description;
+  return AGENT_DESCRIPTORS[resolveAlias(agentId)]?.description;
+}
+
+/* ── Detection ─────────────────────────────────────────────────────────── */
+
+/** Agent info needed for local binary detection (no CDN dependency). */
+export interface DetectableAgent {
+  id: string;
+  name: string;
+  binary: string;
+  installCmd?: string;
+  description?: string;
+}
+
+/**
+ * Return the canonical list of agents for local detection.
+ * Pure local data — no CDN fetch, no async, no network dependency.
+ */
+export function getDetectableAgents(): DetectableAgent[] {
+  return Object.entries(AGENT_DESCRIPTORS).map(([id, desc]) => ({
+    id,
+    name: desc.displayName ?? id,
+    binary: desc.binary,
+    installCmd: desc.installCmd,
+    description: desc.description,
+  }));
 }
 
 /** Parse and validate acpAgents config from raw settings JSON. */

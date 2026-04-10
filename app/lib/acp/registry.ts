@@ -10,57 +10,31 @@
  */
 
 import type { AcpRegistry, AcpRegistryEntry } from './types';
-import { AGENT_DESCRIPTORS, getDescriptorDisplayName, getDescriptorDescription } from './agent-descriptors';
+import { AGENT_DESCRIPTORS, getDescriptorDisplayName, getDescriptorDescription, resolveAlias } from './agent-descriptors';
 
 /* ── Constants ─────────────────────────────────────────────────────────── */
 
 const REGISTRY_URL = 'https://cdn.agentclientprotocol.com/registry/v1/latest/registry.json';
-const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
+const CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days — registry updates very rarely
 const FETCH_TIMEOUT_MS = 10_000;
 
 /* ── Built-in Registry (from AGENT_DESCRIPTORS) ────────────────────────── */
 
 /**
  * Generate a baseline registry from the local AGENT_DESCRIPTORS.
- * This ensures agents like Gemini CLI, CodeBuddy, Claude etc. are always
- * detectable even when CDN is unreachable.
- *
- * We deduplicate by binary name — e.g. 'gemini' and 'gemini-cli' both map
- * to binary 'gemini', so we only keep the canonical entry (shorter ID or
- * the one matching the CDN convention).
+ * AGENT_DESCRIPTORS contains only canonical entries (aliases are in AGENT_ALIASES),
+ * so no deduplication is needed.
  */
 function buildBuiltinRegistry(): AcpRegistryEntry[] {
-  // Preferred IDs per binary — matches what CDN uses
-  const CANONICAL_IDS: Record<string, string> = {
-    'gemini': 'gemini',
-    'claude': 'claude-acp',
-    'codebuddy': 'codebuddy-code',
-    'codex': 'codex-acp',
-    'pi': 'pi-acp',
-  };
-
-  const seen = new Set<string>();
-  const entries: AcpRegistryEntry[] = [];
-
-  for (const [id, desc] of Object.entries(AGENT_DESCRIPTORS)) {
-    // Skip alias entries — only keep the canonical ID for each binary
-    const canonical = CANONICAL_IDS[desc.binary];
-    if (canonical && canonical !== id) continue;
-    if (seen.has(desc.binary)) continue;
-    seen.add(desc.binary);
-
-    entries.push({
-      id,
-      name: desc.displayName ?? id,
-      description: desc.description ?? '',
-      transport: desc.cmd === 'npx' ? 'npx' : 'stdio',
-      command: desc.cmd,
-      args: desc.args,
-      packageName: desc.installCmd?.match(/npm install -g (.+)/)?.[1],
-    });
-  }
-
-  return entries;
+  return Object.entries(AGENT_DESCRIPTORS).map(([id, desc]) => ({
+    id,
+    name: desc.displayName ?? id,
+    description: desc.description ?? '',
+    transport: (desc.cmd === 'npx' ? 'npx' : 'stdio') as AcpRegistryEntry['transport'],
+    command: desc.cmd,
+    args: desc.args,
+    packageName: desc.installCmd?.match(/npm install -g (.+)/)?.[1],
+  }));
 }
 
 let builtinAgents: AcpRegistryEntry[] | null = null;
@@ -78,7 +52,7 @@ let cachedRegistry: AcpRegistry | null = null;
 
 /**
  * Fetch the ACP registry from the CDN and merge with built-in entries.
- * Caches for 1 hour. Falls back to built-in registry if CDN is unreachable.
+ * Caches for 7 days. Falls back to built-in registry if CDN is unreachable.
  */
 export async function fetchAcpRegistry(): Promise<AcpRegistry> {
   // Return cached if still valid
@@ -119,15 +93,36 @@ export async function fetchAcpRegistry(): Promise<AcpRegistry> {
   }
 }
 
-/** Merge built-in and CDN registries. CDN entries win on conflict; built-in fills gaps. */
+/**
+ * Merge built-in and CDN registries.
+ * - Same ID: keep built-in core fields, supplement with CDN metadata (tags, homepage, version)
+ * - CDN alias of built-in entry: skip (avoids duplicate agents in UI)
+ * - New CDN-only entry: add as-is
+ */
 function mergeRegistries(builtin: AcpRegistryEntry[], cdn: AcpRegistryEntry[]): AcpRegistryEntry[] {
   const byId = new Map<string, AcpRegistryEntry>();
 
-  // Start with built-in
   for (const entry of builtin) byId.set(entry.id, entry);
 
-  // CDN overwrites / adds
-  for (const entry of cdn) byId.set(entry.id, entry);
+  for (const cdnEntry of cdn) {
+    const existing = byId.get(cdnEntry.id);
+    const canonicalId = resolveAlias(cdnEntry.id);
+    const canonicalExisting = canonicalId !== cdnEntry.id ? byId.get(canonicalId) : undefined;
+
+    if (existing) {
+      // Same ID in both — keep built-in core, supplement with CDN metadata
+      byId.set(cdnEntry.id, {
+        ...existing,
+        tags: cdnEntry.tags ?? existing.tags,
+        homepage: cdnEntry.homepage ?? existing.homepage,
+        version: cdnEntry.version ?? existing.version,
+      });
+    } else if (canonicalExisting) {
+      // CDN entry is an alias of a built-in entry — skip to avoid duplicates
+    } else {
+      byId.set(cdnEntry.id, cdnEntry);
+    }
+  }
 
   return Array.from(byId.values());
 }
@@ -146,11 +141,12 @@ export async function getAcpAgents(): Promise<AcpRegistryEntry[]> {
 }
 
 /**
- * Find a specific ACP agent by ID.
+ * Find a specific ACP agent by ID (supports alias resolution).
  */
 export async function findAcpAgent(id: string): Promise<AcpRegistryEntry | null> {
   const agents = await getAcpAgents();
-  return agents.find(a => a.id === id) ?? null;
+  const canonical = resolveAlias(id);
+  return agents.find(a => a.id === id || a.id === canonical) ?? null;
 }
 
 /**

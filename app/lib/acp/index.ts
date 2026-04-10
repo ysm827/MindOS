@@ -3,6 +3,7 @@ export { spawnAcpAgent, sendMessage, sendAndWait, onMessage, onNotification, onR
 export { createSession, createSessionFromEntry, loadSession, listSessions, prompt, promptStream, cancelPrompt, setMode, setConfigOption, closeSession, getSession, getActiveSessions, closeAllSessions } from './session';
 export { bridgeA2aToAcp, bridgeAcpResponseToA2a, bridgeAcpUpdatesToA2a } from './bridge';
 export { acpTools } from './acp-tools';
+export { AGENT_DESCRIPTORS, AGENT_ALIASES, resolveAlias, getDetectableAgents } from './agent-descriptors';
 export { ACP_ERRORS } from './types';
 export type {
   AcpAgentCapabilities,
@@ -38,3 +39,4 @@ export type {
   AcpTransportType,
 } from './types';
 export type { AcpProcess, AcpIncomingRequest, AcpNotification } from './subprocess';
+export type { AcpAgentDescriptor, AcpAgentOverride, ResolvedAgentCommand, DetectableAgent } from './agent-descriptors';
