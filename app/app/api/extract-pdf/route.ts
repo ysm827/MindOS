@@ -28,7 +28,7 @@ function truncateText(text: string): { result: string; truncated: boolean } {
  * resolution at runtime. Running the extraction in a plain Node process
  * avoids the bundler entirely.
  */
-function extractPdf(buf: Buffer): { text: string; pages: number } {
+function extractPdf(buf: Buffer): { text: string; pages: number; error?: string } {
   const scriptPath = resolveScript('extract-pdf.cjs');
   if (!scriptPath) {
     throw new Error(

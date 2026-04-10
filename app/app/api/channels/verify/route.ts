@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: false, error: 'Missing credentials' }, { status: 400 });
     }
 
-    const validation = validatePlatformConfig(platform, credentials);
+    const validation = validatePlatformConfig(platform as any, credentials);
     if (!validation.valid) {
       return NextResponse.json(
         { ok: false, error: `Missing required fields: ${validation.missing?.join(', ') || 'unknown'}` },
@@ -38,7 +38,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const result = await verifyIMCredentials(platform, credentials);
+    const result = await verifyIMCredentials(platform as any, credentials);
     if (!result.ok) {
       return NextResponse.json({ ok: false, error: result.error || 'Credential verification failed' }, { status: 401 });
     }
