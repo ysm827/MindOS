@@ -16,6 +16,7 @@ import MessageList from '@/components/ask/MessageList';
 import MentionPopover from '@/components/ask/MentionPopover';
 import SlashCommandPopover from '@/components/ask/SlashCommandPopover';
 import SessionHistory from '@/components/ask/SessionHistory';
+import SessionHistoryPanel from '@/components/ask/SessionHistoryPanel';
 import AskHeader from '@/components/ask/AskHeader';
 import FileChip from '@/components/ask/FileChip';
 import AgentSelectorCapsule from '@/components/ask/AgentSelectorCapsule';
@@ -562,7 +563,7 @@ export default function AskContent({ visible, currentFile, initialMessage, initi
       />
 
       {showHistory && (
-        <SessionHistory
+        <SessionHistoryPanel
           sessions={session.sessions}
           activeSessionId={session.activeSessionId}
           onLoad={handleLoadSession}
@@ -570,16 +571,13 @@ export default function AskContent({ visible, currentFile, initialMessage, initi
           onRename={session.renameSession}
           onTogglePin={session.togglePinSession}
           onClearAll={session.clearAllSessions}
-          labels={{
-            title: t.ask.sessionHistory ?? 'Session History',
-            clearAll: t.ask.clearAll ?? 'Clear all',
-            confirmClear: t.ask.confirmClear ?? 'Confirm clear?',
-            noSessions: t.ask.noSessions ?? 'No saved sessions.',
-            rename: t.ask.renameSession ?? 'Rename',
-          }}
+          onClose={() => setShowHistory(false)}
+          onNewChat={handleResetSession}
         />
       )}
 
+      {!showHistory && (
+        <>
       {/* Messages — home variant hides empty state unless maximized (suggestions rendered externally in normal mode) */}
       <div className="flex-1 min-h-0 flex flex-col">
         {!isHome && (
@@ -813,6 +811,8 @@ export default function AskContent({ visible, currentFile, initialMessage, initi
           </div>
         </div>
       </div>
+        </>
+      )}
     </div>
   );
 }

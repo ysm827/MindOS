@@ -260,6 +260,24 @@ export function getDetectableAgents(): DetectableAgent[] {
   }));
 }
 
+/**
+ * Look up user override for an agent, checking canonical ID, alias → canonical,
+ * and reverse alias (canonical → any alias) so users can configure with any name.
+ */
+export function findUserOverride(
+  agentId: string,
+  overrides?: Record<string, AcpAgentOverride>,
+): AcpAgentOverride | undefined {
+  if (!overrides) return undefined;
+  if (overrides[agentId]) return overrides[agentId];
+  const canonical = resolveAlias(agentId);
+  if (canonical !== agentId && overrides[canonical]) return overrides[canonical];
+  for (const [alias, target] of Object.entries(AGENT_ALIASES)) {
+    if (target === agentId && overrides[alias]) return overrides[alias];
+  }
+  return undefined;
+}
+
 /** Parse and validate acpAgents config from raw settings JSON. */
 export function parseAcpAgentOverrides(raw: unknown): Record<string, AcpAgentOverride> | undefined {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return undefined;

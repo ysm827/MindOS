@@ -1,9 +1,9 @@
 export { fetchAcpRegistry, getAcpAgents, findAcpAgent, clearRegistryCache } from './registry';
-export { spawnAcpAgent, sendMessage, sendAndWait, onMessage, onNotification, onRequest, sendResponse, installAutoApproval, killAgent, killAllAgents, getProcess, getActiveProcesses } from './subprocess';
+export { spawnAndConnect, spawnAcpAgent, killAgent, killAllAgents, getProcess, getActiveProcesses } from './subprocess';
 export { createSession, createSessionFromEntry, loadSession, listSessions, prompt, promptStream, cancelPrompt, setMode, setConfigOption, closeSession, getSession, getActiveSessions, closeAllSessions } from './session';
 export { bridgeA2aToAcp, bridgeAcpResponseToA2a, bridgeAcpUpdatesToA2a } from './bridge';
 export { acpTools } from './acp-tools';
-export { AGENT_DESCRIPTORS, AGENT_ALIASES, resolveAlias, getDetectableAgents } from './agent-descriptors';
+export { AGENT_DESCRIPTORS, AGENT_ALIASES, resolveAlias, findUserOverride, getDetectableAgents } from './agent-descriptors';
 export { ACP_ERRORS } from './types';
 export type {
   AcpAgentCapabilities,
@@ -17,10 +17,6 @@ export type {
   AcpSessionState,
   AcpSession,
   AcpSessionInfo,
-  AcpJsonRpcRequest,
-  AcpJsonRpcResponse,
-  AcpJsonRpcError,
-  AcpPromptRequest,
   AcpPromptResponse,
   AcpUpdateType,
   AcpSessionUpdate,
@@ -38,5 +34,5 @@ export type {
   AcpRegistry,
   AcpTransportType,
 } from './types';
-export type { AcpProcess, AcpIncomingRequest, AcpNotification } from './subprocess';
+export type { AcpProcess, AcpClientCallbacks, AcpConnection } from './subprocess';
 export type { AcpAgentDescriptor, AcpAgentOverride, ResolvedAgentCommand, DetectableAgent } from './agent-descriptors';

@@ -16,7 +16,7 @@ import { AGENT_DESCRIPTORS, getDescriptorDisplayName, getDescriptorDescription, 
 
 const REGISTRY_URL = 'https://cdn.agentclientprotocol.com/registry/v1/latest/registry.json';
 const CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days — registry updates very rarely
-const FETCH_TIMEOUT_MS = 10_000;
+const FETCH_TIMEOUT_MS = 3_000;
 
 /* ── Built-in Registry (from AGENT_DESCRIPTORS) ────────────────────────── */
 

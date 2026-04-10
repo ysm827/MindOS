@@ -1,11 +1,13 @@
 /**
- * Connection state store.
- * Tracks whether we're connected to a MindOS server.
+ * Connection state store with heartbeat monitoring.
  */
 import { create } from 'zustand';
+import { AppState } from 'react-native';
 import { mindosClient } from './api-client';
 
 type ConnectionStatus = 'disconnected' | 'connecting' | 'connected' | 'error';
+
+const HEARTBEAT_INTERVAL = 30_000; // 30 seconds
 
 interface ConnectionState {
   status: ConnectionStatus;
@@ -14,17 +16,17 @@ interface ConnectionState {
   hostname: string;
   error: string;
 
-  /** Initialize from saved storage. */
   init: () => Promise<void>;
-  /** Attempt to connect to a server URL. */
   connect: (url: string) => Promise<boolean>;
-  /** Disconnect and clear saved URL. */
   disconnect: () => Promise<void>;
-  /** Re-check connection to current server. */
   checkHealth: () => Promise<boolean>;
+  startHeartbeat: () => void;
+  stopHeartbeat: () => void;
 }
 
-export const useConnectionStore = create<ConnectionState>((set) => ({
+let heartbeatTimer: ReturnType<typeof setInterval> | null = null;
+
+export const useConnectionStore = create<ConnectionState>((set, get) => ({
   status: 'disconnected',
   serverUrl: '',
   serverVersion: '',
@@ -39,6 +41,7 @@ export const useConnectionStore = create<ConnectionState>((set) => ({
     const health = await mindosClient.health();
     if (health?.ok) {
       set({ status: 'connected', serverVersion: health.version });
+      get().startHeartbeat();
     } else {
       set({ status: 'error', error: 'Saved server is unreachable' });
     }
@@ -48,12 +51,10 @@ export const useConnectionStore = create<ConnectionState>((set) => ({
     const normalized = url.replace(/\/+$/, '');
     set({ status: 'connecting', error: '' });
 
-    // Set URL in memory first (for health check), but do NOT persist yet
     mindosClient.setBaseUrl(normalized);
     const health = await mindosClient.health();
 
     if (health?.ok) {
-      // Only persist after successful verification
       await mindosClient.persistServer();
       const connectInfo = await mindosClient.getConnectInfo();
       set({
@@ -62,10 +63,10 @@ export const useConnectionStore = create<ConnectionState>((set) => ({
         serverVersion: health.version,
         hostname: connectInfo?.hostname ?? '',
       });
+      get().startHeartbeat();
       return true;
     }
 
-    // Reset base URL on failure — don't leave a bad URL in memory
     mindosClient.setBaseUrl('');
     set({
       status: 'error',
@@ -76,6 +77,7 @@ export const useConnectionStore = create<ConnectionState>((set) => ({
   },
 
   disconnect: async () => {
+    get().stopHeartbeat();
     await mindosClient.disconnect();
     set({
       status: 'disconnected',
@@ -87,13 +89,33 @@ export const useConnectionStore = create<ConnectionState>((set) => ({
   },
 
   checkHealth: async () => {
-    set({ status: 'connecting' });
+    const prevStatus = get().status;
+    // Don't show "connecting" spinner for background checks
+    if (prevStatus !== 'connected') set({ status: 'connecting' });
     const health = await mindosClient.health();
     if (health?.ok) {
-      set({ status: 'connected', serverVersion: health.version });
+      set({ status: 'connected', serverVersion: health.version, error: '' });
       return true;
     }
     set({ status: 'error', error: 'Connection lost' });
     return false;
+  },
+
+  startHeartbeat: () => {
+    if (heartbeatTimer) return;
+    heartbeatTimer = setInterval(() => {
+      const { status } = get();
+      // Only heartbeat when app is active and we think we're connected
+      if (AppState.currentState === 'active' && (status === 'connected' || status === 'error')) {
+        get().checkHealth();
+      }
+    }, HEARTBEAT_INTERVAL);
+  },
+
+  stopHeartbeat: () => {
+    if (heartbeatTimer) {
+      clearInterval(heartbeatTimer);
+      heartbeatTimer = null;
+    }
   },
 }));

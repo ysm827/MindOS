@@ -100,36 +100,7 @@ export interface AcpSessionInfo {
   updatedAt?: string;
 }
 
-/* ── JSON-RPC (ACP uses JSON-RPC 2.0 over stdio) ─────────────────────── */
-
-export interface AcpJsonRpcRequest {
-  jsonrpc: '2.0';
-  id: string | number;
-  method: string;
-  params?: Record<string, unknown>;
-}
-
-export interface AcpJsonRpcResponse {
-  jsonrpc: '2.0';
-  id: string | number | null;
-  result?: unknown;
-  error?: AcpJsonRpcError;
-}
-
-export interface AcpJsonRpcError {
-  code: number;
-  message: string;
-  data?: unknown;
-}
-
 /* ── Prompt ────────────────────────────────────────────────────────────── */
-
-export interface AcpPromptRequest {
-  sessionId: string;
-  prompt: AcpContentBlock[];
-  context?: { cwd?: string };
-  stream?: boolean;
-}
 
 export interface AcpPromptResponse {
   sessionId: string;

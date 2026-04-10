@@ -13,6 +13,7 @@ import {
   Alert,
   StyleSheet,
 } from 'react-native';
+import { ActionSheetIOS, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -94,6 +95,101 @@ export default function FilesScreen() {
     );
   }
 
+  const handleLongPress = useCallback((item: FileNode) => {
+    const isFile = item.type === 'file';
+    const options = isFile
+      ? ['Rename', 'Delete', 'View Path', 'Cancel']
+      : ['View Path', 'Cancel'];
+    const destructiveIndex = isFile ? 1 : -1;
+    const cancelIndex = options.length - 1;
+
+    const handleAction = (index: number) => {
+      if (!isFile) {
+        if (index === 0) Alert.alert(item.name, item.path);
+        return;
+      }
+      switch (index) {
+        case 0: // Rename
+          if (Platform.OS === 'ios') {
+            Alert.prompt(
+              'Rename File',
+              `Enter new name for "${item.name}"`,
+              [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                  text: 'Rename',
+                  onPress: async (newName?: string) => {
+                    if (!newName?.trim()) return;
+                    try {
+                      await mindosClient.renameFile(item.path, newName.trim());
+                      await load();
+                    } catch (e) {
+                      Alert.alert('Error', (e as Error).message);
+                    }
+                  },
+                },
+              ],
+              'plain-text',
+              item.name.replace(/\.md$/, ''),
+            );
+          } else {
+            // Android: no Alert.prompt, suggest desktop
+            Alert.alert(
+              'Rename',
+              'Renaming is available on iOS. On Android, please rename from the desktop app.',
+            );
+          }
+          break;
+        case 1: // Delete
+          Alert.alert(
+            'Delete File',
+            `Are you sure you want to delete "${item.name}"? It will be moved to trash.`,
+            [
+              { text: 'Cancel', style: 'cancel' },
+              {
+                text: 'Delete',
+                style: 'destructive',
+                onPress: async () => {
+                  try {
+                    await mindosClient.deleteFile(item.path);
+                    await load();
+                  } catch (e) {
+                    Alert.alert('Error', (e as Error).message);
+                  }
+                },
+              },
+            ],
+          );
+          break;
+        case 2: // View Path
+          Alert.alert(item.name, item.path);
+          break;
+      }
+    };
+
+    if (Platform.OS === 'ios') {
+      ActionSheetIOS.showActionSheetWithOptions(
+        { options, destructiveButtonIndex: destructiveIndex, cancelButtonIndex: cancelIndex },
+        handleAction,
+      );
+    } else {
+      // Android: use Alert with buttons as a simpler fallback
+      if (!isFile) {
+        Alert.alert(item.name, item.path);
+        return;
+      }
+      Alert.alert(
+        item.name,
+        item.path,
+        [
+          { text: 'Rename', onPress: () => handleAction(0) },
+          { text: 'Delete', style: 'destructive', onPress: () => handleAction(1) },
+          { text: 'Cancel', style: 'cancel' },
+        ],
+      );
+    }
+  }, [load]);
+
   function iconForNode(node: FileNode) {
     if (node.type === 'directory') {
       return node.isSpace ? 'layers-outline' : 'folder-outline';
@@ -149,7 +245,7 @@ export default function FilesScreen() {
           <Pressable
             style={styles.row}
             onPress={() => router.push(`/view/${item.path}` as any)}
-            onLongPress={() => Alert.alert(item.name, `Path: ${item.path}`)}
+            onLongPress={() => handleLongPress(item)}
           >
             <Ionicons
               name={iconForNode(item) as any}

@@ -5,6 +5,7 @@ import { resolve } from 'node:path';
 import { ROOT, BUILD_STAMP, DEPS_STAMP, STANDALONE_SERVER, STANDALONE_STAMP } from './constants.js';
 import { red, dim, yellow } from './colors.js';
 import { execInherited as run, npmInstall } from './shell.js';
+import { safeRmSync, assertNotSymlink } from './safe-rm.js';
 
 export function needsBuild() {
   // Prefer prebuilt standalone shipped with the npm package.
@@ -37,14 +38,25 @@ export function writeBuildStamp() {
 export function clearBuildLock() {
   const lockFile = resolve(ROOT, 'app', '.next', 'lock');
   if (existsSync(lockFile)) {
-    rmSync(lockFile, { force: true });
+    try {
+      assertNotSymlink(lockFile);
+      rmSync(lockFile, { force: true });
+    } catch (err) {
+      console.warn(`Warning: Failed to clear build lock: ${err}`);
+    }
   }
 }
 
 export function cleanNextDir() {
   const nextDir = resolve(ROOT, 'app', '.next');
   if (existsSync(nextDir)) {
-    rmSync(nextDir, { recursive: true, force: true });
+    try {
+      assertNotSymlink(nextDir);
+      safeRmSync(nextDir, { recursive: true, force: true });
+    } catch (err) {
+      console.error(red(`Failed to clean .next directory: ${err}`));
+      throw err;
+    }
   }
 }
 
@@ -140,23 +152,29 @@ export function ensureAppDeps({ force = false } = {}) {
   console.log(yellow(label));
   npmInstall(resolve(ROOT, 'app'), '--no-workspaces');
 
-  // Verify critical deps — npm tar extraction can silently fail (ENOENT race)
-  if (!verifyDeps()) {
-    console.log(yellow('Some dependencies are incomplete, retrying with clean install...\n'));
-    const nm = resolve(ROOT, 'app', 'node_modules');
-    rmSync(nm, { recursive: true, force: true });
-    run('npm install --no-workspaces', resolve(ROOT, 'app'));
+    // Verify critical deps — npm tar extraction can silently fail (ENOENT race)
     if (!verifyDeps()) {
-      console.error(red('\n✘ Failed to install dependencies after retry.\n'));
-      const appDir = resolve(ROOT, 'app');
-      if (process.platform === 'win32') {
-        console.error(`  Try manually: cd "${appDir}" && rmdir /s /q node_modules && npm install`);
-      } else {
-        console.error(`  Try manually: cd ${appDir} && rm -rf node_modules && npm install`);
+      console.log(yellow('Some dependencies are incomplete, retrying with clean install...\n'));
+      const nm = resolve(ROOT, 'app', 'node_modules');
+      try {
+        assertNotSymlink(nm);
+        safeRmSync(nm, { recursive: true, force: true });
+      } catch (err) {
+        console.error(red(`SECURITY: Failed to verify safe deletion of node_modules: ${err}`));
+        process.exit(1);
       }
-      process.exit(1);
+      run('npm install --no-workspaces', resolve(ROOT, 'app'));
+      if (!verifyDeps()) {
+        console.error(red('\n✘ Failed to install dependencies after retry.\n'));
+        const appDir = resolve(ROOT, 'app');
+        if (process.platform === 'win32') {
+          console.error(`  Try manually: cd "${appDir}" && rmdir /s /q node_modules && npm install`);
+        } else {
+          console.error(`  Try manually: cd ${appDir} && rm -rf node_modules && npm install`);
+        }
+        process.exit(1);
+      }
     }
-  }
 
   writeDepsStamp();
 }

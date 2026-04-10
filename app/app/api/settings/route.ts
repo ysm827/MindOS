@@ -5,6 +5,7 @@ import { invalidateCache } from '@/lib/fs';
 import { ALL_PROVIDER_IDS, getApiKeyEnvVar, getApiKeyFromEnv } from '@/lib/agent/providers';
 import { parseProviders } from '@/lib/custom-endpoints';
 import { handleRouteErrorSimple } from '@/lib/errors';
+import { getEmbeddingStatus } from '@/lib/core/hybrid-search';
 
 function maskToken(token: string | undefined): string {
   if (!token) return '';
@@ -41,6 +42,8 @@ export async function GET() {
       activeProvider: settings.ai.activeProvider,
       providers: settings.ai.providers,
     },
+    embedding: settings.embedding ?? { enabled: false, baseUrl: '', apiKey: '', model: '' },
+    embeddingStatus: getEmbeddingStatus(),
     mindRoot: settings.mindRoot,
     webPassword: settings.webPassword ?? '',
     authToken: maskToken(settings.authToken),
@@ -73,6 +76,18 @@ export async function POST(req: NextRequest) {
       ? (incomingAuthToken === '' ? '' : current.authToken)
       : current.authToken;
 
+    // Handle embedding config
+    let resolvedEmbedding = current.embedding;
+    if (body.embedding && typeof body.embedding === 'object') {
+      const e = body.embedding;
+      resolvedEmbedding = {
+        enabled: (e as any).enabled === true,
+        baseUrl: typeof (e as any).baseUrl === 'string' ? (e as any).baseUrl : '',
+        apiKey: typeof (e as any).apiKey === 'string' ? (e as any).apiKey : '',
+        model: typeof (e as any).model === 'string' ? (e as any).model : '',
+      };
+    }
+
     // Handle connectionMode: validate if provided, otherwise keep existing
     let resolvedConnectionMode = current.connectionMode ?? { cli: true, mcp: false };
     if (body.connectionMode && typeof body.connectionMode === 'object') {
@@ -87,6 +102,7 @@ export async function POST(req: NextRequest) {
 
     const next: ServerSettings = {
       ai: resolvedAi,
+      embedding: resolvedEmbedding,
       mindRoot: body.mindRoot ?? current.mindRoot,
       agent: body.agent ?? current.agent,
       webPassword: resolvedWebPassword,

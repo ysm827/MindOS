@@ -119,7 +119,7 @@ export function useAcpDetection(): AcpDetectionState {
         if (!cancelled) setLoading(false);
       });
 
-    return () => { cancelled = true; };
+    return () => { cancelled = true; inflight.current = false; };
   }, [trigger]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return { installedAgents, notInstalledAgents, loading, error, refresh };

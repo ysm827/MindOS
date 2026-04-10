@@ -205,9 +205,13 @@ export default memo(function AskHeader({
       {!hideTitle && (
         <div className="flex items-center gap-2 min-w-0">
           <div className="w-6 h-6 rounded-lg bg-[var(--amber)]/10 flex items-center justify-center shrink-0">
-            <Sparkles size={13} className="text-[var(--amber)]" />
+            {showHistory ? <History size={13} className="text-[var(--amber)]" /> : <Sparkles size={13} className="text-[var(--amber)]" />}
           </div>
-          {hasMultipleSessions && activeTitle ? (
+          {showHistory ? (
+            <span className="text-sm font-medium text-[var(--amber)]">
+              {t.ask?.sessionHistory ?? 'Session History'}
+            </span>
+          ) : hasMultipleSessions && activeTitle ? (
             <button
               ref={switcherRef}
               type="button"

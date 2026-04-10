@@ -9,7 +9,7 @@ import { EventEmitter } from 'events';
 import { app } from 'electron';
 import path from 'path';
 import {
-  existsSync, mkdirSync, renameSync, rmSync,
+  existsSync, mkdirSync, renameSync, rmSync, lstatSync,
   createWriteStream, createReadStream, readFileSync, unlinkSync, writeFileSync,
 } from 'fs';
 import { createHash } from 'crypto';
@@ -19,6 +19,8 @@ import https from 'https';
 import http from 'http';
 import semver from 'semver';
 import { analyzeMindOsLayout } from './mindos-runtime-layout';
+import { assertNotSymlink, safeRmSync, isSymlink } from './safe-rm';
+import { validateRuntimePath, getRuntimePaths } from './safe-paths';
 
 // ── Constants ──
 
@@ -28,11 +30,11 @@ const MANIFEST_URLS = [
   'https://github.com/GeminiLight/MindOS/releases/download/runtime-latest/latest.json',
   'https://releases.mindos.com/runtime/latest.json',
 ];
-const CONFIG_DIR = path.join(app.getPath('home'), '.mindos');
-const RUNTIME_DIR = path.join(CONFIG_DIR, 'runtime');
-const DOWNLOAD_DIR = path.join(CONFIG_DIR, 'runtime-downloading');
-const OLD_DIR = path.join(CONFIG_DIR, 'runtime-old');
-const TARBALL_PATH = path.join(CONFIG_DIR, 'runtime-download.tar.gz');
+
+// Get paths safely
+const { configDir: CONFIG_DIR, runtimeDir: RUNTIME_DIR, downloadDir: DOWNLOAD_DIR, 
+        oldDir: OLD_DIR, tarballPath: TARBALL_PATH } = getRuntimePaths();
+
 const URL_TIMEOUT = 8_000;
 
 // ── Types ──
@@ -513,33 +515,90 @@ export class CoreUpdater extends EventEmitter {
    * Atomically replace the cached runtime with the downloaded one.
    * Caller MUST stop ProcessManager before calling this (Windows file locks).
    * Returns the new runtime directory path.
+   * 
+   * Security: Uses symlink detection and atomic operations to prevent
+   * data loss via path traversal or race conditions.
    */
   apply(): string {
+    // ✅ Pre-condition: Downloaded runtime must exist
     if (!existsSync(DOWNLOAD_DIR)) {
       throw new Error('No downloaded runtime to apply (runtime-downloading/ missing)');
     }
 
-    // Move old runtime out of the way
-    if (existsSync(RUNTIME_DIR)) {
-      if (existsSync(OLD_DIR)) rmSync(OLD_DIR, { recursive: true, force: true });
-      renameSync(RUNTIME_DIR, OLD_DIR);
+    // ✅ Security Check 1: Validate downloaded runtime is complete
+    const layout = analyzeMindOsLayout(DOWNLOAD_DIR);
+    if (!layout.runnable) {
+      throw new Error('Downloaded runtime is incomplete or corrupted, refusing to apply');
     }
 
-    // Promote downloaded → current
+    // ✅ Security Check 2: Refuse to delete symlinks
+    assertNotSymlink(CONFIG_DIR);
+    assertNotSymlink(DOWNLOAD_DIR);
+    if (existsSync(RUNTIME_DIR)) {
+      assertNotSymlink(RUNTIME_DIR);
+    }
+    if (existsSync(OLD_DIR)) {
+      assertNotSymlink(OLD_DIR);
+    }
+
+    // ✅ Security Check 3: Create user data guard file
+    this.createUserDataGuard();
+
+    // ✅ Step 1: Backup current runtime (atomic rename)
+    if (existsSync(RUNTIME_DIR)) {
+      // Clean up any stale old-dir first
+      if (existsSync(OLD_DIR)) {
+        try {
+          assertNotSymlink(OLD_DIR);
+          safeRmSync(OLD_DIR, { recursive: true, force: true });
+        } catch (err) {
+          console.warn(`[CoreUpdater] Warning: Failed to cleanup stale runtime-old: ${err}`);
+          throw new Error(`Cannot proceed with update: stale backup exists at ${OLD_DIR}`);
+        }
+      }
+
+      // Atomic rename: RUNTIME_DIR → OLD_DIR
+      try {
+        renameSync(RUNTIME_DIR, OLD_DIR);
+      } catch (err) {
+        throw new Error(`Failed to backup current runtime: ${err}`);
+      }
+    }
+
+    // ✅ Step 2: Promote new runtime (atomic rename)
     try {
       renameSync(DOWNLOAD_DIR, RUNTIME_DIR);
     } catch (err) {
-      // Rollback: restore old runtime
+      // Rollback: Restore old runtime
       if (existsSync(OLD_DIR)) {
-        try { renameSync(OLD_DIR, RUNTIME_DIR); } catch { /* double fault */ }
+        try {
+          renameSync(OLD_DIR, RUNTIME_DIR);
+          console.warn('[CoreUpdater] Update failed, rolled back to previous version');
+        } catch (rollbackErr) {
+          console.error('[CoreUpdater] CRITICAL: Rollback also failed, system may be in inconsistent state');
+          throw new Error(
+            `Update failed AND rollback failed - manual intervention needed.\n` +
+            `Failed: ${err}\nRollback error: ${rollbackErr}`
+          );
+        }
       }
-      throw new Error(`Failed to apply update: ${err instanceof Error ? err.message : err}`);
+      throw new Error(`Failed to apply update: ${err}`);
     }
 
-    // Clean up old (async, best-effort)
-    if (existsSync(OLD_DIR)) {
-      try { rmSync(OLD_DIR, { recursive: true, force: true }); } catch { /* non-critical */ }
-    }
+    // ✅ Step 3: Clean up old runtime (async, non-blocking)
+    // We do this in the background to avoid blocking the update completion
+    setImmediate(() => {
+      if (existsSync(OLD_DIR)) {
+        try {
+          assertNotSymlink(OLD_DIR);
+          safeRmSync(OLD_DIR, { recursive: true, force: true });
+          console.info('[CoreUpdater] Cleaned up old runtime backup');
+        } catch (err) {
+          console.warn(`[CoreUpdater] Non-critical: Failed to cleanup old runtime: ${err}`);
+          // Non-critical failure - log but don't throw
+        }
+      }
+    });
 
     return RUNTIME_DIR;
   }
@@ -567,35 +626,94 @@ export class CoreUpdater extends EventEmitter {
   /**
    * Clean up stale files on Desktop startup.
    * Must be called before resolveLocalMindOsProjectRoot().
+   * 
+   * Security: Enhanced with symlink detection to prevent deletion attacks.
    */
   cleanupOnBoot(bundledVersion: string | null): void {
     // 1. Remove leftover runtime-old/ from a previous apply
     if (existsSync(OLD_DIR)) {
-      try { rmSync(OLD_DIR, { recursive: true, force: true }); } catch { /* best-effort */ }
+      try {
+        assertNotSymlink(OLD_DIR);
+        safeRmSync(OLD_DIR, { recursive: true, force: true });
+        console.info('[CoreUpdater] Cleaned up leftover runtime-old/');
+      } catch (err) {
+        console.warn(`[CoreUpdater] Failed to cleanup runtime-old: ${err}`);
+        // Don't block startup on this failure
+      }
     }
 
     // 2. Remove cached runtime if bundled version is same or newer (Desktop was updated)
     if (bundledVersion && semver.valid(bundledVersion) && existsSync(RUNTIME_DIR)) {
-      const cached = this.getCachedVersion();
-      if (cached && semver.valid(cached) && semver.gte(bundledVersion, cached)) {
-        console.info(`[CoreUpdater] Bundled v${bundledVersion} >= cached v${cached}, removing stale cache`);
-        try { rmSync(RUNTIME_DIR, { recursive: true, force: true }); } catch { /* best-effort */ }
+      try {
+        const cached = this.getCachedVersion();
+        if (cached && semver.valid(cached) && semver.gte(bundledVersion, cached)) {
+          // Additional safety: Verify this is a runtime directory
+          const pkgPath = path.join(RUNTIME_DIR, 'package.json');
+          if (!existsSync(pkgPath)) {
+            console.warn(`[CoreUpdater] runtime/ missing package.json, not removing`);
+            return;
+          }
+
+          // Security: Double-check it's not a symlink
+          assertNotSymlink(RUNTIME_DIR);
+
+          console.info(`[CoreUpdater] Bundled v${bundledVersion} >= cached v${cached}, removing stale cache`);
+          safeRmSync(RUNTIME_DIR, { recursive: true, force: true });
+        }
+      } catch (err) {
+        console.warn(`[CoreUpdater] Failed to cleanup cached runtime: ${err}`);
+        // Non-critical, don't block startup
       }
     }
 
     // 3. Remove incomplete downloads (corrupted / interrupted)
     if (existsSync(DOWNLOAD_DIR)) {
-      const layout = analyzeMindOsLayout(DOWNLOAD_DIR);
-      if (!layout.runnable) {
-        console.info('[CoreUpdater] Removing incomplete download');
-        try { rmSync(DOWNLOAD_DIR, { recursive: true, force: true }); } catch { /* best-effort */ }
+      try {
+        assertNotSymlink(DOWNLOAD_DIR);
+
+        const layout = analyzeMindOsLayout(DOWNLOAD_DIR);
+        if (!layout.runnable) {
+          console.info('[CoreUpdater] Removing incomplete download');
+          safeRmSync(DOWNLOAD_DIR, { recursive: true, force: true });
+        }
+        // If runnable, keep it — UI will show "ready to apply"
+      } catch (err) {
+        console.warn(`[CoreUpdater] Failed to cleanup incomplete download: ${err}`);
       }
-      // If runnable, keep it — UI will show "ready to apply"
     }
 
     // 4. Remove leftover tarball
     if (existsSync(TARBALL_PATH)) {
-      try { unlinkSync(TARBALL_PATH); } catch { /* best-effort */ }
+      try {
+        // Tarball is a file, safe to delete without special checks
+        unlinkSync(TARBALL_PATH);
+      } catch (err) {
+        console.warn(`[CoreUpdater] Failed to cleanup tarball: ${err}`);
+      }
+    }
+  }
+
+  /**
+   * Create a guard file marking user data directory.
+   * Helps prevent accidental deletion of user files.
+   */
+  private createUserDataGuard(): void {
+    const userDataGuardPath = path.join(CONFIG_DIR, '.mindos-guard');
+    if (!existsSync(userDataGuardPath)) {
+      try {
+        writeFileSync(
+          userDataGuardPath,
+          JSON.stringify({
+            created: new Date().toISOString(),
+            version: '1.0',
+            warning: 'This directory contains MindOS system files. Deletion may cause data loss.',
+          }, null, 2),
+          'utf-8'
+        );
+      } catch (err) {
+        console.warn(`[CoreUpdater] Failed to create guard file: ${err}`);
+        // Non-critical, continue anyway
+      }
     }
   }
 }

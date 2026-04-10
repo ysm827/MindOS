@@ -75,16 +75,60 @@ npm install -g @geminilight/mindos
 
 ---
 
+## Retrieval strategy
+
+When retrieving knowledge, use **two paths in parallel**, then filter before deep-reading:
+
+### Path 1: Directory scan (by name/structure)
+
+Browse the KB tree and **look at file names and directory names**. Titles often reveal content without reading. If a user asks about "authentication", and you see `Decisions/auth-jwt-vs-session.md`, that's a strong candidate — read it directly, no search needed.
+
+- After bootstrap, scan the tree for paths whose names relate to the query topic.
+- Pay attention to directory semantics: `Decisions/`, `Projects/`, `Workflows/`, `Resources/` etc. each imply what kind of content lives there.
+- If the KB is small (<50 files), a quick tree scan may be faster and more reliable than search.
+
+### Path 2: Full-text search (by content)
+
+Use `search` for content that can't be guessed from file names alone.
+
+- Craft queries from the user's actual words. If the user says "那个很慢的接口", search for "慢 接口" or "性能 API".
+- One well-targeted search is better than 4 vague ones. Only add a second search if the first returned <3 results or if the topic has obvious alternate terms (e.g., Chinese + English).
+- **Do NOT** mechanically fire 2-4 searches every time. Think first, search precisely.
+
+### Filter: snippet triage before full read
+
+Search results include a **snippet** and a **BM25 score**. Use them to decide what to read:
+
+- **High score + snippet clearly on-topic** → read full file.
+- **Medium score + snippet partially relevant** → read full file only if no better candidates exist.
+- **Low score or snippet off-topic** → skip. Do not read every search result.
+- Aim to read **1-3 files** deeply, not 10 files superficially.
+
+### Combined example
+
+```
+User: "之前关于数据库选型的讨论"
+
+Step 1 (tree scan): See "Decisions/database-postgres-vs-mongo.md" → strong match by name.
+Step 2 (search):    search("数据库选型") → returns 5 results.
+Step 3 (triage):    Result #1 snippet mentions "PostgreSQL vs MongoDB 对比" (score 18.3) → read.
+                    Result #2 snippet mentions "数据库连接池配置" (score 4.1) → skip, off-topic.
+                    Result #3 snippet mentions "选型会议纪要" (score 12.7) → read.
+Step 4 (answer):    Cite from the 2-3 files actually read.
+```
+
+---
+
 ## NEVER do (hard-won pitfalls)
 
 - **NEVER write to the KB root** unless explicitly told. Root is for governance files only. New content goes under the most fitting subdirectory.
 - **NEVER assume directory names.** Infer from the actual bootstrap tree — the KB may use Chinese names or flat layout.
 - **NEVER use full-file overwrite for a small edit.** Use `mindos file edit-section` or `mindos file insert-heading` for targeted changes. Full rewrites destroy git diffs.
-- **NEVER search with a single keyword.** Fire 2-4 parallel searches (synonyms, abbreviations, Chinese/English variants).
 - **NEVER modify `INSTRUCTION.md` or `README.md` without confirmation.** Governance docs — treat as high-sensitivity.
 - **NEVER create a file without checking siblings.** Read 1-2 files in the target directory to learn local style.
 - **NEVER leave orphan references.** After rename/move, check backlinks and update every referring file.
 - **NEVER skip routing confirmation for multi-file writes.** The user's mental model may differ from yours.
+- **NEVER read every search result.** Use snippet + score to triage. Only deep-read files that are clearly relevant.
 
 ---
 

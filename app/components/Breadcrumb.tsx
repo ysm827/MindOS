@@ -21,7 +21,7 @@ export default function Breadcrumb({ filePath }: { filePath: string }) {
 
   if (friendly) {
     return (
-      <nav className="flex items-center gap-2 text-xs text-muted-foreground flex-wrap">
+      <nav className="flex items-center gap-1 text-xs text-muted-foreground flex-wrap">
         <Link
           href="/"
           className="p-1.5 rounded-md hover:bg-muted/50 hover:text-foreground transition-colors shrink-0"
@@ -30,17 +30,17 @@ export default function Breadcrumb({ filePath }: { filePath: string }) {
           <Home size={14} />
         </Link>
         <ChevronRight size={12} className="text-muted-foreground/50 shrink-0" />
-        <div className="flex items-center gap-1.5 text-foreground font-medium shrink-0">
+        <span className="flex items-center gap-1.5 text-foreground font-medium shrink-0">
           {friendly.icon}
           <span>{friendly.getLabel(t)}</span>
-        </div>
+        </span>
       </nav>
     );
   }
 
   const parts = filePath.split('/');
   return (
-    <nav className="flex items-center gap-2 text-xs text-muted-foreground flex-wrap">
+    <nav className="flex items-center gap-1 text-xs text-muted-foreground flex-wrap">
       <Link
         href="/"
         className="p-1.5 rounded-md hover:bg-muted/50 hover:text-foreground transition-colors shrink-0"
@@ -52,19 +52,19 @@ export default function Breadcrumb({ filePath }: { filePath: string }) {
         const isLast = i === parts.length - 1;
         const href = '/view/' + parts.slice(0, i + 1).map(encodeURIComponent).join('/');
         return (
-          <div key={i} className="flex items-center gap-2 min-w-0">
+          <span key={i} className="flex items-center gap-1 min-w-0">
             <ChevronRight size={12} className="text-muted-foreground/50 shrink-0" />
             {isLast ? (
-              <div className="flex items-center gap-1.5 text-foreground font-medium shrink-0">
+              <span className="flex items-center gap-1.5 px-1 py-0.5 text-foreground font-medium">
                 <FileTypeIcon name={part} />
                 <span suppressHydrationWarning>{part}</span>
-              </div>
+              </span>
             ) : (
-              <Link href={href} className="px-2 py-1 rounded-md hover:bg-muted/50 hover:text-foreground transition-colors truncate text-muted-foreground hover:text-foreground" title={part}>
+              <Link href={href} className="px-1 py-0.5 rounded-md hover:bg-muted/50 hover:text-foreground transition-colors truncate max-w-[200px]" title={part}>
                 <span suppressHydrationWarning>{part}</span>
               </Link>
             )}
-          </div>
+          </span>
         );
       })}
     </nav>

@@ -214,7 +214,7 @@ export class ProcessManager extends EventEmitter {
     let token = authToken;
     if (!token) {
       try {
-        const configPath = path.join(process.env.HOME || '', '.mindos', 'config.json');
+        const configPath = path.join(process.env.HOME || process.env.USERPROFILE || '', '.mindos', 'config.json');
         const cfg = JSON.parse(readFileSync(configPath, 'utf-8'));
         token = cfg.authToken;
       } catch { /* no config */ }
@@ -284,7 +284,10 @@ export class ProcessManager extends EventEmitter {
     const localNext = path.join(appDir, 'node_modules', '.bin', IS_WIN ? 'next.cmd' : 'next');
     const injectNodeOpts = (base: string) => {
       if (!useWatchdog) return base;
-      return base ? `--require ${watchdog} ${base}` : `--require ${watchdog}`;
+      // Quote the watchdog path for NODE_OPTIONS — paths with spaces (e.g.
+      // C:\Users\John Smith\.mindos\...) would break without quotes.
+      const quoted = `"${watchdog}"`;
+      return base ? `--require ${quoted} ${base}` : `--require ${quoted}`;
     };
     if (existsSync(localNext)) {
       return spawn(localNext, ['start', '-p', String(webPort)], {

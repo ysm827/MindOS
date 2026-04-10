@@ -5,6 +5,7 @@ import { View, Text, Pressable, ActivityIndicator, StyleSheet, Alert } from 'rea
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import Constants from 'expo-constants';
 import { useConnectionStore } from '@/lib/connection-store';
 
 export default function SettingsScreen() {
@@ -91,7 +92,7 @@ export default function SettingsScreen() {
             <Text style={styles.aboutLogo}>◆</Text>
             <View>
               <Text style={styles.aboutName}>MindOS Mobile</Text>
-              <Text style={styles.aboutVersion}>v0.0.1</Text>
+              <Text style={styles.aboutVersion}>v{Constants.expoConfig?.version ?? '0.1.0'}</Text>
             </View>
           </View>
           <Text style={styles.aboutText}>

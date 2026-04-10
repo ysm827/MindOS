@@ -469,10 +469,13 @@ async function startLocalMode(): Promise<string | null> {
       mcpPort = await findAvailablePort(config.mcpPort || DEFAULT_MCP_PORT);
     } catch {
       const basePort = config.port || DEFAULT_WEB_PORT;
+      const portHint = process.platform === 'win32'
+        ? `netstat -ano | findstr :${basePort}`
+        : `lsof -ti:${basePort} | xargs kill`;
       splashStatus({
         error: zh
-          ? `端口 ${basePort}-${basePort + 9} 均被占用。\n请关闭其他占用这些端口的程序，或在终端运行:\n  lsof -ti:${basePort} | xargs kill`
-          : `Ports ${basePort}-${basePort + 9} are all in use.\nClose other programs using these ports, or run:\n  lsof -ti:${basePort} | xargs kill`,
+          ? `端口 ${basePort}-${basePort + 9} 均被占用。\n请关闭其他占用这些端口的程序，或在终端运行:\n  ${portHint}`
+          : `Ports ${basePort}-${basePort + 9} are all in use.\nClose other programs using these ports, or run:\n  ${portHint}`,
         actions: [
           { id: 'retry', label: 'retry', primary: true },
           { id: 'quit', label: 'quit' },
@@ -1615,7 +1618,12 @@ async function bootApp(): Promise<void> {
     mainWindow = createMainWindow();
     setupIPC();
     try {
-      createTray(mainWindow, trayCallbacks);
+      const trayInstance = createTray(mainWindow, trayCallbacks);
+      if (!trayInstance) {
+        // createTray swallowed the error and returned null — same recovery as catch
+        console.warn('[MindOS] Tray creation returned null — close will quit instead of hide');
+        mainWindow.removeAllListeners('close');
+      }
     } catch (trayErr) {
       console.warn('[MindOS] Tray creation failed — close will quit instead of hide:', (trayErr as Error)?.message);
       // Without tray, let window close normally (remove the hide-on-close behavior)

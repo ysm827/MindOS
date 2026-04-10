@@ -180,7 +180,7 @@ export default function ProviderModelCapsule({
     const goUp = rect.top > window.innerHeight - rect.bottom && rect.top > 280;
     setDropdownStyle({
       position: 'fixed',
-      left: Math.min(rect.left, window.innerWidth - 230),
+      left: Math.min(rect.left, window.innerWidth - 270),
       ...(goUp ? { bottom: window.innerHeight - rect.top + 6 } : { top: rect.bottom + 6 }),
       zIndex: 50,
     });
@@ -487,7 +487,7 @@ export default function ProviderModelCapsule({
         ref={providerPanelRef}
         role="listbox"
         aria-label={t.ask?.providerCapsule ?? 'Provider'}
-        className="w-[220px] rounded-lg border border-border bg-card shadow-lg py-1 animate-in fade-in-0 zoom-in-95 duration-100"
+        className="w-[260px] rounded-lg border border-border bg-card shadow-lg py-1 animate-in fade-in-0 zoom-in-95 duration-100"
         style={{ maxHeight: '70vh', overflowY: 'auto' }}
       >
         {providerIds.map((id) => {
@@ -512,15 +512,17 @@ export default function ProviderModelCapsule({
                 <button
                   type="button" role="option" aria-selected={isSelected}
                   onClick={() => handleSelectProvider(id as ProviderSelection)}
-                  className="flex flex-1 items-center gap-2 px-3 py-1.5 min-w-0"
+                  className="flex flex-1 items-center gap-2 px-3 py-1.5 min-w-0 text-left"
                 >
-                  <div className="flex-1 min-w-0 truncate">
-                    <span className={`text-xs ${isSelected ? 'font-medium text-foreground' : 'text-foreground/80'}`}>
-                      {provName}
+                  <span className={`shrink-0 text-xs ${isSelected ? 'font-medium text-foreground' : 'text-foreground/80'}`}>
+                    {provName}
+                  </span>
+                  {provModel && (
+                    <span className="min-w-0 truncate rounded bg-muted/70 px-1.5 py-px text-[10px] font-mono leading-tight text-muted-foreground">
+                      {provModel}
                     </span>
-                    <span className="text-2xs text-muted-foreground ml-1.5">{provModel}</span>
-                  </div>
-                  {isSelected && <Check size={11} className="shrink-0 text-[var(--amber)]" />}
+                  )}
+                  {isSelected && <Check size={11} className="shrink-0 ml-auto text-[var(--amber)]" />}
                 </button>
                 {canExpand && (
                   <button

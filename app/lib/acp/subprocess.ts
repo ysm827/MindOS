@@ -1,33 +1,40 @@
 /**
- * ACP Subprocess Manager — Spawn and communicate with ACP agent processes.
- * ACP agents communicate via JSON-RPC 2.0 over stdio (stdin/stdout).
+ * ACP Subprocess Manager — Spawn ACP agent processes and create SDK connections.
+ * Process lifecycle (spawn, kill, cleanup) remains here.
+ * All JSON-RPC protocol handling is delegated to @agentclientprotocol/sdk.
  */
 
 import { spawn, type ChildProcess } from 'child_process';
+import { Readable, Writable } from 'node:stream';
 import path from 'path';
 import os from 'os';
-import type {
-  AcpJsonRpcRequest,
-  AcpJsonRpcResponse,
-  AcpRegistryEntry,
-} from './types';
-import { resolveAgentCommand } from './agent-descriptors';
+import fs from 'fs';
+import {
+  ClientSideConnection,
+  ndJsonStream,
+  RequestError,
+  type Client,
+  type SessionNotification,
+  type ReadTextFileRequest,
+  type ReadTextFileResponse,
+  type WriteTextFileRequest,
+  type WriteTextFileResponse,
+  type CreateTerminalRequest,
+  type CreateTerminalResponse,
+  type TerminalOutputRequest,
+  type TerminalOutputResponse,
+  type KillTerminalRequest,
+  type KillTerminalResponse,
+  type WaitForTerminalExitRequest,
+  type WaitForTerminalExitResponse,
+  type ReleaseTerminalRequest,
+  type ReleaseTerminalResponse,
+  type RequestPermissionRequest,
+  type RequestPermissionResponse,
+} from '@agentclientprotocol/sdk';
+import type { AcpRegistryEntry } from './types';
+import { resolveAgentCommand, findUserOverride } from './agent-descriptors';
 import { readSettings } from '../settings';
-
-/** Incoming JSON-RPC request from agent (bidirectional — agent asks US for permission). */
-export interface AcpIncomingRequest {
-  jsonrpc: '2.0';
-  id: string | number;
-  method: string;
-  params?: Record<string, unknown>;
-}
-
-/** JSON-RPC 2.0 notification from agent (no id → no response expected). */
-export interface AcpNotification {
-  jsonrpc: '2.0';
-  method: string;
-  params?: Record<string, unknown>;
-}
 
 /* ── Types ─────────────────────────────────────────────────────────────── */
 
@@ -36,35 +43,68 @@ export interface AcpProcess {
   agentId: string;
   proc: ChildProcess;
   alive: boolean;
-  /** Set when the process fails to spawn or exits with an error. */
   spawnError?: string;
-  /** Exit code when the process has terminated. */
   exitCode?: number | null;
 }
 
-type MessageCallback = (msg: AcpJsonRpcResponse) => void;
-type RequestCallback = (req: AcpIncomingRequest) => void;
-type NotificationCallback = (notif: AcpNotification) => void;
+/**
+ * Mutable callbacks container — session layer swaps handlers
+ * for each prompt/promptStream call.
+ */
+export interface AcpClientCallbacks {
+  onSessionUpdate?: (params: SessionNotification) => void;
+}
+
+export interface AcpConnection {
+  connection: ClientSideConnection;
+  callbacks: AcpClientCallbacks;
+  process: AcpProcess;
+}
 
 /* ── State ─────────────────────────────────────────────────────────────── */
 
 const processes = new Map<string, AcpProcess>();
-const messageListeners = new Map<string, Set<MessageCallback>>();
-const requestListeners = new Map<string, Set<RequestCallback>>();
-const notificationListeners = new Map<string, Set<NotificationCallback>>();
-let rpcIdCounter = 1;
 
-/* ── Public API ────────────────────────────────────────────────────────── */
+/* ── Public API — Process Lifecycle ───────────────────────────────────── */
 
 /**
- * Spawn an ACP agent subprocess.
+ * Spawn an ACP agent subprocess and create an SDK connection.
+ * Returns both the process handle and the SDK ClientSideConnection.
+ */
+export function spawnAndConnect(
+  entry: AcpRegistryEntry,
+  options?: { env?: Record<string, string>; cwd?: string },
+): AcpConnection {
+  const proc = spawnAcpAgent(entry, options);
+  const cwd = options?.cwd ?? process.cwd();
+  const callbacks: AcpClientCallbacks = {};
+
+  const client = createMindosClient(proc, cwd, callbacks);
+
+  const output = Writable.toWeb(proc.proc.stdin!) as WritableStream<Uint8Array>;
+  const input = Readable.toWeb(proc.proc.stdout!) as ReadableStream<Uint8Array>;
+  const stream = ndJsonStream(output, input);
+
+  const connection = new ClientSideConnection(() => client, stream);
+
+  connection.signal.addEventListener('abort', () => {
+    if (proc.alive) {
+      proc.alive = false;
+    }
+  });
+
+  return { connection, callbacks, process: proc };
+}
+
+/**
+ * Spawn an ACP agent subprocess (low-level — prefer spawnAndConnect).
  */
 export function spawnAcpAgent(
   entry: AcpRegistryEntry,
   options?: { env?: Record<string, string>; cwd?: string },
 ): AcpProcess {
   const settings = readSettings();
-  const userOverride = settings.acpAgents?.[entry.id];
+  const userOverride = findUserOverride(entry.id, settings.acpAgents);
   const resolved = resolveAgentCommand(entry.id, entry, userOverride);
   const { cmd, args } = { cmd: resolved.cmd, args: resolved.args };
 
@@ -87,50 +127,10 @@ export function spawnAcpAgent(
   const acpProc: AcpProcess = { id, agentId: entry.id, proc, alive: true };
 
   processes.set(id, acpProc);
-  messageListeners.set(id, new Set());
-  requestListeners.set(id, new Set());
-  notificationListeners.set(id, new Set());
 
-  // Parse newline-delimited JSON-RPC 2.0 from stdout.
-  // Three message types per spec:
-  //   1. Request  (has method + id)    → agent asking client for something
-  //   2. Notification (has method, NO id) → agent streaming updates
-  //   3. Response (has id, NO method)  → reply to our request
-  let buffer = '';
-  proc.stdout?.on('data', (chunk: Buffer) => {
-    buffer += chunk.toString();
-    const lines = buffer.split('\n');
-    buffer = lines.pop() ?? '';
-
-    for (const line of lines) {
-      const trimmed = line.trim();
-      if (!trimmed) continue;
-      try {
-        const msg = JSON.parse(trimmed);
-
-        if (msg.method !== undefined) {
-          if (msg.id !== undefined) {
-            const reqCbs = requestListeners.get(id);
-            if (reqCbs) for (const cb of reqCbs) cb(msg as AcpIncomingRequest);
-          } else {
-            const notifCbs = notificationListeners.get(id);
-            if (notifCbs) for (const cb of notifCbs) cb(msg as AcpNotification);
-          }
-        } else {
-          const msgCbs = messageListeners.get(id);
-          if (msgCbs) for (const cb of msgCbs) cb(msg as AcpJsonRpcResponse);
-        }
-      } catch {
-        // Not valid JSON — skip (could be agent debug output)
-      }
-    }
-  });
-
-  // Capture stderr for debugging (agents may log startup errors there)
   let stderrBuf = '';
   proc.stderr?.on('data', (chunk: Buffer) => {
     stderrBuf += chunk.toString();
-    // Keep only last 4KB to avoid unbounded memory
     if (stderrBuf.length > 4096) stderrBuf = stderrBuf.slice(-4096);
   });
 
@@ -141,8 +141,6 @@ export function spawnAcpAgent(
       acpProc.spawnError = stderrBuf.trim().slice(0, 500) || `Process exited with code ${code}`;
       console.error(`[ACP] ${entry.id} exited with code ${code}: ${acpProc.spawnError}`);
     }
-    // Do NOT delete listeners here — sendAndWait still needs them to reject.
-    // Listeners are cleaned up in killAgent() and by individual unsub calls.
   });
 
   proc.on('error', (err) => {
@@ -155,130 +153,21 @@ export function spawnAcpAgent(
 }
 
 /**
- * Send a JSON-RPC message to an ACP agent's stdin.
- */
-export function sendMessage(acpProc: AcpProcess, method: string, params?: Record<string, unknown>): string {
-  if (!acpProc.alive || !acpProc.proc.stdin?.writable) {
-    throw new Error(`ACP process ${acpProc.id} is not alive`);
-  }
-
-  const id = `rpc-${rpcIdCounter++}`;
-  const request: AcpJsonRpcRequest = {
-    jsonrpc: '2.0',
-    id,
-    method,
-    ...(params ? { params } : {}),
-  };
-
-  acpProc.proc.stdin.write(JSON.stringify(request) + '\n');
-  return id;
-}
-
-/**
- * Register a callback for messages from an ACP agent.
- * Returns an unsubscribe function.
- */
-export function onMessage(acpProc: AcpProcess, callback: MessageCallback): () => void {
-  const listeners = messageListeners.get(acpProc.id);
-  if (!listeners) throw new Error(`ACP process ${acpProc.id} not found`);
-
-  listeners.add(callback);
-  return () => { listeners.delete(callback); };
-}
-
-/**
- * Send a JSON-RPC request and wait for a response with the matching ID.
- */
-export function sendAndWait(
-  acpProc: AcpProcess,
-  method: string,
-  params?: Record<string, unknown>,
-  timeoutMs = 30_000,
-): Promise<AcpJsonRpcResponse> {
-  return new Promise((resolve, reject) => {
-    // Fail fast if process is already dead (e.g. binary not found).
-    if (!acpProc.alive) {
-      const reason = acpProc.spawnError || 'Process is not alive';
-      reject(new Error(
-        `Agent "${acpProc.agentId}" is not running: ${reason}. ` +
-        `Please check that the agent is installed and available on your PATH.`,
-      ));
-      return;
-    }
-
-    let rpcId: string;
-    try {
-      rpcId = sendMessage(acpProc, method, params);
-    } catch (err) {
-      reject(err);
-      return;
-    }
-
-    const cleanup = () => {
-      clearTimeout(timer);
-      unsub();
-      acpProc.proc.removeListener('close', onClose);
-      acpProc.proc.removeListener('error', onError);
-    };
-
-    const timer = setTimeout(() => {
-      cleanup();
-      reject(new Error(`ACP RPC timeout after ${timeoutMs}ms for method: ${method}`));
-    }, timeoutMs);
-
-    const unsub = onMessage(acpProc, (msg) => {
-      if (String(msg.id) === rpcId) {
-        cleanup();
-        resolve(msg);
-      }
-    });
-
-    // Reject immediately if the process dies while we're waiting.
-    const onClose = (code: number | null) => {
-      cleanup();
-      const reason = acpProc.spawnError || `Process exited with code ${code}`;
-      reject(new Error(
-        `Agent "${acpProc.agentId}" exited unexpectedly: ${reason}. ` +
-        `Please check that the agent is installed and available on your PATH.`,
-      ));
-    };
-    const onError = (err: Error) => {
-      cleanup();
-      reject(new Error(
-        `Agent "${acpProc.agentId}" failed to start: ${err.message}. ` +
-        `Please check that the agent is installed and available on your PATH.`,
-      ));
-    };
-    acpProc.proc.once('close', onClose);
-    acpProc.proc.once('error', onError);
-  });
-}
-
-/**
  * Kill an ACP agent process and its entire process tree.
- * Uses negative PID to send signal to the process group (requires detached spawn).
  */
 export function killAgent(acpProc: AcpProcess): void {
   const pid = acpProc.proc.pid;
   if (pid) {
-    // Kill the entire process group via negative PID
     try { process.kill(-pid, 'SIGTERM'); } catch { /* already dead */ }
-
-    // Force SIGKILL after 3s — use signal 0 probe instead of `alive` flag
-    // because `alive` is set to false below before the timeout fires.
     setTimeout(() => {
       try {
-        process.kill(-pid, 0); // probe: throws if group is gone
+        process.kill(-pid, 0);
         process.kill(-pid, 'SIGKILL');
-      } catch { /* already dead — good */ }
+      } catch { /* already dead */ }
     }, 3000);
   }
   acpProc.alive = false;
   processes.delete(acpProc.id);
-  messageListeners.delete(acpProc.id);
-  requestListeners.delete(acpProc.id);
-  notificationListeners.delete(acpProc.id);
-  // Clean up any terminals spawned by this process
   const terms = terminalMaps.get(acpProc.id);
   if (terms) {
     for (const entry of terms.values()) {
@@ -288,275 +177,185 @@ export function killAgent(acpProc: AcpProcess): void {
   }
 }
 
-/**
- * Get a process by its ID.
- */
 export function getProcess(id: string): AcpProcess | undefined {
   return processes.get(id);
 }
 
-/**
- * Get all active processes.
- */
 export function getActiveProcesses(): AcpProcess[] {
   return [...processes.values()].filter(p => p.alive);
 }
 
-/**
- * Kill all active ACP processes. Used for cleanup.
- */
 export function killAllAgents(): void {
   for (const proc of processes.values()) {
     killAgent(proc);
   }
 }
 
-/**
- * Register a callback for JSON-RPC notifications from the agent
- * (e.g. session/update streaming updates during prompt processing).
- * Returns an unsubscribe function.
- */
-export function onNotification(acpProc: AcpProcess, callback: NotificationCallback): () => void {
-  const listeners = notificationListeners.get(acpProc.id);
-  if (!listeners) throw new Error(`ACP process ${acpProc.id} not found`);
+/* ── Client Implementation ─────────────────────────────────────────────── */
 
-  listeners.add(callback);
-  return () => { listeners.delete(callback); };
-}
+function createMindosClient(
+  proc: AcpProcess,
+  cwd: string,
+  callbacks: AcpClientCallbacks,
+): Client {
+  return {
+    async requestPermission(params: RequestPermissionRequest): Promise<RequestPermissionResponse> {
+      console.log(`[ACP] Auto-approve permission: agent=${proc.agentId} ${JSON.stringify(params.toolCall ?? params).slice(0, 200)}`);
+      const options = params.options ?? [];
+      const selected =
+        options.find(o => o.kind === 'allow_once') ??
+        options.find(o => o.kind === 'allow_always') ??
+        options[0];
+      return { outcome: { outcome: 'selected', optionId: selected?.optionId ?? 'allow_once' } };
+    },
 
-/**
- * Register a callback for incoming JSON-RPC REQUESTS from the agent
- * (bidirectional: agent asks client for permission / capability).
- * Returns an unsubscribe function.
- */
-export function onRequest(acpProc: AcpProcess, callback: RequestCallback): () => void {
-  const listeners = requestListeners.get(acpProc.id);
-  if (!listeners) throw new Error(`ACP process ${acpProc.id} not found`);
+    async sessionUpdate(params: SessionNotification): Promise<void> {
+      callbacks.onSessionUpdate?.(params);
+    },
 
-  listeners.add(callback);
-  return () => { listeners.delete(callback); };
-}
-
-/**
- * Send a raw JSON-RPC response back to the agent's stdin.
- * Used for replying to incoming requests (e.g. permission approvals).
- */
-export function sendResponse(
-  acpProc: AcpProcess,
-  id: string | number,
-  result: unknown,
-): void {
-  if (!acpProc.alive || !acpProc.proc.stdin?.writable) {
-    throw new Error(`ACP process ${acpProc.id} is not alive`);
-  }
-
-  const response: AcpJsonRpcResponse = {
-    jsonrpc: '2.0',
-    id,
-    result,
-  };
-  acpProc.proc.stdin.write(JSON.stringify(response) + '\n');
-}
-
-/**
- * Install auto-approval for all incoming permission/capability requests.
- * Agents in ACP mode send requests like fs/read, fs/write, terminal/execute etc.
- * Without approval, the agent hangs waiting for TTY input that never comes.
- * Returns an unsubscribe function.
- */
-export function installAutoApproval(
-  acpProc: AcpProcess,
-  options?: { cwd?: string },
-): () => void {
-  const cwd = options?.cwd;
-
-  return onRequest(acpProc, (req) => {
-    const method = req.method;
-    const params = (req.params ?? {}) as Record<string, unknown>;
-
-    switch (method) {
-      // ── File system: read ──
-      case 'fs/read_text_file': {
-        const filePath = String(params.path ?? '');
-        if (!filePath) {
-          sendResponse(acpProc, req.id, { error: { code: -32602, message: 'path is required' } });
-          return;
+    async readTextFile(params: ReadTextFileRequest): Promise<ReadTextFileResponse> {
+      if (!params.path) throw RequestError.invalidParams(undefined, 'path is required');
+      if (isSensitivePath(params.path)) {
+        throw new RequestError(-32001, `Access denied: ${params.path} is a sensitive file`);
+      }
+      try {
+        let content = fs.readFileSync(params.path, 'utf-8');
+        if (params.line != null || params.limit != null) {
+          const lines = content.split('\n');
+          const start = ((params.line ?? 1) - 1);
+          const end = params.limit != null ? start + params.limit : lines.length;
+          content = lines.slice(Math.max(0, start), end).join('\n');
         }
-        if (isSensitivePath(filePath)) {
-          sendResponse(acpProc, req.id, { error: { code: -32001, message: `Access denied: ${filePath} is a sensitive file` } });
-          return;
+        return { content };
+      } catch (err: any) {
+        if (err?.code === 'ENOENT') throw RequestError.resourceNotFound(params.path);
+        if (err?.code === 'EACCES' || err?.code === 'EPERM') {
+          throw new RequestError(-32001, `Permission denied: ${params.path}`);
         }
-        try {
-          const fs = require('fs');
-          const line = typeof params.line === 'number' ? params.line : undefined;
-          const limit = typeof params.limit === 'number' ? params.limit : undefined;
-          let content = fs.readFileSync(filePath, 'utf-8') as string;
-          if (line !== undefined || limit !== undefined) {
-            const lines = content.split('\n');
-            const start = (line ?? 1) - 1; // 1-based to 0-based
-            const end = limit !== undefined ? start + limit : lines.length;
-            content = lines.slice(Math.max(0, start), end).join('\n');
-          }
-          sendResponse(acpProc, req.id, { content });
-        } catch (err) {
-          sendResponse(acpProc, req.id, { error: { code: -32002, message: (err as Error).message } });
+        throw new RequestError(-32603, `Failed to read ${params.path}: ${err?.message ?? err}`);
+      }
+    },
+
+    async writeTextFile(params: WriteTextFileRequest): Promise<WriteTextFileResponse> {
+      if (!params.path) throw RequestError.invalidParams(undefined, 'path is required');
+      if (!isWithinAllowedWritePaths(params.path, cwd)) {
+        throw new RequestError(-32001, `Write denied: ${params.path} is outside the working directory`);
+      }
+      try {
+        const dir = path.dirname(params.path);
+        if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+        fs.writeFileSync(params.path, params.content, 'utf-8');
+        return {};
+      } catch (err: any) {
+        if (err?.code === 'EACCES' || err?.code === 'EPERM') {
+          throw new RequestError(-32001, `Write permission denied: ${params.path}`);
         }
-        return;
+        if (err?.code === 'ENOSPC') {
+          throw new RequestError(-32603, `Disk full: cannot write ${params.path}`);
+        }
+        throw RequestError.internalError(undefined, err?.message ?? String(err));
+      }
+    },
+
+    async createTerminal(params: CreateTerminalRequest): Promise<CreateTerminalResponse> {
+      if (!params.command) throw RequestError.invalidParams(undefined, 'command is required');
+
+      const requestedCwd = params.cwd ?? undefined;
+      const terminalCwd = requestedCwd && isWithinAllowedWritePaths(requestedCwd, cwd)
+        ? requestedCwd
+        : cwd;
+
+      const envObj: Record<string, string> = {};
+      if (params.env) {
+        for (const v of params.env) envObj[v.name] = v.value;
       }
 
-      // ── File system: write ──
-      case 'fs/write_text_file': {
-        const filePath = String(params.path ?? '');
-        const content = String(params.content ?? '');
-        if (!filePath) {
-          sendResponse(acpProc, req.id, { error: { code: -32602, message: 'path is required' } });
-          return;
-        }
-        if (cwd && !isWithinAllowedWritePaths(filePath, cwd)) {
-          sendResponse(acpProc, req.id, { error: { code: -32001, message: `Write denied: ${filePath} is outside the working directory` } });
-          return;
-        }
-        try {
-          const fs = require('fs');
-          const dir = path.dirname(filePath);
-          if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-          fs.writeFileSync(filePath, content, 'utf-8');
-          sendResponse(acpProc, req.id, {});
-        } catch (err) {
-          sendResponse(acpProc, req.id, { error: { code: -32603, message: (err as Error).message } });
-        }
-        return;
-      }
+      console.log(`[ACP] terminal/create: agent=${proc.agentId} cmd="${params.command} ${(params.args ?? []).join(' ')}" cwd=${terminalCwd}`);
 
-      // ── Terminal: create ──
-      case 'terminal/create': {
-        const command = String(params.command ?? '');
-        const args = Array.isArray(params.args) ? params.args.map(String) : [];
-        const cwd = typeof params.cwd === 'string' ? params.cwd : undefined;
-        const env = (params.env && typeof params.env === 'object') ? params.env as Record<string, string> : undefined;
-        const outputByteLimit = typeof params.outputByteLimit === 'number' ? params.outputByteLimit : 1_000_000;
+      const terminalId = `term-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+      const outputByteLimit = params.outputByteLimit ?? 1_000_000;
 
-        if (!command) {
-          sendResponse(acpProc, req.id, { error: { code: -32602, message: 'command is required' } });
-          return;
-        }
-
-        const terminalId = `term-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
-        try {
-          const { spawn: spawnChild } = require('child_process');
-          const child = spawnChild(command, args, {
-            cwd,
-            env: { ...process.env, ...(env ?? {}) },
-            shell: true,
-            stdio: ['pipe', 'pipe', 'pipe'],
-          });
-
-          let output = '';
-          let truncated = false;
-
-          child.stdout?.on('data', (chunk: Buffer) => {
-            if (output.length < outputByteLimit) {
-              output += chunk.toString();
-              if (output.length > outputByteLimit) {
-                output = output.slice(0, outputByteLimit);
-                truncated = true;
-              }
-            }
-          });
-          child.stderr?.on('data', (chunk: Buffer) => {
-            if (output.length < outputByteLimit) {
-              output += chunk.toString();
-              if (output.length > outputByteLimit) {
-                output = output.slice(0, outputByteLimit);
-                truncated = true;
-              }
-            }
-          });
-
-          // Store terminal in process-scoped map
-          const terminalMap = getOrCreateTerminalMap(acpProc.id);
-          terminalMap.set(terminalId, { child, output: () => output, truncated: () => truncated });
-
-          sendResponse(acpProc, req.id, { terminalId });
-        } catch (err) {
-          sendResponse(acpProc, req.id, { error: { code: -32603, message: (err as Error).message } });
-        }
-        return;
-      }
-
-      // ── Terminal: output ──
-      case 'terminal/output': {
-        const terminalId = String(params.terminalId ?? '');
-        const terminal = getTerminal(acpProc.id, terminalId);
-        if (!terminal) {
-          sendResponse(acpProc, req.id, { error: { code: -32002, message: `Terminal not found: ${terminalId}` } });
-          return;
-        }
-        const exitStatus = terminal.child.exitCode !== null ? { exitCode: terminal.child.exitCode } : undefined;
-        sendResponse(acpProc, req.id, { output: terminal.output(), truncated: terminal.truncated(), exitStatus });
-        return;
-      }
-
-      // ── Terminal: kill ──
-      case 'terminal/kill': {
-        const terminalId = String(params.terminalId ?? '');
-        const terminal = getTerminal(acpProc.id, terminalId);
-        if (!terminal) {
-          sendResponse(acpProc, req.id, { error: { code: -32002, message: `Terminal not found: ${terminalId}` } });
-          return;
-        }
-        terminal.child.kill('SIGTERM');
-        sendResponse(acpProc, req.id, {});
-        return;
-      }
-
-      // ── Terminal: wait_for_exit ──
-      case 'terminal/wait_for_exit': {
-        const terminalId = String(params.terminalId ?? '');
-        const terminal = getTerminal(acpProc.id, terminalId);
-        if (!terminal) {
-          sendResponse(acpProc, req.id, { error: { code: -32002, message: `Terminal not found: ${terminalId}` } });
-          return;
-        }
-        if (terminal.child.exitCode !== null) {
-          sendResponse(acpProc, req.id, { exitCode: terminal.child.exitCode, signal: terminal.child.signalCode });
-          return;
-        }
-        terminal.child.on('exit', (code: number | null, signal: string | null) => {
-          sendResponse(acpProc, req.id, { exitCode: code, signal });
+      try {
+        const child = spawn(params.command, params.args ?? [], {
+          cwd: terminalCwd,
+          env: { ...process.env, ...envObj },
+          shell: true,
+          stdio: ['pipe', 'pipe', 'pipe'],
         });
-        return;
-      }
 
-      // ── Terminal: release ──
-      case 'terminal/release': {
-        const terminalId = String(params.terminalId ?? '');
-        const terminal = getTerminal(acpProc.id, terminalId);
-        if (!terminal) {
-          sendResponse(acpProc, req.id, { error: { code: -32002, message: `Terminal not found: ${terminalId}` } });
-          return;
+      let output = '';
+      let truncated = false;
+      const collect = (chunk: Buffer) => {
+        output += chunk.toString();
+        if (output.length > outputByteLimit) {
+          // ACP spec: truncate from the beginning, keeping most recent output
+          output = output.slice(-outputByteLimit);
+          truncated = true;
         }
-        if (terminal.child.exitCode === null) terminal.child.kill('SIGTERM');
-        removeTerminal(acpProc.id, terminalId);
-        sendResponse(acpProc, req.id, {});
-        return;
-      }
+      };
+        child.stdout?.on('data', collect);
+        child.stderr?.on('data', collect);
 
-      // ── Permission requests (auto-approve all) ──
-      case 'session/request_permission': {
-        // Auto-approve in production; log in dev for debugging
-        if (process.env.NODE_ENV === 'development') console.log(`[ACP] Auto-approving permission: ${JSON.stringify(params.toolCall ?? {}).slice(0, 200)}`);
-        sendResponse(acpProc, req.id, { outcome: { selected: { optionId: 'allow_once' } } });
-        return;
-      }
+        const terminalMap = getOrCreateTerminalMap(proc.id);
+        terminalMap.set(terminalId, { child, output: () => output, truncated: () => truncated });
 
-      // ── Unknown methods: auto-approve for backwards compat ──
-      default: {
-        if (process.env.NODE_ENV === 'development') console.log(`[ACP] Auto-approving unknown agent request: ${method} (id=${req.id})`);
-        sendResponse(acpProc, req.id, {});
+        return { terminalId };
+      } catch (err) {
+        throw RequestError.internalError(undefined, (err as Error).message);
       }
-    }
-  });
+    },
+
+    async terminalOutput(params: TerminalOutputRequest): Promise<TerminalOutputResponse> {
+      const terminal = getTerminal(proc.id, params.terminalId);
+      if (!terminal) throw new RequestError(-32002, `Terminal not found: ${params.terminalId}`);
+      const exitStatus = terminal.child.exitCode !== null
+        ? { exitCode: terminal.child.exitCode, signal: terminal.child.signalCode }
+        : undefined;
+      return { output: terminal.output(), truncated: terminal.truncated(), exitStatus };
+    },
+
+    async killTerminal(params: KillTerminalRequest): Promise<KillTerminalResponse> {
+      const terminal = getTerminal(proc.id, params.terminalId);
+      if (!terminal) throw new RequestError(-32002, `Terminal not found: ${params.terminalId}`);
+      terminal.child.kill('SIGTERM');
+      return {};
+    },
+
+    async waitForTerminalExit(params: WaitForTerminalExitRequest): Promise<WaitForTerminalExitResponse> {
+      const terminal = getTerminal(proc.id, params.terminalId);
+      if (!terminal) throw new RequestError(-32002, `Terminal not found: ${params.terminalId}`);
+      if (terminal.child.exitCode !== null) {
+        return { exitCode: terminal.child.exitCode, signal: terminal.child.signalCode };
+      }
+      return new Promise((resolve) => {
+        terminal.child.on('exit', (code: number | null, signal: string | null) => {
+          resolve({ exitCode: code, signal });
+        });
+        // Re-check after attaching listener to avoid race condition:
+        // if child exited between the check above and .on('exit'), the event already fired.
+        if (terminal.child.exitCode !== null) {
+          resolve({ exitCode: terminal.child.exitCode, signal: terminal.child.signalCode });
+        }
+      });
+    },
+
+    async releaseTerminal(params: ReleaseTerminalRequest): Promise<ReleaseTerminalResponse> {
+      const terminal = getTerminal(proc.id, params.terminalId);
+      if (!terminal) throw new RequestError(-32002, `Terminal not found: ${params.terminalId}`);
+      if (terminal.child.exitCode === null) terminal.child.kill('SIGTERM');
+      removeTerminal(proc.id, params.terminalId);
+      return {};
+    },
+
+    async extMethod(_method: string, _params: Record<string, unknown>): Promise<Record<string, unknown>> {
+      console.log(`[ACP] Auto-approve ext method: agent=${proc.agentId} method=${_method}`);
+      return {};
+    },
+
+    async extNotification(_method: string, _params: Record<string, unknown>): Promise<void> {
+      // Silently accept extension notifications
+    },
+  };
 }
 
 /* ── Path safety ───────────────────────────────────────────────────────── */
@@ -586,7 +385,7 @@ function isWithinAllowedWritePaths(filePath: string, cwd: string): boolean {
 /* ── Terminal management (per ACP process) ─────────────────────────────── */
 
 interface TerminalEntry {
-  child: import('child_process').ChildProcess;
+  child: ChildProcess;
   output: () => string;
   truncated: () => boolean;
 }
@@ -609,5 +408,3 @@ function getTerminal(procId: string, terminalId: string): TerminalEntry | undefi
 function removeTerminal(procId: string, terminalId: string): void {
   terminalMaps.get(procId)?.delete(terminalId);
 }
-
-/* ── Internal — agent command resolution moved to agent-descriptors.ts ─ */

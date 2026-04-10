@@ -11,7 +11,6 @@ import type { McpTabProps, McpStatus, AgentInfo, ConnectionMode } from './types'
 import AgentInstall from './McpAgentInstall';
 import SkillsSection from './McpSkillsSection';
 import McpExternalTools from './McpExternalTools';
-import ServerPortsCard from './ServerPortsCard';
 
 /* ── Main Connections Tab ────────────────────────────────────────── */
 
@@ -99,9 +98,6 @@ export function McpTab({ t }: McpTabProps) {
 
   return (
     <div className="space-y-6">
-      {/* 0. Server Ports */}
-      {m && <ServerPortsCard m={m} />}
-
       {/* 1. Connection Mode Toggle */}
       <ConnectionModeCard
         mcpEnabled={mcpEnabled}
@@ -114,7 +110,7 @@ export function McpTab({ t }: McpTabProps) {
       {/* 2. Auth Token */}
       <AuthTokenCard status={mcp.status} m={m} />
 
-      {/* 3. Connect Agents (CLI/MCP guides + detected agents) */}
+      {/* 3. Connect Agents (CLI/MCP guides + detected agents + MCP port) */}
       <ConnectCard
         mode={mode}
         onModeChange={setMode}

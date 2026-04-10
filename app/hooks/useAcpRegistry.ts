@@ -79,7 +79,7 @@ export function useAcpRegistry(): AcpRegistryState {
         if (!cancelled) setLoading(false);
       });
 
-    return () => { cancelled = true; };
+    return () => { cancelled = true; inflight.current = false; };
   }, [trigger]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return { agents, loading, error, retry };

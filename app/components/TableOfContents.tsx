@@ -194,7 +194,7 @@ export default function TableOfContents({ content }: TableOfContentsProps) {
               }}
               title={heading.text}
             >
-              <span className="line-clamp-2" suppressHydrationWarning>
+              <span className="block truncate" suppressHydrationWarning>
                 {heading.text}
               </span>
             </a>

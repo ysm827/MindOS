@@ -39,6 +39,7 @@ import * as uninstallCmd from './commands/uninstall.js';
 import * as logsCmd from './commands/logs.js';
 import * as apiCmd from './commands/api.js';
 import * as initSkillsCmd from './commands/init-skills.js';
+import * as channelCmd from './commands/channel.js';
 
 // ── Command registry ──────────────────────────────────────────────────────────
 
@@ -49,7 +50,7 @@ const modules = [
   mcpCmd, tokenCmd,
   syncCmd,
   gatewayCmd,
-  onboardCmd, configCmd, doctorCmd, updateCmd, uninstallCmd, logsCmd, apiCmd,
+  onboardCmd, configCmd, channelCmd, doctorCmd, updateCmd, uninstallCmd, logsCmd, apiCmd,
   initSkillsCmd,
 ];
 
@@ -88,6 +89,7 @@ const coreEntries = [
   ['mcp',    mcpCmd],
   ['init',   onboardCmd],
   ['config', configCmd],
+  ['channel', channelCmd],
   ['doctor', doctorCmd],
   ['update', updateCmd],
 ];

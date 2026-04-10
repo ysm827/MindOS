@@ -13,6 +13,8 @@ export interface PlatformDef {
   icon: string;
   fields: PlatformField[];
   guide?: string;
+  guideUrl?: string;
+  editHint?: string;
 }
 
 export type PlatformStatus = {
@@ -33,6 +35,8 @@ export const PLATFORMS: PlatformDef[] = [
   {
     id: 'feishu', name: 'Feishu', icon: '🐦',
     guide: '1. open.feishu.cn → Create App\n2. Credentials page → copy App ID & Secret\n3. Enable Bot capability + add permissions',
+    guideUrl: 'https://open.feishu.cn/',
+    editHint: 'Need to update credentials? Edit and save below — MindOS will reconnect automatically.',
     fields: [
       { key: 'app_id', label: 'App ID', placeholder: 'CLI_XXXXXXXXXXXXXXXXX', hint: 'From Credentials page on open.feishu.cn' },
       { key: 'app_secret', label: 'App Secret', placeholder: 'XXXXXXXXXXXXXXXXXXXXXXXX', hint: 'Keep this secret — do not share' },

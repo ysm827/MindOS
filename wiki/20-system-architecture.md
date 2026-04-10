@@ -318,11 +318,13 @@ mindos/
 
 ### 8. ACP Protocol — Agent Client Protocol
 
-**协议：** ACP 标准协议，支持远程 Agent subprocess 调用
+**协议：** ACP 标准协议，基于 `@agentclientprotocol/sdk` 官方 SDK，通过 JSON-RPC 2.0 over stdio 与本地 Agent 子进程通信
 
 **端点：** `/api/acp/*`（registry / detect / install / config / session）
 
 **注册表：** 31+ 个 ACP Agent 可用
+
+**SDK 集成：** `subprocess.ts` 使用 SDK `ClientSideConnection` + `ndJsonStream` 建立连接，`session.ts` 通过 SDK 方法管理完整生命周期（initialize → authenticate → session/new → prompt → cancel → close）
 
 **Agent 工具 (2)：** `list_acp_agents`, `call_acp_agent`
 

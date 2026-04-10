@@ -5,8 +5,7 @@ import { collectAllFiles } from './tree';
 import { readFile } from './fs-ops';
 import { SearchIndex } from './search-index';
 import type { SearchResult, SearchOptions } from './types';
-import { expandQueryWithSynonyms } from './synonym-dict';
-
+import { updateEmbeddingFile, removeEmbeddingFile, invalidateEmbeddingIndex } from './hybrid-search';
 /**
  * Module-level search index singleton.
  * Lazily built on first search, invalidated by `invalidateSearchIndex()`.
@@ -21,6 +20,7 @@ function getMindosDir(): string {
 /** Invalidate the core search index. Called from `lib/fs.ts` on write operations. */
 export function invalidateSearchIndex(): void {
   searchIndex.invalidate();
+  invalidateEmbeddingIndex();
 }
 
 /** Incrementally update a single file in the search index (after write/edit). */
@@ -28,6 +28,8 @@ export function updateSearchIndexFile(mindRoot: string, filePath: string): void 
   if (!searchIndex.isBuilt()) return;
   searchIndex.updateFile(mindRoot, filePath);
   schedulePersist();
+  // Also update embedding index (async, non-blocking)
+  updateEmbeddingFile(mindRoot, filePath);
 }
 
 /** Incrementally add a new file to the search index (after create). */
@@ -35,6 +37,8 @@ export function addSearchIndexFile(mindRoot: string, filePath: string): void {
   if (!searchIndex.isBuilt()) return;
   searchIndex.addFile(mindRoot, filePath);
   schedulePersist();
+  // Also update embedding index (async, non-blocking)
+  updateEmbeddingFile(mindRoot, filePath);
 }
 
 /** Incrementally remove a file from the search index (after delete). */
@@ -42,6 +46,7 @@ export function removeSearchIndexFile(filePath: string): void {
   if (!searchIndex.isBuilt()) return;
   searchIndex.removeFile(filePath);
   schedulePersist();
+  removeEmbeddingFile(filePath);
 }
 
 /** Debounced persist — writes index to disk 5s after last write operation. */
@@ -151,13 +156,10 @@ function countTermOccurrences(term: string, text: string): number {
  * Candidate narrowing: uses an in-memory inverted index with UNION semantics
  * for multi-term queries (a document matching ANY term is a candidate).
  *
- * Synonym expansion: queries are expanded via the synonym dictionary so that
- * "架构" automatically searches for "系统设计", "技术方案", etc.
- *
  * NOTE: The App also has a separate Fuse.js fuzzy search in `lib/fs.ts` for the
  * browser `⌘K` search overlay. The two coexist intentionally:
- * - Core search (here): exact literal match + BM25 ranking + synonyms, used by MCP/API
- * - App search (lib/fs.ts): Fuse.js fuzzy match with CJK support, used by frontend
+ * - Core search (here): BM25 ranking, used by MCP/API/Agent
+ * - App search (lib/fs.ts): Fuse.js fuzzy match, used by frontend ⌘K
  */
 export function searchFiles(mindRoot: string, query: string, opts: SearchOptions = {}): SearchResult[] {
   if (!query.trim()) return [];
@@ -176,20 +178,8 @@ export function searchFiles(mindRoot: string, query: string, opts: SearchOptions
 
   const totalDocs = searchIndex.getFileCount();
   const avgDocLength = searchIndex.getAvgDocLength();
-  
-  // NEW: Expand query with synonyms (e.g., "架构" → ["架构", "系统设计", "技术方案", ...])
-  const expandedTerms = expandQueryWithSynonyms(query);
-  
-  // If synonym expansion produced new terms, use the expanded set.
-  // Otherwise fall back to the original query term splitting behavior.
-  let queryTerms: string[];
-  if (expandedTerms.length > 0 && expandedTerms.length !== 1) {
-    queryTerms = expandedTerms;
-  } else if (expandedTerms.length === 1) {
-    queryTerms = splitQueryTerms(query);
-  } else {
-    queryTerms = splitQueryTerms(query);
-  }
+
+  const queryTerms = splitQueryTerms(query);
 
   // Use UNION index to get candidate files (any file matching any term)
   const candidates = searchIndex.getCandidatesUnion(query);

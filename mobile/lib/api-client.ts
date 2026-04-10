@@ -9,6 +9,8 @@ import type {
   HealthResponse,
   ConnectResponse,
   FileSaveResponse,
+  FileDeleteResponse,
+  FileRenameResponse,
 } from './types';
 
 const STORAGE_KEY = 'mindos_server_url';
@@ -146,6 +148,30 @@ class MindOSClient {
     if (res.status === 409) return { ok: false, error: 'conflict', serverMtime: data.serverMtime };
     if (!res.ok) throw new ApiError(res.status, data.error || 'Save failed');
     return { ok: true, mtime: data.mtime };
+  }
+
+  async deleteFile(filePath: string): Promise<FileDeleteResponse> {
+    const res = await this.fetchWithTimeout('/api/file', {
+      method: 'POST',
+      body: JSON.stringify({ op: 'delete_file', path: filePath }),
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({ error: 'Delete failed' }));
+      throw new ApiError(res.status, data.error || 'Delete failed');
+    }
+    return res.json();
+  }
+
+  async renameFile(filePath: string, newName: string): Promise<FileRenameResponse> {
+    const res = await this.fetchWithTimeout('/api/file', {
+      method: 'POST',
+      body: JSON.stringify({ op: 'rename_file', path: filePath, new_name: newName }),
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({ error: 'Rename failed' }));
+      throw new ApiError(res.status, data.error || 'Rename failed');
+    }
+    return res.json();
   }
 
   // ---------------------------------------------------------------------------

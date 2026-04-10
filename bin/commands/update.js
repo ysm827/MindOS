@@ -11,6 +11,7 @@ import { dirname, resolve } from 'node:path';
 import { ROOT, BUILD_STAMP, CONFIG_PATH, LOG_PATH, MINDOS_DIR } from '../lib/constants.js';
 import { bold, dim, cyan, green, red, yellow } from '../lib/colors.js';
 import { execInherited } from '../lib/shell.js';
+import { safeRmSync, assertNotSymlink } from '../lib/safe-rm.js';
 import { EXIT } from '../lib/command.js';
 import { stopMindos } from '../lib/stop.js';
 import { getLocalIP } from '../lib/startup.js';
@@ -77,10 +78,16 @@ function buildIfNeeded(newRoot) {
   if (existsSync(appPkg)) {
     execInherited('npm install', resolve(newRoot, 'app'));
   }
-  const nextDir = resolve(newRoot, 'app', '.next');
-  if (existsSync(nextDir)) {
-    rmSync(nextDir, { recursive: true, force: true });
-  }
+    const nextDir = resolve(newRoot, 'app', '.next');
+    if (existsSync(nextDir)) {
+      try {
+        assertNotSymlink(nextDir);
+        safeRmSync(nextDir, { recursive: true, force: true });
+      } catch (err) {
+        console.error(red(`Failed to clean .next directory: ${err}`));
+        throw err;
+      }
+    }
   execInherited('node scripts/gen-renderer-index.js', newRoot);
   execInherited(`${newNextBin} build`, resolve(newRoot, 'app'));
   const version = JSON.parse(readFileSync(resolve(newRoot, 'package.json'), 'utf-8')).version;

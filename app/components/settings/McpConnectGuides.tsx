@@ -11,6 +11,7 @@ import { copyToClipboard } from '@/lib/clipboard';
 import CustomSelect from '@/components/CustomSelect';
 import type { SelectItem } from '@/components/CustomSelect';
 import AgentInstall from './McpAgentInstall';
+import McpPortSection from './McpPortSection';
 
 export function useCopyField() {
   const [copiedField, setCopiedField] = useState<string | null>(null);
@@ -235,6 +236,9 @@ function McpGuide({ status, agents, activeSkillName, connectedAgents, detectedAg
     <>
       {/* MCP Status */}
       <McpStatusInline status={status} restarting={restarting} onRestart={onRestart} onRefresh={onRefresh} m={m} />
+
+      {/* MCP Port Configuration */}
+      {m && <McpPortSection m={m} />}
 
       {/* Local (stdio) */}
       <div className="space-y-2.5">

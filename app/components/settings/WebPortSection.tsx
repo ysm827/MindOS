@@ -51,8 +51,8 @@ function PortField({
 
   return (
     <div className="space-y-1">
-      <label className="text-xs font-medium text-foreground">{label}</label>
-      <p className="text-2xs text-muted-foreground">{hint}</p>
+      {label && <label className="text-xs font-medium text-foreground">{label}</label>}
+      {hint && <p className="text-2xs text-muted-foreground">{hint}</p>}
       <input
         type="number" min={1024} max={65535} value={value}
         onChange={handleChange}
@@ -107,46 +107,33 @@ function RestartOverlay({ message, sub }: { message: string; sub?: string }) {
   );
 }
 
-/* ── ServerPortsCard ───────────────────────────────────────────── */
+/* ── WebPortSection ────────────────────────────────────────────── */
 
-export default function ServerPortsCard({ m }: { m: Record<string, any> }) {
-  // Loaded from /api/settings
-  const [origWebPort, setOrigWebPort] = useState<number>(0);
-  const [origMcpPort, setOrigMcpPort] = useState<number>(0);
-
-  const [webPort, setWebPort] = useState<number>(0);
-  const [mcpPort, setMcpPort] = useState<number>(0);
-
-  const [webStatus, setWebStatus] = useState<PortStatus>(EMPTY_STATUS);
-  const [mcpStatus, setMcpStatus] = useState<PortStatus>(EMPTY_STATUS);
-
+export default function WebPortSection({ m }: { m: Record<string, any> }) {
+  const [origPort, setOrigPort] = useState<number>(0);
+  const [port, setPort] = useState<number>(0);
+  const [status, setStatus] = useState<PortStatus>(EMPTY_STATUS);
   const [updating, setUpdating] = useState(false);
   const [overlayMsg, setOverlayMsg] = useState<string | null>(null);
   const [overlaySub, setOverlaySub] = useState<string | undefined>(undefined);
   const pollRef = useRef<ReturnType<typeof setInterval>>(undefined);
 
-  // Load current ports from API
   useEffect(() => {
-    apiFetch<{ port?: number; mcpPort?: number }>('/api/settings').then(d => {
-      const wp = d.port || 3456;
-      const mp = d.mcpPort || 8781;
-      setOrigWebPort(wp); setWebPort(wp);
-      setOrigMcpPort(mp); setMcpPort(mp);
+    apiFetch<{ port?: number }>('/api/settings').then(d => {
+      const p = d.port || 3456;
+      setOrigPort(p);
+      setPort(p);
     }).catch(() => {});
   }, []);
 
   useEffect(() => () => clearInterval(pollRef.current), []);
 
-  const hasChanges = webPort !== origWebPort || mcpPort !== origMcpPort;
-  const portConflict = webPort === mcpPort && webPort > 0;
-  const portInvalid = webPort < 1024 || webPort > 65535 || mcpPort < 1024 || mcpPort > 65535;
-  const webChanged = webPort !== origWebPort;
-  const mcpChanged = mcpPort !== origMcpPort;
+  const hasChanges = port !== origPort;
+  const portInvalid = port < 1024 || port > 65535;
+  const portUnavailable = status.checking || (status.available === false && !status.isSelf);
 
-  // Port check via existing API
-  const checkPort = useCallback(async (port: number, which: 'web' | 'mcp') => {
-    const setStatus = which === 'web' ? setWebStatus : setMcpStatus;
-    if (port < 1024 || port > 65535) {
+  const checkPort = useCallback(async (p: number) => {
+    if (p < 1024 || p > 65535) {
       setStatus({ ...EMPTY_STATUS, available: false, invalid: true });
       return;
     }
@@ -155,7 +142,7 @@ export default function ServerPortsCard({ m }: { m: Record<string, any> }) {
       const res = await apiFetch<CheckPortResult>('/api/setup/check-port', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ port }),
+        body: JSON.stringify({ port: p }),
       });
       setStatus({
         checking: false,
@@ -168,131 +155,74 @@ export default function ServerPortsCard({ m }: { m: Record<string, any> }) {
     }
   }, []);
 
-  // Update handler
   const handleUpdate = async () => {
-    if (!hasChanges || portConflict || portInvalid || updating) return;
+    if (!hasChanges || portInvalid || portUnavailable || updating) return;
 
     setUpdating(true);
     try {
-      // 0. Final port availability check before committing
-      //    User may have waited a while since input — port state could have changed.
-      const portsToCheck: Array<{ port: number; which: 'web' | 'mcp' }> = [];
-      if (webChanged) portsToCheck.push({ port: webPort, which: 'web' });
-      if (mcpChanged) portsToCheck.push({ port: mcpPort, which: 'mcp' });
-
-      for (const { port, which } of portsToCheck) {
-        const res = await apiFetch<CheckPortResult>('/api/setup/check-port', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ port }),
+      // Final availability check
+      const res = await apiFetch<CheckPortResult>('/api/setup/check-port', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ port }),
+      });
+      if (!res.available && !res.isSelf) {
+        setStatus({
+          checking: false,
+          available: false,
+          isSelf: false,
+          suggestion: res.suggestion ?? null,
         });
-        if (!res.available && !res.isSelf) {
-          // Port became occupied since last check
-          const setStatus = which === 'web' ? setWebStatus : setMcpStatus;
-          setStatus({
-            checking: false,
-            available: false,
-            isSelf: false,
-            suggestion: res.suggestion ?? null,
-          });
-          setUpdating(false);
-          toast.error(m.portInUse(port));
-          return;
-        }
+        setUpdating(false);
+        toast.error(m.portInUse(port));
+        return;
       }
 
-      // 1. Save both ports to config
+      // Save port
       await apiFetch('/api/settings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          port: webPort,
-          mcpPort,
-        }),
+        body: JSON.stringify({ port }),
       });
 
-      // 2. Determine restart strategy
-      if (webChanged) {
-        // Full restart needed — Web port changed
-        setOverlayMsg(m.portWebRestarting);
-        setOverlaySub(m.portRedirecting);
+      // Full restart — Web port changed
+      setOverlayMsg(m.portWebRestarting);
+      setOverlaySub(m.portRedirecting);
 
-        try {
-          await apiFetch('/api/restart', { method: 'POST' });
-        } catch {
-          // Expected: server dies before response completes
-        }
+      try {
+        await apiFetch('/api/restart', { method: 'POST' });
+      } catch {
+        // Expected: server dies before response completes
+      }
 
-        // Poll new port for health
-        const newOrigin = `${window.location.protocol}//${window.location.hostname}:${webPort}`;
-        const deadline = Date.now() + 30_000;
-        pollRef.current = setInterval(async () => {
-          if (Date.now() > deadline) {
-            clearInterval(pollRef.current);
-            setOverlayMsg(null);
-            setUpdating(false);
-            toast.error(m.portRestartTimeout);
-            return;
-          }
-          try {
-            const res = await fetch(`${newOrigin}/api/health`, { signal: AbortSignal.timeout(2000) });
-            if (res.ok) {
-              clearInterval(pollRef.current);
-              // Redirect to new port
-              window.location.href = newOrigin;
-            }
-          } catch {
-            // Server not up yet, keep polling
-          }
-        }, 1500);
-      } else if (mcpChanged) {
-        // MCP-only restart
-        setOverlayMsg(m.portMcpRestarting);
-        try {
-          await apiFetch('/api/mcp/restart', { method: 'POST' });
-        } catch {
+      // Poll new port for health
+      const newOrigin = `${window.location.protocol}//${window.location.hostname}:${port}`;
+      const deadline = Date.now() + 30_000;
+      pollRef.current = setInterval(async () => {
+        if (Date.now() > deadline) {
+          clearInterval(pollRef.current);
           setOverlayMsg(null);
           setUpdating(false);
-          toast.error(m.portUpdateFailed);
+          toast.error(m.portRestartTimeout);
           return;
         }
-
-        // Poll MCP status
-        const deadline = Date.now() + 60_000;
-        pollRef.current = setInterval(async () => {
-          if (Date.now() > deadline) {
+        try {
+          const r = await fetch(`${newOrigin}/api/health`, { signal: AbortSignal.timeout(2000) });
+          if (r.ok) {
             clearInterval(pollRef.current);
-            setOverlayMsg(null);
-            setUpdating(false);
-            toast.error(m.portRestartTimeout);
-            return;
+            window.location.href = newOrigin;
           }
-          try {
-            const s = await apiFetch<{ running: boolean; port: number }>('/api/mcp/status', { timeout: 3000 });
-            if (s.running) {
-              clearInterval(pollRef.current);
-              setOverlayMsg(null);
-              setUpdating(false);
-              setOrigMcpPort(mcpPort);
-              toast.success(m.portUpdateSuccess);
-            }
-          } catch {
-            // keep polling
-          }
-        }, 3000);
-      } else {
-        // No restart needed (shouldn't reach here, but guard)
-        setUpdating(false);
-        toast.success(m.portUpdateSuccess);
-      }
+        } catch {
+          // Server not up yet
+        }
+      }, 1500);
     } catch {
       setUpdating(false);
       toast.error(m.portUpdateFailed);
     }
   };
 
-  // Don't render until data loaded
-  if (origWebPort === 0) return null;
+  if (origPort === 0) return null;
 
   return (
     <>
@@ -302,34 +232,20 @@ export default function ServerPortsCard({ m }: { m: Record<string, any> }) {
             <Monitor size={14} className="text-muted-foreground" />
           </div>
           <div className="flex-1 min-w-0">
-            <h3 className="text-sm font-semibold text-foreground">{m.portsCardTitle}</h3>
-            <p className="text-2xs text-muted-foreground">{m.portsCardDesc}</p>
+            <h3 className="text-sm font-semibold text-foreground">{m.webPortLabel}</h3>
+            <p className="text-2xs text-muted-foreground">{m.webPortHint}</p>
           </div>
         </div>
-        <div className="px-4 pb-4 space-y-4">
+        <div className="px-4 pb-4 space-y-3">
           <PortField
-            label={m.webPortLabel} hint={m.webPortHint}
-            value={webPort} onChange={v => { setWebPort(v); setWebStatus(EMPTY_STATUS); }}
-            status={webStatus} onCheckPort={p => checkPort(p, 'web')} m={m}
+            label="" hint=""
+            value={port} onChange={v => { setPort(v); setStatus(EMPTY_STATUS); }}
+            status={status} onCheckPort={checkPort} m={m}
           />
-          <PortField
-            label={m.mcpPortLabel} hint={m.mcpPortHint}
-            value={mcpPort} onChange={v => { setMcpPort(v); setMcpStatus(EMPTY_STATUS); }}
-            status={mcpStatus} onCheckPort={p => checkPort(p, 'mcp')} m={m}
-          />
-
-          {/* Conflict warning */}
-          {portConflict && (
-            <p className="text-xs flex items-center gap-1.5 text-[var(--amber)]">
-              <AlertTriangle size={12} /> {m.portConflict}
-            </p>
-          )}
-
-          {/* Update button */}
           <button
             type="button"
             onClick={handleUpdate}
-            disabled={!hasChanges || portConflict || portInvalid || updating}
+            disabled={!hasChanges || portInvalid || portUnavailable || updating}
             className="w-full py-2 rounded-lg text-xs font-medium transition-colors
               bg-[var(--amber)] text-[var(--amber-foreground)]
               hover:opacity-90
@@ -341,7 +257,6 @@ export default function ServerPortsCard({ m }: { m: Record<string, any> }) {
         </div>
       </div>
 
-      {/* Full-screen restart overlay */}
       {overlayMsg && <RestartOverlay message={overlayMsg} sub={overlaySub} />}
     </>
   );

@@ -12,6 +12,7 @@ import { type Provider, generateProviderId } from '@/lib/custom-endpoints';
 import { useCustomProviderForm, type TestResult } from './useCustomProviderForm';
 import CustomProviderFields from './CustomProviderFields';
 import { TestButton } from './TestButton';
+import WebPortSection from './WebPortSection';
 
 export function AiTab({ data, updateAi, updateAgent, t }: AiTabProps) {
   const { locale } = useLocale();
@@ -367,7 +368,10 @@ export function AiTab({ data, updateAi, updateAgent, t }: AiTabProps) {
         )}
       </SettingCard>
 
-      {/* ── Card 3: Display Mode ── */}
+      {/* ── Card 3: Web Server Port ── */}
+      <WebPortSection m={t.settings?.mcp ?? {}} />
+
+      {/* ── Card 4: Display Mode ── */}
       <AskDisplayMode />
     </div>
   );

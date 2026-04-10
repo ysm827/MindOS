@@ -115,3 +115,13 @@ export interface FileSaveResponse {
   error?: string;
   serverMtime?: number;
 }
+
+export interface FileDeleteResponse {
+  ok: boolean;
+  trashId?: string;
+}
+
+export interface FileRenameResponse {
+  ok: boolean;
+  newPath?: string;
+}

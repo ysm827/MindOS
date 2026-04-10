@@ -40,9 +40,17 @@ export interface GuideState {
   walkthroughDismissed?: boolean; // user skipped walkthrough
 }
 
+export interface EmbeddingConfig {
+  enabled: boolean;
+  baseUrl: string;   // e.g. "https://api.openai.com/v1"
+  apiKey: string;
+  model: string;     // e.g. "text-embedding-3-small"
+}
+
 export interface ServerSettings {
   ai: AiConfig;
   agent?: AgentConfig;
+  embedding?: EmbeddingConfig;
   mindRoot: string;   // empty = use env var / default
   port?: number;
   mcpPort?: number;
@@ -120,6 +128,19 @@ function parseAgent(raw: unknown): AgentConfig | undefined {
   return Object.keys(result).length > 0 ? result : undefined;
 }
 
+/** Parse embedding config from unknown input */
+function parseEmbedding(raw: unknown): EmbeddingConfig | undefined {
+  if (!raw || typeof raw !== 'object') return undefined;
+  const obj = raw as Record<string, unknown>;
+  if (typeof obj.enabled !== 'boolean') return undefined;
+  return {
+    enabled: obj.enabled,
+    baseUrl: typeof obj.baseUrl === 'string' ? obj.baseUrl : '',
+    apiKey: typeof obj.apiKey === 'string' ? obj.apiKey : '',
+    model: typeof obj.model === 'string' ? obj.model : '',
+  };
+}
+
 /** Parse acpAgents config field, delegates to agent-descriptors.ts */
 function parseAcpAgentsField(raw: unknown): Record<string, import('./acp/agent-descriptors').AcpAgentOverride> | undefined {
   return parseAcpAgentOverrides(raw);
@@ -176,6 +197,7 @@ export function readSettings(): ServerSettings {
     const settings: ServerSettings = {
       ai: migrateAi(parsed),
       agent: parseAgent(parsed.agent),
+      embedding: parseEmbedding(parsed.embedding),
       acpAgents: parseAcpAgentsField(parsed.acpAgents),
       mindRoot: (parsed.mindRoot ?? DEFAULTS.mindRoot) as string,
       webPassword: typeof parsed.webPassword === 'string' ? parsed.webPassword : undefined,
@@ -224,6 +246,7 @@ export function writeSettings(settings: ServerSettings): void {
   try { existing = JSON.parse(fs.readFileSync(SETTINGS_PATH, 'utf-8')); } catch { /* ignore */ }
   const merged: Record<string, unknown> = { ...existing, ai: settings.ai, mindRoot: settings.mindRoot };
   if (settings.agent !== undefined) merged.agent = settings.agent;
+  if (settings.embedding !== undefined) merged.embedding = settings.embedding;
   if (settings.webPassword !== undefined) merged.webPassword = settings.webPassword;
   if (settings.authToken   !== undefined) merged.authToken   = settings.authToken;
   if (settings.port        !== undefined) merged.port        = settings.port;

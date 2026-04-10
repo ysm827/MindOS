@@ -18,6 +18,7 @@ import { Ionicons } from '@expo/vector-icons';
 import Markdown from 'react-native-markdown-display';
 import { mindosClient } from '@/lib/api-client';
 import MarkdownEditor from '@/components/editor/MarkdownEditor';
+import CSVTable from '@/components/CSVTable';
 import type { FileNode } from '@/lib/types';
 
 export default function ViewScreen() {
@@ -208,9 +209,13 @@ export default function ViewScreen() {
               ),
         }}
       />
-      <ScrollView style={styles.content} contentContainerStyle={styles.contentInner}>
-        <Markdown style={markdownStyles}>{content}</Markdown>
-      </ScrollView>
+      {fileName.endsWith('.csv') || fileName.endsWith('.tsv') ? (
+        <CSVTable content={content} delimiter={fileName.endsWith('.tsv') ? '\t' : ','} />
+      ) : (
+        <ScrollView style={styles.content} contentContainerStyle={styles.contentInner}>
+          <Markdown style={markdownStyles}>{content}</Markdown>
+        </ScrollView>
+      )}
     </View>
   );
 }

@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   resolveAgentCommand,
   parseAcpAgentOverrides,
+  findUserOverride,
   AGENT_DESCRIPTORS,
   AGENT_ALIASES,
   resolveAlias,
@@ -220,6 +221,41 @@ describe('resolveAlias', () => {
     for (const [alias, canonical] of Object.entries(AGENT_ALIASES)) {
       expect(AGENT_DESCRIPTORS[canonical], `alias ${alias} → ${canonical} not in AGENT_DESCRIPTORS`).toBeDefined();
     }
+  });
+});
+
+/* ── findUserOverride ────────────────────────────────────────────────── */
+
+describe('findUserOverride', () => {
+  const overrides = {
+    'gemini': { command: '/usr/bin/gemini' },
+    'gemini-cli': { command: '/custom/gemini-cli' },
+    'codebuddy': { args: ['--custom'] },
+  };
+
+  it('finds by direct ID', () => {
+    expect(findUserOverride('gemini', overrides)).toEqual({ command: '/usr/bin/gemini' });
+  });
+
+  it('finds by alias → canonical (alias ID in overrides, canonical ID queried)', () => {
+    expect(findUserOverride('codebuddy-code', overrides)?.args).toEqual(['--custom']);
+  });
+
+  it('finds by canonical → alias (canonical ID in overrides, alias ID queried)', () => {
+    expect(findUserOverride('gemini-cli', overrides)).toEqual({ command: '/custom/gemini-cli' });
+  });
+
+  it('prefers direct match over alias resolution', () => {
+    const result = findUserOverride('gemini', overrides);
+    expect(result?.command).toBe('/usr/bin/gemini');
+  });
+
+  it('returns undefined for unknown agent', () => {
+    expect(findUserOverride('totally-unknown', overrides)).toBeUndefined();
+  });
+
+  it('returns undefined when no overrides', () => {
+    expect(findUserOverride('gemini', undefined)).toBeUndefined();
   });
 });
 

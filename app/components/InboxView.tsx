@@ -197,7 +197,7 @@ export default function InboxView() {
     return (
       <div className="flex flex-col min-h-screen">
         <div className="sticky top-[52px] md:top-0 z-20 border-b border-border px-4 md:px-6 h-[46px] flex items-center bg-background">
-          <div className="max-w-[780px] mx-auto">
+          <div className="px-4 md:px-6">
             <div className="h-5 w-32 bg-muted rounded animate-pulse" />
           </div>
         </div>
@@ -226,7 +226,7 @@ export default function InboxView() {
 
       {/* ─── Sticky Top Bar ─── */}
       <div className="sticky top-[52px] md:top-0 z-20 border-b border-border h-[46px] flex items-center bg-background">
-        <div className="max-w-[780px] mx-auto px-4 md:px-6 flex items-center w-full">
+        <div className="w-full px-4 md:px-6 flex items-center justify-between">
           <div className="flex items-center gap-3">
             {/* Back */}
             <button

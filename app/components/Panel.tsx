@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useRef, useEffect, useCallback } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-import { ChevronsDownUp, ChevronsUpDown, Plus, Import, FileText, Layers, MoreHorizontal, Eye, EyeOff, Trash2, Inbox } from 'lucide-react';
+import { ChevronsDownUp, ChevronsUpDown, Plus, Import, FileText, Layers, MoreHorizontal, Eye, EyeOff, Trash2, Inbox, History } from 'lucide-react';
 import type { PanelId } from './ActivityBar';
 import type { FileNode } from '@/lib/types';
 import FileTree, { setShowHiddenFiles, useShowHiddenFiles } from './FileTree';
@@ -286,15 +286,6 @@ export default function Panel({
                 >
                   <button
                     className="w-full flex items-center gap-2 px-3 py-1.5 text-sm text-foreground hover:bg-muted transition-colors text-left"
-                    onClick={() => { setShowHiddenFiles(!showHidden); }}
-                  >
-                    {showHidden ? <EyeOff size={14} className="shrink-0" /> : <Eye size={14} className="shrink-0" />}
-                    <span className="flex-1">{t.sidebar.showHiddenFiles}</span>
-                    {showHidden && <span className="text-[var(--amber)] text-xs">✓</span>}
-                  </button>
-                  <div className="my-1 border-t border-border/50" />
-                  <button
-                    className="w-full flex items-center gap-2 px-3 py-1.5 text-sm text-foreground hover:bg-muted transition-colors text-left"
                     onClick={() => { setMorePopover(false); router.push('/view/Inbox/'); }}
                   >
                     <Inbox size={14} className="shrink-0 text-[var(--amber)]" />
@@ -305,6 +296,13 @@ export default function Panel({
                   </button>
                   <button
                     className="w-full flex items-center gap-2 px-3 py-1.5 text-sm text-foreground hover:bg-muted transition-colors text-left"
+                    onClick={() => { setMorePopover(false); router.push('/view/.mindos/change-log.json'); }}
+                  >
+                    <History size={14} className="shrink-0 text-[var(--amber)]" />
+                    <span className="flex-1">{t.changes.title}</span>
+                  </button>
+                  <button
+                    className="w-full flex items-center gap-2 px-3 py-1.5 text-sm text-foreground hover:bg-muted transition-colors text-left"
                     onClick={() => { setMorePopover(false); router.push('/trash'); }}
                   >
                     <Trash2 size={14} className="shrink-0" />
@@ -312,6 +310,15 @@ export default function Panel({
                     {trashCount > 0 && (
                       <span className="text-xs text-muted-foreground tabular-nums">{trashCount}</span>
                     )}
+                  </button>
+                  <div className="my-1 border-t border-border/50" />
+                  <button
+                    className="w-full flex items-center gap-2 px-3 py-1.5 text-sm text-foreground hover:bg-muted transition-colors text-left"
+                    onClick={() => { setShowHiddenFiles(!showHidden); }}
+                  >
+                    {showHidden ? <EyeOff size={14} className="shrink-0" /> : <Eye size={14} className="shrink-0" />}
+                    <span className="flex-1">{t.sidebar.showHiddenFiles}</span>
+                    {showHidden && <span className="text-[var(--amber)] text-xs">✓</span>}
                   </button>
                 </div>
               )}

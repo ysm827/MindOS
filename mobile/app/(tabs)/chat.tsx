@@ -12,6 +12,8 @@ import {
   KeyboardAvoidingView,
   Platform,
   Alert,
+  NativeSyntheticEvent,
+  NativeScrollEvent,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -24,6 +26,10 @@ export default function ChatScreen() {
   const [mode, setMode] = useState<AskMode>('chat');
   const listRef = useRef<FlatList>(null);
   const [inputText, setInputText] = useState('');
+  const [showScrollBtn, setShowScrollBtn] = useState(false);
+  const contentHeightRef = useRef(0);
+  const scrollOffsetRef = useRef(0);
+  const layoutHeightRef = useRef(0);
 
   const {
     messages, isStreaming, error, lastFailedMessage,
@@ -53,6 +59,19 @@ export default function ChatScreen() {
       ],
     );
   }, [messages.length, newChat]);
+
+  const handleScroll = useCallback((e: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const { contentOffset, contentSize, layoutMeasurement } = e.nativeEvent;
+    scrollOffsetRef.current = contentOffset.y;
+    contentHeightRef.current = contentSize.height;
+    layoutHeightRef.current = layoutMeasurement.height;
+    const distFromBottom = contentSize.height - contentOffset.y - layoutMeasurement.height;
+    setShowScrollBtn(distFromBottom > 150);
+  }, []);
+
+  const scrollToBottom = useCallback(() => {
+    listRef.current?.scrollToEnd({ animated: true });
+  }, []);
 
   // Don't render until storage is loaded
   if (!loaded) {
@@ -131,7 +150,15 @@ export default function ChatScreen() {
           renderItem={({ item }) => <MessageBubble message={item} />}
           contentContainerStyle={styles.messageList}
           keyboardDismissMode="on-drag"
-          onContentSizeChange={() => listRef.current?.scrollToEnd({ animated: false })}
+          onScroll={handleScroll}
+          scrollEventThrottle={100}
+          onContentSizeChange={() => {
+            // Auto-scroll only if user was near bottom
+            const distFromBottom = contentHeightRef.current - scrollOffsetRef.current - layoutHeightRef.current;
+            if (distFromBottom < 150 || isStreaming) {
+              listRef.current?.scrollToEnd({ animated: false });
+            }
+          }}
           ListFooterComponent={
             <>
               {isStreaming && !messages[messages.length - 1]?.content && (
@@ -155,6 +182,16 @@ export default function ChatScreen() {
             </>
           }
         />
+
+        {/* Scroll-to-bottom button */}
+        {showScrollBtn && (
+          <Pressable
+            style={({ pressed }) => [styles.scrollBtn, pressed && styles.scrollBtnPressed]}
+            onPress={scrollToBottom}
+          >
+            <Ionicons name="chevron-down" size={18} color="#fafaf9" />
+          </Pressable>
+        )}
 
         <ChatInput
           value={inputText}
@@ -248,4 +285,23 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(200, 135, 58, 0.15)',
   },
   retryText: { fontSize: 12, color: '#c8873a', fontWeight: '600' },
+  scrollBtn: {
+    position: 'absolute',
+    right: 16,
+    bottom: 80,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#44403c',
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.3,
+    shadowRadius: 2,
+  },
+  scrollBtnPressed: {
+    opacity: 0.7,
+  },
 });

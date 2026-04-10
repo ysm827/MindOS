@@ -495,11 +495,18 @@ rootcause: app/api/ask/route.ts:143 直接传递 llmHistoryMessages（pi-ai Mess
 - **规则：** 所有传给 `pi-coding-agent` / `pi-ai` 的 provider 标识符必须经过 `toPiProvider()` 转换。MindOS ProviderId 仅用于 UI 层和 settings 层
 - **文件：** `app/app/api/ask/route.ts`
 
-### ACP sendAndWait 不感知进程死亡 — 30 秒盲等（#23）
+### ACP sendAndWait 不感知进程死亡 — 30 秒盲等（#23，已通过 SDK 迁移彻底修复）
 - **现象：** 用户选择未安装的 ACP agent（如 Auggie），等待 30 秒后报错 "ACP Agent Error: ACP RPC timeout after 30000ms for method: initialize"
-- **原因：** `sendAndWait()` 发送 JSON-RPC 后仅靠 `setTimeout` 等待响应，不监听进程 `close`/`error` 事件。当 `spawn` 失败（ENOENT）或进程崩溃时，进程立即死亡但 `sendAndWait` 仍盲等到超时
-- **解决：** (1) `sendAndWait` 增加 `close`/`error` 事件监听，进程死亡立即 reject (2) 调用前检查 `acpProc.alive` 快速失败 (3) 错误信息包含 `spawnError` 和安装提示
-- **规则：** 任何等待子进程响应的 Promise 都必须监听进程终止事件，防止 Promise 挂起。`spawn` 的 `error` 事件必须传播到调用方，不能只 `console.error`
+- **原因：** 手写的 `sendAndWait()` 发送 JSON-RPC 后仅靠 `setTimeout` 等待响应，不监听进程 `close`/`error` 事件
+- **解决：** 迁移至 `@agentclientprotocol/sdk`，SDK 的 `ClientSideConnection` 自动将流关闭事件传播为 Promise rejection，消除了手写 JSON-RPC 解析/调度的整类 bug
+- **规则：** 协议层优先使用官方 SDK 而非手写实现。手写 JSON-RPC 解析/调度曾导致 5 类 bug（sessionId 丢失、streaming 格式不匹配、同步 prompt 无文本、进程死亡盲等、modes 解析错误）
+- **文件：** `app/lib/acp/subprocess.ts`, `app/lib/acp/session.ts`
+
+### ACP waitForTerminalExit 竞态条件（#24）
+- **现象：** 如果终端子进程在 `exitCode !== null` 检查和 `.on('exit')` 监听之间退出，Promise 永远挂起
+- **原因：** Node.js 的 `exit` 事件已触发后不会重发，附加监听器后再也收不到
+- **解决：** 在附加 `.on('exit')` 后再次检查 `exitCode`，覆盖竞态窗口
+- **规则：** 任何 "先检查状态 → 再挂监听器" 的模式都必须在监听器挂上后重新检查状态
 - **文件：** `app/lib/acp/subprocess.ts`
 
 ### pi-agent-core 迁移：compact 失败不能静默返回

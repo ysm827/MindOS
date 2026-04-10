@@ -40,13 +40,15 @@ export default function AgentsContentChannelDetail({ platformId }: { platformId:
     setError(false);
     try {
       const res = await fetch('/api/im/status');
-      if (res.ok) {
-        const data = await res.json();
-        const platforms: PlatformStatus[] = data.platforms ?? [];
-        setStatus(platforms.find(s => s.platform === platformId) ?? null);
-      } else {
+      if (!res.ok) {
         setError(true);
+        setLoading(false);
+        return;
       }
+
+      const data = await res.json();
+      const platforms: PlatformStatus[] = data.platforms ?? [];
+      setStatus(platforms.find(s => s.platform === platformId) ?? null);
     } catch {
       setError(true);
     }
@@ -67,6 +69,7 @@ export default function AgentsContentChannelDetail({ platformId }: { platformId:
   }
 
   const isConnected = status?.connected ?? false;
+  const hasExistingCredentials = isConnected;
 
   const handleSave = async () => {
     setSaving(true);
@@ -203,6 +206,71 @@ export default function AgentsContentChannelDetail({ platformId }: { platformId:
             )}
           </div>
 
+          {/* Credential update */}
+          <div className="rounded-lg border border-border bg-card p-4">
+            <h3 className="text-sm font-medium text-foreground mb-2">{im.editCredentials}</h3>
+            <p className="text-xs text-muted-foreground mb-4">{platform.editHint || im.editCredentialsHint}</p>
+            {hasExistingCredentials && (
+              <p className="text-xs text-muted-foreground/80 mb-4">{im.savedValuesHint}</p>
+            )}
+            <div className="flex flex-col gap-4">
+              {platform.fields.map(field => (
+                <div key={field.key} className="flex flex-col gap-1.5">
+                  <label className="text-xs font-medium text-foreground">
+                    {field.label}
+                    <span className="text-muted-foreground/50 font-normal"> ({im.required})</span>
+                  </label>
+                  <div className="relative">
+                    <input
+                      type={showSecrets ? 'text' : 'password'}
+                      placeholder={field.placeholder}
+                      value={formValues[field.key] ?? ''}
+                      onChange={e => setFormValues(prev => ({ ...prev, [field.key]: e.target.value }))}
+                      className="h-11 w-full px-3 pr-10 text-sm font-mono bg-background border border-border rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                      autoComplete="off"
+                      aria-required="true"
+                      aria-describedby={field.hint ? `connected-hint-${field.key}` : undefined}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowSecrets(!showSecrets)}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1.5 text-muted-foreground hover:text-foreground rounded transition-colors"
+                      aria-label={showSecrets ? im.hideSecret : im.showSecret}
+                      title={showSecrets ? im.hideSecret : im.showSecret}
+                    >
+                      {showSecrets ? <EyeOff size={16} /> : <Eye size={16} />}
+                    </button>
+                  </div>
+                  {field.hint && (
+                    <span id={`connected-hint-${field.key}`} className="text-xs text-muted-foreground">{field.hint}</span>
+                  )}
+                </div>
+              ))}
+              <div className="flex items-center gap-3 pt-1">
+                <button
+                  type="button"
+                  onClick={handleSave}
+                  disabled={saving || !isFormComplete}
+                  className="h-11 px-4 text-sm rounded-md inline-flex items-center gap-1.5 bg-[var(--amber)] text-[var(--amber-foreground)] hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-opacity"
+                  aria-label={saving ? im.saving : im.saveConfig}
+                >
+                  {saving ? <Loader2 size={14} className="animate-spin" /> : <Settings2 size={14} />}
+                  {saving ? im.saving : im.saveConfig}
+                </button>
+              </div>
+              {saveResult && (
+                <div 
+                  role="alert" 
+                  aria-live="polite"
+                  className={`flex items-start gap-1.5 text-sm ${saveResult.ok ? 'text-success' : 'text-error'}`}
+                >
+                  {saveResult.ok ? <CheckCircle2 size={16} className="shrink-0 mt-0.5" /> : <XCircle size={16} className="shrink-0 mt-0.5" />}
+                  <span className="break-all">{saveResult.msg}</span>
+                </div>
+              )}
+            </div>
+          </div>
+
           {/* Test send */}
           <div className="rounded-lg border border-border bg-card p-4">
             <h3 className="text-sm font-medium text-foreground mb-3">{im.testSend}</h3>
@@ -214,9 +282,10 @@ export default function AgentsContentChannelDetail({ platformId }: { platformId:
                   placeholder={im.recipientPlaceholder}
                   value={testRecipient}
                   onChange={e => setTestRecipient(e.target.value)}
-                  className="h-9 w-full px-3 text-sm bg-background border border-border rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                  className="h-11 w-full px-3 text-sm bg-background border border-border rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                   aria-label={im.recipientPlaceholder}
                 />
+                <p className="text-xs text-muted-foreground mt-1.5">{im.recipientHint}</p>
               </div>
               <div>
                 <label className="text-xs font-medium text-foreground block mb-1.5">{im.messagePlaceholder}</label>
@@ -225,7 +294,7 @@ export default function AgentsContentChannelDetail({ platformId }: { platformId:
                   placeholder={im.messagePlaceholder}
                   value={testMsg}
                   onChange={e => setTestMsg(e.target.value)}
-                  className="h-9 w-full px-3 text-sm bg-background border border-border rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                  className="h-11 w-full px-3 text-sm bg-background border border-border rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                   aria-label={im.messagePlaceholder}
                 />
               </div>
@@ -234,7 +303,7 @@ export default function AgentsContentChannelDetail({ platformId }: { platformId:
                   type="button"
                   onClick={handleTest}
                   disabled={testStatus === 'sending' || !testRecipient.trim()}
-                  className="h-9 px-4 text-sm rounded-md inline-flex items-center gap-1.5 bg-[var(--amber)] text-[var(--amber-foreground)] hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-opacity"
+                  className="h-11 px-4 text-sm rounded-md inline-flex items-center gap-1.5 bg-[var(--amber)] text-[var(--amber-foreground)] hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-opacity"
                   aria-label={im.sendTest}
                 >
                   {testStatus === 'sending' ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
@@ -262,7 +331,7 @@ export default function AgentsContentChannelDetail({ platformId }: { platformId:
               type="button"
               onClick={handleDisconnect}
               disabled={deleting}
-              className={`h-9 px-4 text-sm rounded-md inline-flex items-center gap-1.5 border transition-colors ${
+              className={`h-11 px-4 text-sm rounded-md inline-flex items-center gap-1.5 border transition-colors ${
                 confirmDelete
                   ? 'text-error border-error/40 bg-error/5 hover:bg-error/10'
                   : 'text-muted-foreground border-border hover:text-error hover:border-error/30'
@@ -282,7 +351,19 @@ export default function AgentsContentChannelDetail({ platformId }: { platformId:
           {/* Guide */}
           {platform.guide && (
             <div className="rounded-lg border border-border border-l-4 border-l-[var(--amber)] bg-card p-4">
-              <h3 className="text-sm font-medium text-foreground mb-3">{im.setupGuide}</h3>
+              <div className="flex items-start justify-between gap-3 mb-3">
+                <h3 className="text-sm font-medium text-foreground">{im.setupGuide}</h3>
+                {platform.guideUrl && (
+                  <Link
+                    href={platform.guideUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-xs text-[var(--amber)] hover:underline shrink-0"
+                  >
+                    {im.guideLink}
+                  </Link>
+                )}
+              </div>
               <div className="text-sm text-muted-foreground leading-relaxed space-y-1">
                 {platform.guide.split('\n').map((line, idx) => (
                   <div key={idx}>{line}</div>
@@ -307,7 +388,7 @@ export default function AgentsContentChannelDetail({ platformId }: { platformId:
                       placeholder={field.placeholder}
                       value={formValues[field.key] ?? ''}
                       onChange={e => setFormValues(prev => ({ ...prev, [field.key]: e.target.value }))}
-                      className="h-9 w-full px-3 pr-10 text-sm font-mono bg-background border border-border rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                      className="h-11 w-full px-3 pr-10 text-sm font-mono bg-background border border-border rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                       autoComplete="off"
                       aria-required="true"
                       aria-describedby={field.hint ? `hint-${field.key}` : undefined}
@@ -315,7 +396,7 @@ export default function AgentsContentChannelDetail({ platformId }: { platformId:
                     <button
                       type="button"
                       onClick={() => setShowSecrets(!showSecrets)}
-                      className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-muted-foreground hover:text-foreground rounded transition-colors"
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1.5 text-muted-foreground hover:text-foreground rounded transition-colors"
                       aria-label={showSecrets ? im.hideSecret : im.showSecret}
                       title={showSecrets ? im.hideSecret : im.showSecret}
                     >
@@ -332,8 +413,8 @@ export default function AgentsContentChannelDetail({ platformId }: { platformId:
                   type="button"
                   onClick={handleSave}
                   disabled={saving || !isFormComplete}
-                  className="h-9 px-4 text-sm rounded-md inline-flex items-center gap-1.5 bg-[var(--amber)] text-[var(--amber-foreground)] hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-opacity"
-                  aria-label={saving ? "Saving..." : im.saveConfig}
+                  className="h-11 px-4 text-sm rounded-md inline-flex items-center gap-1.5 bg-[var(--amber)] text-[var(--amber-foreground)] hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-opacity"
+                  aria-label={saving ? im.saving : im.saveConfig}
                 >
                   {saving ? <Loader2 size={14} className="animate-spin" /> : <Settings2 size={14} />}
                   {saving ? im.saving : im.saveConfig}
