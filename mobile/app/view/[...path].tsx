@@ -1,5 +1,5 @@
 /**
- * File/directory view — renders Markdown content or directory listing.
+ * File/directory view — renders Markdown preview, directory listing, or Markdown editor.
  */
 import { useEffect, useRef, useState } from 'react';
 import {
@@ -15,24 +15,27 @@ import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import Markdown from 'react-native-markdown-display';
 import { mindosClient } from '@/lib/api-client';
+import MarkdownEditor from '@/components/editor/MarkdownEditor';
 import type { FileNode } from '@/lib/types';
 
 export default function ViewScreen() {
   const { path: pathSegments } = useLocalSearchParams<{ path: string[] }>();
   const filePath = Array.isArray(pathSegments) ? pathSegments.join('/') : pathSegments ?? '';
   const fileName = filePath.split('/').pop() || filePath;
+  const isMarkdown = fileName.endsWith('.md');
   const router = useRouter();
 
   const [content, setContent] = useState('');
+  const [mtime, setMtime] = useState<number | undefined>();
   const [children, setChildren] = useState<FileNode[]>([]);
   const [isDir, setIsDir] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [editing, setEditing] = useState(false);
 
-  // Track current request to prevent stale updates on rapid navigation
   const requestIdRef = useRef(0);
 
-  useEffect(() => {
+  const loadContent = () => {
     const currentId = ++requestIdRef.current;
     const controller = new AbortController();
 
@@ -40,17 +43,16 @@ export default function ViewScreen() {
       setLoading(true);
       setError('');
       try {
-        // Try to read as file first
         const data = await mindosClient.getFileContent(filePath, controller.signal);
-        if (currentId !== requestIdRef.current) return; // stale
+        if (currentId !== requestIdRef.current) return;
         setContent(data.content);
+        setMtime(data.mtime);
         setIsDir(false);
       } catch {
-        if (currentId !== requestIdRef.current) return; // stale
-        // If file read fails, try listing as directory
+        if (currentId !== requestIdRef.current) return;
         try {
           const tree = await mindosClient.getFileTree();
-          if (currentId !== requestIdRef.current) return; // stale
+          if (currentId !== requestIdRef.current) return;
           const node = findNode(tree, filePath);
           if (node?.children) {
             setChildren(node.children);
@@ -63,15 +65,20 @@ export default function ViewScreen() {
           setError((e as Error).message);
         }
       } finally {
-        if (currentId === requestIdRef.current) {
-          setLoading(false);
-        }
+        if (currentId === requestIdRef.current) setLoading(false);
       }
     })();
 
     return () => controller.abort();
+  };
+
+  useEffect(() => {
+    const cleanup = loadContent();
+    return cleanup;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filePath]);
 
+  // --- Loading ---
   if (loading) {
     return (
       <View style={styles.container}>
@@ -81,6 +88,7 @@ export default function ViewScreen() {
     );
   }
 
+  // --- Error ---
   if (error) {
     return (
       <View style={styles.container}>
@@ -96,7 +104,7 @@ export default function ViewScreen() {
     );
   }
 
-  // Directory listing
+  // --- Directory listing ---
   if (isDir) {
     return (
       <View style={styles.container}>
@@ -127,10 +135,48 @@ export default function ViewScreen() {
     );
   }
 
-  // Markdown file content
+  // --- Markdown editor mode ---
+  if (editing && isMarkdown) {
+    return (
+      <View style={styles.container}>
+        <Stack.Screen
+          options={{
+            title: fileName,
+            headerLeft: () => (
+              <Pressable onPress={() => setEditing(false)} style={styles.headerBtn}>
+                <Ionicons name="close" size={22} color="#fafaf9" />
+              </Pressable>
+            ),
+          }}
+        />
+        <MarkdownEditor
+          filePath={filePath}
+          initialContent={content}
+          initialMtime={mtime}
+          onSaved={() => {
+            setEditing(false);
+            loadContent();
+          }}
+        />
+      </View>
+    );
+  }
+
+  // --- Markdown preview (default) ---
   return (
     <View style={styles.container}>
-      <Stack.Screen options={{ title: fileName }} />
+      <Stack.Screen
+        options={{
+          title: fileName,
+          headerRight: isMarkdown
+            ? () => (
+                <Pressable onPress={() => setEditing(true)} style={styles.headerBtn}>
+                  <Ionicons name="create-outline" size={22} color="#c8873a" />
+                </Pressable>
+              )
+            : undefined,
+        }}
+      />
       <ScrollView style={styles.content} contentContainerStyle={styles.contentInner}>
         <Markdown style={markdownStyles}>{content}</Markdown>
       </ScrollView>
@@ -178,9 +224,12 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   retryText: { color: '#fafaf9', fontWeight: '500' },
+  headerBtn: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
 });
 
-// react-native-markdown-display requires plain objects, not StyleSheet.create()
 const markdownStyles = {
   body: { color: '#d6d3d1', fontSize: 15, lineHeight: 24 },
   heading1: { color: '#fafaf9', fontSize: 24, fontWeight: '700' as const, marginTop: 24, marginBottom: 8 },
