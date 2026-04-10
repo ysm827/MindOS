@@ -84,8 +84,8 @@ export function TodoRenderer({ content, saveAction }: RendererContext) {
               {totalDone}/{totalItems} completed
             </span>
             {totalInProgress > 0 && (
-              <span className="flex items-center gap-1 text-xs text-amber-500">
-                <Circle size={8} className="fill-amber-500/30" />
+              <span className="flex items-center gap-1 text-xs text-[var(--amber)]">
+                <Circle size={8} className="fill-[var(--amber)]/30" />
                 {totalInProgress} in progress
               </span>
             )}

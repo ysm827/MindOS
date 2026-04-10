@@ -35,7 +35,7 @@ export default function FilterBar({ filters, onFilterChange, allTags, allPriorit
         </button>
         <button
           onClick={() => onFilterChange({ ...filters, status: 'in-progress' })}
-          className={`px-2.5 py-1 transition-colors border-l border-border ${filters.status === 'in-progress' ? 'bg-amber-500/10 text-amber-500 font-medium' : 'text-muted-foreground hover:bg-muted/50'}`}
+          className={`px-2.5 py-1 transition-colors border-l border-border ${filters.status === 'in-progress' ? 'bg-[var(--amber)]/10 text-[var(--amber)] font-medium' : 'text-muted-foreground hover:bg-muted/50'}`}
         >
           In Progress {counts.inProgress}
         </button>

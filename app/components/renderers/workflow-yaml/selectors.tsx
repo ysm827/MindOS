@@ -283,7 +283,7 @@ export function SkillsSelector({ value, onChange }: { value: string[]; onChange:
             <button key={s.name} onClick={() => toggle(s.name)}
               className={`w-full text-left px-3 py-1.5 text-xs hover:bg-muted transition-colors flex items-center gap-2 ${checked ? 'bg-[var(--amber)]/5' : ''}`}>
               <span className={`w-3.5 h-3.5 rounded border flex items-center justify-center shrink-0 transition-colors ${
-                checked ? 'bg-[var(--amber)] border-[var(--amber)] text-white' : 'border-border'
+                checked ? 'bg-[var(--amber)] border-[var(--amber)] text-[var(--amber-foreground)]' : 'border-border'
               }`}>
                 {checked && <span className="text-[9px]">✓</span>}
               </span>

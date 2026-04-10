@@ -263,10 +263,22 @@ function isTemplateContent(filePath: string): boolean {
 function buildSpacePreview(dirAbsPath: string) {
   const instructionPath = path.join(dirAbsPath, 'INSTRUCTION.md');
   const readmePath = path.join(dirAbsPath, 'README.md');
+  const readmeTemplate = isTemplateContent(readmePath);
+
+  // Parse lastCompiled from README footer comment
+  let lastCompiled: string | undefined;
+  try {
+    const readmeContent = fs.readFileSync(readmePath, 'utf-8');
+    const match = readmeContent.match(/<!-- mindos:compiled (\S+) files:\d+ -->/);
+    if (match) lastCompiled = match[1];
+  } catch { /* no README */ }
+
   return {
     instructionLines: extractBodyLines(instructionPath, SPACE_PREVIEW_MAX_LINES),
     readmeLines: extractBodyLines(readmePath, SPACE_PREVIEW_MAX_LINES),
-    isTemplate: isTemplateContent(instructionPath) && isTemplateContent(readmePath),
+    isTemplate: isTemplateContent(instructionPath) && readmeTemplate,
+    readmeIsTemplate: readmeTemplate,
+    lastCompiled,
   };
 }
 

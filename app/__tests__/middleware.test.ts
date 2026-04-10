@@ -57,6 +57,32 @@ describe('middleware — API protection (AUTH_TOKEN)', () => {
   });
 });
 
+describe('middleware — CORS headers on /api/* routes', () => {
+  it('returns 204 with CORS headers for OPTIONS preflight', async () => {
+    const req = new NextRequest('http://localhost/api/files', { method: 'OPTIONS' });
+    const res = await middleware(req);
+    expect(res.status).toBe(204);
+    expect(res.headers.get('access-control-allow-origin')).toBe('*');
+    expect(res.headers.get('access-control-allow-methods')).toContain('POST');
+    expect(res.headers.get('access-control-allow-headers')).toContain('Authorization');
+  });
+
+  it('attaches CORS headers to normal API responses', async () => {
+    delete process.env.AUTH_TOKEN;
+    const req = new NextRequest('http://localhost/api/files');
+    const res = await middleware(req);
+    expect(res.headers.get('access-control-allow-origin')).toBe('*');
+  });
+
+  it('attaches CORS headers to 401 responses', async () => {
+    process.env.AUTH_TOKEN = 'secret123';
+    const req = new NextRequest('http://localhost/api/files');
+    const res = await middleware(req);
+    expect(res.status).toBe(401);
+    expect(res.headers.get('access-control-allow-origin')).toBe('*');
+  });
+});
+
 describe('middleware — Web UI protection (WEB_PASSWORD)', () => {
   const original = process.env.WEB_PASSWORD;
 

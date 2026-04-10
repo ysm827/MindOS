@@ -120,7 +120,7 @@ export default function WorkflowsPanel({ active, maximized, onMaximize }: Workfl
               onKeyDown={e => e.key === 'Enter' && handleCreate()}
               placeholder={wt.namePlaceholder}
               autoFocus
-              className="w-full px-2.5 py-1.5 text-sm rounded-md border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+              className="w-full px-2.5 py-1.5 text-sm rounded-md border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus-visible:ring-1 focus-visible:ring-ring"
             />
             {createError && (
               <p className="text-xs text-[var(--error)] mt-1">{createError}</p>

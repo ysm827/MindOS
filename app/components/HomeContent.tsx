@@ -123,7 +123,7 @@ export default function HomeContent({ recent, existingFiles, spaces }: { recent:
               <div className="w-full max-w-4xl">
 
                 {/* Pill Tabs */}
-                <div className="flex items-center justify-center gap-1.5 mb-5">
+                <div className="flex items-center justify-center gap-1.5 mb-5" role="tablist">
                   {categories.map((cat, i) => {
                     const Icon = TAB_ICONS[i % TAB_ICONS.length];
                     const isActive = i === activeTab;
@@ -131,6 +131,8 @@ export default function HomeContent({ recent, existingFiles, spaces }: { recent:
                       <button
                         key={cat.label}
                         type="button"
+                        role="tab"
+                        aria-selected={isActive}
                         onClick={() => setActiveTab(i)}
                         className={`flex items-center gap-1.5 px-4 py-2 text-xs font-medium rounded-full transition-all duration-150 ${
                           isActive
@@ -146,7 +148,7 @@ export default function HomeContent({ recent, existingFiles, spaces }: { recent:
                 </div>
 
                 {/* Prompt Cards — 2x2 grid */}
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-2 gap-2" role="tabpanel">
                   {current.items.map((item, i) => (
                     <button
                       key={`${activeTab}-${i}`}

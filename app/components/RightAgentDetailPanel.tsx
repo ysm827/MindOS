@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useEffect } from 'react';
-import { useMcpData } from '@/lib/stores/mcp-store';
+import { useMcpAgents, useMcpStatus, useMcpInstallAgent } from '@/lib/stores/mcp-store';
 import { useLocale } from '@/lib/stores/locale-store';
 import { useResizeDrag } from '@/hooks/useResizeDrag';
 import AgentsPanelAgentDetail from '@/components/panels/AgentsPanelAgentDetail';
@@ -33,22 +33,24 @@ export default function RightAgentDetailPanel({
   onWidthChange,
   onWidthCommit,
 }: RightAgentDetailPanelProps) {
-  const mcp = useMcpData();
+  const agents = useMcpAgents();
+  const status = useMcpStatus();
+  const installAgent = useMcpInstallAgent();
   const { t } = useLocale();
   const p = t.panels.agents;
 
-  const connected = mcp.agents.filter(a => a.present && a.installed);
-  const detected = mcp.agents.filter(a => a.present && !a.installed);
-  const notFound = mcp.agents.filter(a => !a.present);
+  const connected = agents.filter(a => a.present && a.installed);
+  const detected = agents.filter(a => a.present && !a.installed);
+  const notFound = agents.filter(a => !a.present);
 
   const resolved = useMemo(() => {
     if (!agentKey) return null;
-    const agent = mcp.agents.find(a => a.key === agentKey);
+    const agent = agents.find(a => a.key === agentKey);
     if (!agent) return null;
     const status = resolveAgentDetailStatus(agentKey, connected, detected, notFound);
     if (!status) return null;
     return { agent, status };
-  }, [agentKey, mcp.agents, connected, detected, notFound]);
+  }, [agentKey, agents, connected, detected, notFound]);
 
   useEffect(() => {
     if (agentKey && !resolved) {
@@ -101,9 +103,9 @@ export default function RightAgentDetailPanel({
           <AgentsPanelAgentDetail
             agent={resolved.agent}
             agentStatus={resolved.status}
-            mcpStatus={mcp.status}
+            mcpStatus={status}
             onBack={onClose}
-            onInstallAgent={mcp.installAgent}
+            onInstallAgent={installAgent}
             copy={detailCopy}
             headerVariant="dock"
           />

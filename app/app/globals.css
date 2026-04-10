@@ -29,6 +29,8 @@
   --color-destructive-foreground: var(--destructive-foreground);
   --color-success: var(--success);
   --color-error: var(--error);
+  --color-tool-read: var(--tool-read);
+  --color-tool-search: var(--tool-search);
   --color-amber-foreground: var(--amber-foreground);
   --color-accent-foreground: var(--accent-foreground);
   --color-accent: var(--accent);
@@ -85,6 +87,8 @@ body {
   --amber-foreground: #ffffff;
   --success: #5a8d60;
   --error: #c85050;
+  --tool-read: #5a8ab4;
+  --tool-search: #9a7ab4;
   --sidebar: #ede9e1;
   --sidebar-foreground: #1c1a17;
   --sidebar-primary: #1c1a17;
@@ -122,6 +126,8 @@ body {
   --amber-foreground: #ffffff;
   --success: #7aad80;
   --error: #c85050;
+  --tool-read: #8ab4d8;
+  --tool-search: #c8a0d8;
   --sidebar: #1c1a17;
   --sidebar-foreground: #e8e4dc;
   --sidebar-primary: #d4954a;

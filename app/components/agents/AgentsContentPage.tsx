@@ -18,6 +18,7 @@ import AgentsSkillsSection from './AgentsSkillsSection';
 import AgentsPanelA2aTab from './AgentsPanelA2aTab';
 import AgentsPanelSessionsTab from './AgentsPanelSessionsTab';
 import AgentActivitySection from './AgentActivitySection';
+import AgentsContentChannels from './AgentsContentChannels';
 import CustomAgentModal from './CustomAgentModal';
 import { ConfirmDialog } from './AgentsPrimitives';
 import type { AgentInfo } from '@/components/settings/types';
@@ -28,6 +29,12 @@ export default function AgentsContentPage({ tab }: { tab: AgentsDashboardTab }) 
   const mcp = useMcpData();
   const a2a = useA2aRegistry();
   const pageHeader = useMemo(() => {
+    if (tab === 'channels') {
+      return {
+        title: a.navChannels ?? 'Channels',
+        subtitle: a.channelsSubtitle ?? 'Connect messaging platforms to let MindOS Agent send messages on your behalf.',
+      };
+    }
     if (tab === 'activity') {
       return {
         title: a.navActivity ?? 'Activity',
@@ -200,6 +207,10 @@ export default function AgentsContentPage({ tab }: { tab: AgentsDashboardTab }) 
 
       {tab === 'activity' && (
         <AgentActivitySection />
+      )}
+
+      {tab === 'channels' && (
+        <AgentsContentChannels />
       )}
 
       {/* Custom Agent Modal */}

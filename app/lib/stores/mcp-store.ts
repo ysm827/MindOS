@@ -154,3 +154,13 @@ export function useMcpData(): McpStoreState {
 export function useMcpDataOptional(): McpStoreState {
   return useMcpStore();
 }
+
+/* ── Granular selectors — subscribe to individual fields to avoid unnecessary re-renders ── */
+
+export const useMcpLoading = () => useMcpStore(s => s.loading);
+export const useMcpAgents = () => useMcpStore(s => s.agents);
+export const useMcpSkills = () => useMcpStore(s => s.skills);
+export const useMcpStatus = () => useMcpStore(s => s.status);
+export const useMcpRefresh = () => useMcpStore(s => s.refresh);
+export const useMcpToggleSkill = () => useMcpStore(s => s.toggleSkill);
+export const useMcpInstallAgent = () => useMcpStore(s => s.installAgent);

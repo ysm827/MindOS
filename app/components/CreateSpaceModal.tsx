@@ -150,7 +150,7 @@ export default function CreateSpaceModal({ t, dirPaths }: { t: ReturnType<typeof
               aria-invalid={!!nameHint}
               aria-describedby={nameHint ? 'space-name-hint' : undefined}
               className={`w-full px-3 py-2 text-sm rounded-lg border bg-background outline-none transition-colors ${
-                nameHint ? 'border-error focus:border-error' : 'border-border focus-visible:ring-1 focus-visible:ring-ring'
+                nameHint ? 'border-error focus-visible:border-error' : 'border-border focus-visible:ring-1 focus-visible:ring-ring'
               }`}
             />
             {nameHint && <span id="space-name-hint" className="text-xs text-error">{nameHint}</span>}

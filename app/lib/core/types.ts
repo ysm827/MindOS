@@ -3,6 +3,10 @@ export interface SpacePreview {
   readmeLines: string[];
   /** True when both files still contain only the default scaffold template. */
   isTemplate?: boolean;
+  /** True when README.md specifically contains scaffold template content. */
+  readmeIsTemplate?: boolean;
+  /** ISO timestamp of last AI-compiled overview, parsed from README footer comment. */
+  lastCompiled?: string;
 }
 
 export interface FileNode {

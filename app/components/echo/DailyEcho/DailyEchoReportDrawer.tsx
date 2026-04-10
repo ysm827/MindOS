@@ -40,7 +40,7 @@ export default function DailyEchoReportDrawer({
     <>
       {/* Overlay */}
       <div
-        className={isOpen ? 'fixed inset-0 z-30 bg-black/25 transition-opacity duration-200' : 'hidden'}
+        className={isOpen ? 'fixed inset-0 z-30 overlay-backdrop transition-opacity duration-200' : 'hidden'}
         onClick={onClose}
         role="presentation"
       />

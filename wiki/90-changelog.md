@@ -1,8 +1,22 @@
-<!-- Last verified: 2026-03-27 | Current stage: P1 -->
+<!-- Last verified: 2026-04-10 | Current version: v0.6.65 -->
 
 # 变更日志 (CHANGELOG)
 
-## Unreleased (after v0.6.7)
+## 未发布 (v0.6.8 - v0.6.65)
+
+> **注**：v0.6.8 ~ v0.6.65 的 58 个版本需要补充详细 changelog。当前文档涵盖关键改动，完整历史见 git tags。
+
+### [v0.6.65] - 2026-04-10
+
+**主要改动：**
+- Save Session 功能完成（三种模式：Full / Digest / Organize）
+- Daily Echo 改进（实时对齐分析、i18n 完整）
+- IM 集成完成（8 个平台）
+- Ask Panel UX 优化（Portal Popover、Session Switcher 增强）
+- 架构审查完成（API 路由 65、工具 34、Component 189）
+- CLI 命令扩展（24 个命令，bin/ 总 7,890 行代码）
+
+## v0.6.7 (旧版本历史)
 
 ### 架构重构：巨型文件拆分
 

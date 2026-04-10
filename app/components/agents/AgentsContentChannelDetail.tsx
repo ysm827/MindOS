@@ -214,7 +214,7 @@ export default function AgentsContentChannelDetail({ platformId }: { platformId:
                   placeholder={im.recipientPlaceholder}
                   value={testRecipient}
                   onChange={e => setTestRecipient(e.target.value)}
-                  className="h-8 w-full px-3 text-sm bg-background border border-border rounded-md focus:outline-none focus:ring-1 focus:ring-ring"
+                  className="h-8 w-full px-3 text-sm bg-background border border-border rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                 />
               </div>
               <div>
@@ -224,7 +224,7 @@ export default function AgentsContentChannelDetail({ platformId }: { platformId:
                   placeholder={im.messagePlaceholder}
                   value={testMsg}
                   onChange={e => setTestMsg(e.target.value)}
-                  className="h-8 w-full px-3 text-sm bg-background border border-border rounded-md focus:outline-none focus:ring-1 focus:ring-ring"
+                  className="h-8 w-full px-3 text-sm bg-background border border-border rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                 />
               </div>
               <div className="flex items-center gap-3">
@@ -294,7 +294,7 @@ export default function AgentsContentChannelDetail({ platformId }: { platformId:
                       placeholder={field.placeholder}
                       value={formValues[field.key] ?? ''}
                       onChange={e => setFormValues(prev => ({ ...prev, [field.key]: e.target.value }))}
-                      className="h-8 w-full px-3 pr-8 text-sm font-mono bg-background border border-border rounded-md focus:outline-none focus:ring-1 focus:ring-ring"
+                      className="h-8 w-full px-3 pr-8 text-sm font-mono bg-background border border-border rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                       autoComplete="off"
                     />
                     <button

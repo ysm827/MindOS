@@ -46,17 +46,27 @@ export default function DirPicker({ dirPaths, value, onChange, rootLabel = 'Root
     });
   }, []);
 
-  // Recalculate position on open, scroll, and resize
+  // Recalculate position on open, scroll, and resize (throttled to rAF)
+  const rafRef = useRef(0);
+  const throttledCalc = useCallback(() => {
+    if (rafRef.current) return;
+    rafRef.current = requestAnimationFrame(() => {
+      rafRef.current = 0;
+      calcPosition();
+    });
+  }, [calcPosition]);
+
   useEffect(() => {
     if (!expanded) { setPanelPos(null); return; }
     calcPosition();
-    window.addEventListener('scroll', calcPosition, true);
-    window.addEventListener('resize', calcPosition);
+    window.addEventListener('scroll', throttledCalc, true);
+    window.addEventListener('resize', throttledCalc);
     return () => {
-      window.removeEventListener('scroll', calcPosition, true);
-      window.removeEventListener('resize', calcPosition);
+      window.removeEventListener('scroll', throttledCalc, true);
+      window.removeEventListener('resize', throttledCalc);
+      if (rafRef.current) { cancelAnimationFrame(rafRef.current); rafRef.current = 0; }
     };
-  }, [expanded, calcPosition]);
+  }, [expanded, calcPosition, throttledCalc]);
 
   const collapse = useCallback(() => setExpanded(false), []);
 
@@ -111,7 +121,7 @@ export default function DirPicker({ dirPaths, value, onChange, rootLabel = 'Root
   const panel = expanded && panelPos && createPortal(
     <div
       ref={panelRef}
-      className="fixed z-[9999] rounded-lg border border-[var(--amber)] bg-card shadow-lg overflow-hidden flex flex-col"
+      className="fixed z-50 rounded-lg border border-[var(--amber)] bg-card shadow-lg overflow-hidden flex flex-col"
       style={{
         left: panelPos.left,
         width: panelPos.width,

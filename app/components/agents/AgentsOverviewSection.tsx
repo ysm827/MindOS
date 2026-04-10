@@ -154,7 +154,7 @@ export default function AgentsOverviewSection({
           <button
             type="button"
             onClick={() => setRiskOpen(!riskOpen)}
-            className="inline-flex items-center gap-1.5 rounded-full border border-amber-500/25 bg-amber-500/[0.06] px-3 py-1.5 text-sm font-medium text-[var(--amber)] transition-colors duration-150 hover:bg-amber-500/[0.12] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="inline-flex items-center gap-1.5 rounded-full border border-[var(--amber)]/25 bg-[var(--amber)]/[0.06] px-3 py-1.5 text-sm font-medium text-[var(--amber)] transition-colors duration-150 hover:bg-[var(--amber)]/[0.12] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             aria-expanded={riskOpen}
           >
             <AlertTriangle size={13} className="shrink-0" aria-hidden="true" />
@@ -183,7 +183,7 @@ export default function AgentsOverviewSection({
                     className={`flex items-center gap-3 px-3 py-2.5 rounded-lg border text-sm ${
                       risk.severity === 'error'
                         ? 'border-destructive/20 bg-destructive/[0.03]'
-                        : 'border-amber-500/15 bg-background'
+                        : 'border-[var(--amber)]/15 bg-background'
                     }`}
                     style={{ animationDelay: `${i * 50}ms` }}
                   >

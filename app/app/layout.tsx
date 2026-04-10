@@ -87,7 +87,7 @@ export default async function RootLayout({
   return (
     <html lang={ssrLocale} suppressHydrationWarning>
       <head>
-        <meta name="theme-color" content="#c8871e" />
+        <meta name="theme-color" content="#c8873a" />
         {/* Patch Node.removeChild/insertBefore to swallow errors caused by browser
             extensions (translators, Grammarly, etc.) that mutate the DOM between SSR
             and hydration. See: https://github.com/facebook/react/issues/17256 */}

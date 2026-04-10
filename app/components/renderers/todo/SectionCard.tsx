@@ -52,7 +52,7 @@ function StatusIcon({ status, onClick }: { status: TodoStatus; onClick: () => vo
         <CheckSquare size={15} style={{ color: 'var(--amber)' }} />
       )}
       {status === 'in-progress' && (
-        <Circle size={15} className="text-amber-500 fill-amber-500/20" />
+        <Circle size={15} className="text-[var(--amber)] fill-[var(--amber)]/20" />
       )}
       {status === 'todo' && (
         <Square size={15} style={{ color: 'var(--muted-foreground)' }} />
@@ -203,7 +203,7 @@ function TodoItemRow({
       <div
         className={`group flex items-center gap-2 py-1.5 px-2 rounded-lg transition-colors hover:bg-muted/60 ${
           item.status === 'done' ? 'opacity-45' : ''
-        } ${urgency === 'overdue' && item.status !== 'done' ? 'bg-red-500/[0.03]' : ''}`}
+        } ${urgency === 'overdue' && item.status !== 'done' ? 'bg-error/[0.03]' : ''}`}
         style={{ paddingLeft: `${8 + depth * 20}px` }}
       >
         {hasChildren ? (
@@ -307,7 +307,7 @@ export default function SectionCard({
             {done}/{total}
           </span>
           {inProgress > 0 && (
-            <span className="flex items-center gap-0.5 text-[10px] text-amber-500">
+            <span className="flex items-center gap-0.5 text-[10px] text-[var(--amber)]">
               <Clock size={9} /> {inProgress}
             </span>
           )}

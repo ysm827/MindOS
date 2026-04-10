@@ -38,11 +38,11 @@ export const KIND_LABEL: Record<string, Record<OpKind, string>> = {
 };
 
 export const KIND_STYLE: Record<OpKind, { bg: string; text: string; border: string }> = {
-  read:   { bg: 'rgba(138,180,216,0.10)', text: '#8ab4d8', border: 'rgba(138,180,216,0.25)' },
+  read:   { bg: 'rgba(138,180,216,0.10)', text: 'var(--tool-read)', border: 'rgba(138,180,216,0.25)' },
   write:  { bg: 'rgba(200,135,58,0.10)',  text: 'var(--amber)', border: 'rgba(200,135,58,0.25)' },
   create: { bg: 'rgba(122,173,128,0.10)', text: 'var(--success)', border: 'rgba(122,173,128,0.25)' },
   delete: { bg: 'rgba(200,80,80,0.10)',   text: 'var(--error)', border: 'rgba(200,80,80,0.25)' },
-  search: { bg: 'rgba(200,160,216,0.10)', text: '#c8a0d8', border: 'rgba(200,160,216,0.25)' },
+  search: { bg: 'rgba(200,160,216,0.10)', text: 'var(--tool-search)', border: 'rgba(200,160,216,0.25)' },
   other:  { bg: 'var(--muted)', text: 'var(--muted-foreground)', border: 'var(--border)' },
 };
 

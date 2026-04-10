@@ -74,7 +74,7 @@ export default function FileChip({ path, onRemove, variant = 'kb', imageData, im
     statusIndicatorCls = 'text-destructive';
   } else if (isTruncated) {
     StatusIndicator = AlertTriangle;
-    statusIndicatorCls = 'text-amber-500';
+    statusIndicatorCls = 'text-[var(--amber)]';
   } else if (status === 'success') {
     StatusIndicator = CheckCircle2;
     statusIndicatorCls = 'text-emerald-500';
@@ -83,7 +83,7 @@ export default function FileChip({ path, onRemove, variant = 'kb', imageData, im
   const style = status === 'error'
     ? 'border-destructive/30 bg-destructive/5 text-foreground'
     : isTruncated
-    ? 'border-amber-500/30 bg-amber-500/5 text-foreground'
+    ? 'border-[var(--amber)]/30 bg-[var(--amber)]/5 text-foreground'
     : VARIANT_STYLE[variant];
 
   // Build tooltip text
@@ -129,7 +129,7 @@ export default function FileChip({ path, onRemove, variant = 'kb', imageData, im
 
   const tooltipBorderCls = status === 'error'
     ? 'border-destructive/20 text-destructive'
-    : 'border-amber-500/20 text-amber-600 dark:text-amber-400';
+    : 'border-[var(--amber)]/20 text-[var(--amber-text)]';
 
   const tooltip = showTooltip && tooltipPos && tooltipText ? (
     <div

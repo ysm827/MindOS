@@ -653,6 +653,28 @@ server.registerTool("mindos_lint", {
   } catch (e) { _logOp("mindos_lint", { space }, "error", String(e)); return error(String(e)); }
 });
 
+// ── mindos_compile ──────────────────────────────────────────────────────────
+
+server.registerTool("mindos_compile", {
+  title: "Compile Space Overview",
+  description: "Generate or regenerate a Space overview README using AI. Reads all files in the Space, analyzes their content, and produces a structured summary saved as README.md in the Space.",
+  inputSchema: z.object({
+    space: z.string().min(1).describe("Space path to compile (e.g. 'Research')"),
+  }),
+}, async ({ space }) => {
+  try {
+    const result = await _post("/api/space-overview", { space }) as Record<string, unknown>;
+    if (result.error) {
+      _logOp("mindos_compile", { space }, "error", String(result.error));
+      return error(String(result.error));
+    }
+    const stats = result.stats as Record<string, unknown>;
+    const msg = `Overview generated for "${stats.spaceName}" (${stats.fileCount} files analyzed). Saved to ${space}/README.md`;
+    _logOp("mindos_compile", { space }, "ok", msg);
+    return ok(msg);
+  } catch (e) { _logOp("mindos_compile", { space }, "error", String(e)); return error(String(e)); }
+});
+
 } // end registerTools
 
 // ─── Server Factory ──────────────────────────────────────────────────────────

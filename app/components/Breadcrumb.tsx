@@ -1,7 +1,12 @@
 'use client';
 
 import Link from 'next/link';
-import { ChevronRight, Home, FileText, Table, Folder } from 'lucide-react';
+import { ChevronRight, Home, FileText, Table, Folder, History } from 'lucide-react';
+import { useLocale } from '@/lib/stores/locale-store';
+
+const FRIENDLY_PATHS: Record<string, { icon: React.ReactNode; getLabel: (t: ReturnType<typeof useLocale>['t']) => string }> = {
+  '.mindos/change-log.json': { icon: <History size={13} className="text-[var(--amber)] shrink-0" />, getLabel: (t) => t.changes.title },
+};
 
 function FileTypeIcon({ name }: { name: string }) {
   const ext = name.includes('.') ? name.slice(name.lastIndexOf('.')).toLowerCase() : '';
@@ -11,6 +16,28 @@ function FileTypeIcon({ name }: { name: string }) {
 }
 
 export default function Breadcrumb({ filePath }: { filePath: string }) {
+  const { t } = useLocale();
+  const friendly = FRIENDLY_PATHS[filePath];
+
+  if (friendly) {
+    return (
+      <nav className="flex items-center gap-0.5 text-xs text-muted-foreground flex-wrap">
+        <Link
+          href="/"
+          className="p-1.5 rounded-md hover:bg-muted/50 hover:text-foreground transition-colors"
+          title="Home"
+        >
+          <Home size={14} />
+        </Link>
+        <ChevronRight size={12} className="text-muted-foreground/50 shrink-0" />
+        <span className="flex items-center gap-1.5 px-2 py-1 text-foreground font-medium">
+          {friendly.icon}
+          <span>{friendly.getLabel(t)}</span>
+        </span>
+      </nav>
+    );
+  }
+
   const parts = filePath.split('/');
   return (
     <nav className="flex items-center gap-0.5 text-xs text-muted-foreground flex-wrap">

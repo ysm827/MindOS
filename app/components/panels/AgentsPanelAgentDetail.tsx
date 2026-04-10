@@ -115,7 +115,7 @@ export default function AgentsPanelAgentDetail({
               type="button"
               onClick={handleInstall}
               disabled={installing}
-              className="inline-flex items-center gap-1.5 px-3 py-2 text-xs rounded-lg font-medium text-white disabled:opacity-50 bg-[var(--amber)] hover:bg-[var(--amber)]/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className="inline-flex items-center gap-1.5 px-3 py-2 text-xs rounded-lg font-medium text-[var(--amber-foreground)] disabled:opacity-50 bg-[var(--amber)] hover:bg-[var(--amber)]/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
               {installing ? <Loader2 size={14} className="animate-spin" /> : null}
               {installing ? copy.installing : copy.install}

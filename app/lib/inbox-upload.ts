@@ -93,6 +93,87 @@ export async function quickDropToInbox(
 }
 
 /**
+ * Clip a web page URL to the Inbox.
+ * Fetches the page server-side, converts HTML→Markdown via Readability + Turndown,
+ * and saves the result to the Inbox directory.
+ */
+export async function clipUrlToInbox(
+  url: string,
+  t: ReturnType<typeof useLocale>['t'],
+): Promise<{ ok: boolean; title?: string }> {
+  try {
+    const res = await fetch('/api/inbox/clip', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url }),
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      const msg = data.error || t.inbox.clipFailed;
+      toast.error(msg, 4000);
+      return { ok: false };
+    }
+
+    toast.success(t.inbox.clipSuccess(data.title || url), 3000);
+    window.dispatchEvent(new Event('mindos:files-changed'));
+    window.dispatchEvent(new Event('mindos:inbox-updated'));
+    return { ok: true, title: data.title };
+  } catch (err) {
+    console.error('[ClipURL] Network error:', err);
+    toast.error(t.inbox.clipFailed, 4000);
+    return { ok: false };
+  }
+}
+
+/**
+ * Detects if a string looks like a URL (http:// or https://).
+ */
+export function looksLikeUrl(text: string): boolean {
+  const trimmed = text.trim();
+  if (!trimmed.startsWith('http://') && !trimmed.startsWith('https://')) return false;
+  try {
+    new URL(trimmed);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Extracts a URL from a DragEvent's dataTransfer.
+ * Checks text/uri-list first, then text/plain.
+ * Returns null if no valid URL found (or if files are present).
+ */
+export function extractUrlFromDrop(e: DragEvent): string | null {
+  if (e.dataTransfer?.files && e.dataTransfer.files.length > 0) return null;
+
+  const uriList = e.dataTransfer?.getData('text/uri-list');
+  if (uriList) {
+    const firstUrl = uriList.split(/[\r\n]+/).find(
+      line => !line.startsWith('#') && line.trim().length > 0,
+    );
+    if (firstUrl && looksLikeUrl(firstUrl)) return firstUrl.trim();
+  }
+
+  const plainText = e.dataTransfer?.getData('text/plain');
+  if (plainText && looksLikeUrl(plainText)) return plainText.trim();
+
+  return null;
+}
+
+/**
+ * Checks whether a DragEvent likely contains a URL (not files).
+ * Used during dragenter/dragover to show the appropriate drop overlay.
+ */
+export function dragContainsUrl(e: DragEvent): boolean {
+  const types = e.dataTransfer?.types ?? [];
+  if (types.includes('Files')) return false;
+  return types.includes('text/uri-list') || types.includes('text/plain');
+}
+
+/**
  * Drop files into a specific directory via /api/file/import.
  * Used when user drags external files onto a directory in the file tree.
  */

@@ -45,7 +45,7 @@ const EXT_STYLES: Record<string, { bg: string; text: string }> = {
   txt:  { bg: 'bg-muted/50',       text: 'text-muted-foreground/60' },
   csv:  { bg: 'bg-emerald-500/10', text: 'text-emerald-500/70' },
   json: { bg: 'bg-violet-500/10',  text: 'text-violet-500/70' },
-  pdf:  { bg: 'bg-red-500/10',     text: 'text-red-500/60' },
+  pdf:  { bg: 'bg-error/10',       text: 'text-error/60' },
 };
 
 function getFileExt(name: string): string {
@@ -524,7 +524,7 @@ function InboxFileRow({ file, onDelete, index, animate }: { file: InboxFile; onD
     : FileText;
   const iconColor = ext === 'csv' ? 'text-emerald-500/70'
     : ext === 'json' ? 'text-violet-500/70'
-    : ext === 'pdf' ? 'text-red-500/60'
+    : ext === 'pdf' ? 'text-error/60'
     : 'text-muted-foreground/60';
 
   return (

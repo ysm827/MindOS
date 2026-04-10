@@ -119,7 +119,7 @@ export function UninstallTab() {
           <div className="flex gap-2">
             <button
               onClick={handleUninstall}
-              className="px-3.5 py-2 text-sm font-medium rounded-lg bg-error text-white hover:bg-error/90 transition-colors focus-visible:ring-1 focus-visible:ring-ring"
+              className="px-3.5 py-2 text-sm font-medium rounded-lg bg-error text-destructive-foreground hover:bg-error/90 transition-colors focus-visible:ring-1 focus-visible:ring-ring"
             >
               {u.confirmButton}
             </button>

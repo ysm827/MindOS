@@ -162,8 +162,8 @@ export default function CustomSelect({
     : 'absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none';
 
   const listBaseCls = isSm
-    ? 'fixed z-[9999] overflow-y-auto rounded-md border border-border bg-card shadow-lg py-0.5'
-    : 'fixed z-[9999] overflow-y-auto rounded-lg border border-border bg-card shadow-lg py-1';
+    ? 'fixed z-50 overflow-y-auto rounded-md border border-border bg-card shadow-lg py-0.5'
+    : 'fixed z-50 overflow-y-auto rounded-lg border border-border bg-card shadow-lg py-1';
 
   const itemBaseCls = isSm
     ? 'w-full flex items-center gap-1.5 px-2 py-1 text-2xs text-left transition-colors cursor-pointer'

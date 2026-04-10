@@ -136,7 +136,7 @@ export default memo(function AskHeader({
                   if (e.key === 'Escape') setRenamingId(null);
                 }}
                 onBlur={handleCommitRename}
-                className="flex-1 min-w-0 px-2 py-1 text-xs rounded-md border border-border bg-background text-foreground outline-none focus:border-[var(--amber)]/50"
+                className="flex-1 min-w-0 px-2 py-1 text-xs rounded-md border border-border bg-background text-foreground outline-none focus-visible:border-[var(--amber)]/50"
                 placeholder="Session name..."
               />
             </div>

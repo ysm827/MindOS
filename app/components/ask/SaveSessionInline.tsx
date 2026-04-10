@@ -277,7 +277,7 @@ function SingleSaveForm({ content, defaultFilenamePrefix, dirPaths, onClose, ask
         <label className="text-2xs text-muted-foreground mb-0.5 block">{ask?.fileName ?? 'Filename'}</label>
         <input ref={fnRef} type="text" value={filename} onChange={(e) => setFilename(e.target.value)}
           onKeyDown={(e) => { if (e.key === 'Enter') handleSave(); if (e.key === 'Escape') onClose(); }}
-          className="w-full px-2 py-1 text-xs font-mono rounded-md border border-border bg-background text-foreground outline-none focus:border-[var(--amber)]/50" />
+          className="w-full px-2 py-1 text-xs font-mono rounded-md border border-border bg-background text-foreground outline-none focus-visible:border-[var(--amber)]/50" />
       </div>
       <div className="text-[10px] text-muted-foreground/60 font-mono truncate">{safePath}</div>
 
@@ -429,7 +429,7 @@ function ArchiveForm({ messages, dirPaths, onBack, onClose, ask }: {
         <label className="text-2xs text-muted-foreground mb-0.5 block">{ask?.fileName ?? 'Filename'}</label>
         <input ref={fnRef} type="text" value={filename} onChange={(e) => setFilename(e.target.value)}
           onKeyDown={(e) => { if (e.key === 'Enter') handleSave(); if (e.key === 'Escape') onClose(); }}
-          className="w-full px-2 py-1 text-xs font-mono rounded-md border border-border bg-background text-foreground outline-none focus:border-[var(--amber)]/50" />
+          className="w-full px-2 py-1 text-xs font-mono rounded-md border border-border bg-background text-foreground outline-none focus-visible:border-[var(--amber)]/50" />
       </div>
 
       <div className="flex items-center gap-2.5">

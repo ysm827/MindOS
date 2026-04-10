@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { Bot, ChevronDown, ArrowRight } from 'lucide-react';
-import { useMcpDataOptional } from '@/lib/stores/mcp-store';
+import { useMcpAgents, useMcpStatus, useMcpLoading } from '@/lib/stores/mcp-store';
 import { useLocale } from '@/lib/stores/locale-store';
 import type { AgentInfo } from '@/components/settings/types';
 
@@ -43,7 +43,9 @@ function initials(name: string): string {
 /* ── Main Component ── */
 
 export default function SystemPulse() {
-  const mcp = useMcpDataOptional();
+  const agents = useMcpAgents();
+  const status = useMcpStatus();
+  const loading = useMcpLoading();
   const { t } = useLocale();
   const pulse = t.pulse;
   const [collapsed, setCollapsed] = useState(false);
@@ -54,8 +56,6 @@ export default function SystemPulse() {
     if (stored !== null) setCollapsed(stored === '1');
   }, []);
 
-  const agents = mcp?.agents ?? [];
-  const status = mcp?.status ?? null;
   const sorted = useMemo(() => sortAgents(agents), [agents]);
   const connectedAgents = sorted.filter(a => a.installed);
   const mcpRunning = status?.running ?? false;
@@ -66,7 +66,7 @@ export default function SystemPulse() {
     localStorage.setItem(COLLAPSE_KEY, next ? '1' : '0');
   };
 
-  if (!mcp || mcp.loading) return (
+  if (loading) return (
     <section className="mb-8 animate-pulse">
       <div className="h-4 w-32 bg-muted rounded mb-3" />
       <div className="h-16 bg-muted/50 rounded-xl" />

@@ -46,9 +46,9 @@ function getSourceIcon(source: string): React.ReactNode {
 }
 
 function getSourceBgColor(source: string): string {
-  if (source === 'agent') return 'bg-blue-500/10 text-blue-700 border border-blue-200/50';
-  if (source === 'user') return 'bg-emerald-500/10 text-emerald-700 border border-emerald-200/50';
-  return 'bg-slate-500/10 text-slate-700 border border-slate-200/50';
+  if (source === 'agent') return 'bg-[var(--info)]/10 text-[var(--info)] border border-[var(--info)]/20';
+  if (source === 'user') return 'bg-[var(--success)]/10 text-[var(--success)] border border-[var(--success)]/20';
+  return 'bg-muted text-muted-foreground border border-border';
 }
 
 /** Skeleton placeholder for loading state */

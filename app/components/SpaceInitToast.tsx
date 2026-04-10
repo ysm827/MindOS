@@ -129,7 +129,7 @@ export default function SpaceInitToast() {
             <button
               type="button"
               onClick={handleReview}
-              className="px-2.5 py-1 rounded-full text-2xs font-medium bg-[var(--amber)] text-white hover:opacity-90 transition-opacity focus-visible:ring-2 focus-visible:ring-ring"
+              className="px-2.5 py-1 rounded-full text-2xs font-medium bg-[var(--amber)] text-[var(--amber-foreground)] hover:opacity-90 transition-opacity focus-visible:ring-2 focus-visible:ring-ring"
             >
               {h.aiInitReview}
             </button>

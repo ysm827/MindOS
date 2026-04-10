@@ -169,6 +169,7 @@ export const onboardingEn = {
     showGuide: 'Show getting started guide',
     close: 'Close',
     skip: 'Skip',
+    stepLocked: 'Complete the previous step first',
     import: {
       title: 'Import your files',
       cta: 'Import',
@@ -393,6 +394,7 @@ export const onboardingZh = {
     showGuide: '显示新手引导',
     close: '关闭',
     skip: '跳过',
+    stepLocked: '请先完成上一步',
     import: {
       title: '导入你的文件',
       cta: '导入',

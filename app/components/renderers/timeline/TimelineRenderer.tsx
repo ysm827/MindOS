@@ -111,8 +111,8 @@ function renderBody(body: string): string {
 const TAG_PALETTE = [
   { bg: 'rgba(200,135,58,0.12)', text: 'var(--amber)' },
   { bg: 'rgba(122,173,128,0.12)', text: 'var(--success)' },
-  { bg: 'rgba(138,180,216,0.12)', text: '#8ab4d8' },
-  { bg: 'rgba(200,160,216,0.12)', text: '#c8a0d8' },
+  { bg: 'rgba(138,180,216,0.12)', text: 'var(--tool-read)' },
+  { bg: 'rgba(200,160,216,0.12)', text: 'var(--tool-search)' },
 ];
 function tagColor(tag: string) {
   let h = 0;

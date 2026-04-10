@@ -225,7 +225,7 @@ export default function TrashPageClient({ initialItems }: { initialItems: TrashM
 
       {/* Restore Conflict Dialog */}
       {conflictItem && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-center justify-center modal-backdrop">
           <div className="bg-card border border-border rounded-xl shadow-xl max-w-sm w-full mx-4 p-5">
             <div className="flex items-center gap-2 mb-3">
               <AlertTriangle size={16} className="text-[var(--amber)]" />

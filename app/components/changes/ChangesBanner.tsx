@@ -117,7 +117,7 @@ export default function ChangesBanner() {
             <div className="mt-1 flex items-center gap-1.5">
               <Link
                 href="/changelog"
-                className="inline-flex items-center rounded-md px-2.5 py-1 text-xs font-medium bg-[var(--amber)] text-white focus-visible:ring-2 focus-visible:ring-ring hover:opacity-90"
+                className="inline-flex items-center rounded-md px-2.5 py-1 text-xs font-medium bg-[var(--amber)] text-[var(--amber-foreground)] focus-visible:ring-2 focus-visible:ring-ring hover:opacity-90"
               >
                 {t.changes.reviewNow}
               </Link>

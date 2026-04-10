@@ -17,7 +17,7 @@ interface EditorProps {
 
 const darkTheme = EditorView.theme({
   '&': {
-    backgroundColor: '#09090b',
+    backgroundColor: 'var(--background)',
     height: '100%',
     fontSize: '0.875rem',
     fontFamily: 'var(--font-ibm-plex-mono), ui-monospace, monospace',
@@ -28,7 +28,7 @@ const darkTheme = EditorView.theme({
   },
   '.cm-content': {
     padding: '16px',
-    caretColor: '#60a5fa',
+    caretColor: 'var(--amber)',
   },
   '.cm-focused': {
     outline: 'none',
@@ -37,24 +37,24 @@ const darkTheme = EditorView.theme({
     padding: '0 4px',
   },
   '.cm-gutters': {
-    backgroundColor: '#0d0d0f',
-    borderRight: '1px solid #27272a',
-    color: '#52525b',
+    backgroundColor: 'var(--card)',
+    borderRight: '1px solid var(--border)',
+    color: 'var(--muted-foreground)',
   },
   '.cm-activeLineGutter': {
-    backgroundColor: '#18181b',
+    backgroundColor: 'var(--muted)',
   },
   '.cm-activeLine': {
-    backgroundColor: '#18181b50',
+    backgroundColor: 'color-mix(in srgb, var(--muted) 50%, transparent)',
   },
   '.cm-selectionBackground': {
-    backgroundColor: '#2563eb40',
+    backgroundColor: 'color-mix(in srgb, var(--amber) 25%, transparent)',
   },
   '&.cm-focused .cm-selectionBackground': {
-    backgroundColor: '#2563eb60',
+    backgroundColor: 'color-mix(in srgb, var(--amber) 38%, transparent)',
   },
   '.cm-cursor': {
-    borderLeftColor: '#60a5fa',
+    borderLeftColor: 'var(--amber)',
     borderLeftWidth: '2px',
   },
 });
@@ -215,11 +215,11 @@ export default function Editor({ value, onChange, language = 'markdown' }: Edito
     <div className="relative h-full w-full flex flex-col">
       {/* Image insert button for markdown mode */}
       {isMarkdown && (
-        <div className="px-2 py-1.5 border-b border-zinc-800 bg-zinc-900/50 flex items-center gap-1">
+        <div className="px-2 py-1.5 border-b border-border bg-card/50 flex items-center gap-1">
           <button
             onClick={handlePickImages}
             disabled={isUploading}
-            className="p-1.5 rounded hover:bg-zinc-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
+            className="p-1.5 rounded hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
             title="Insert images (Ctrl+V or drag & drop)"
           >
             <ImageIcon size={14} />
@@ -234,7 +234,7 @@ export default function Editor({ value, onChange, language = 'markdown' }: Edito
       {/* Editor container */}
       <div
         ref={containerRef}
-        className="h-full w-full overflow-hidden rounded-lg border border-zinc-800"
+        className="h-full w-full overflow-hidden rounded-lg border border-border"
         style={{ minHeight: '400px' }}
       />
     </div>

@@ -710,4 +710,23 @@ export const knowledgeBaseTools: AgentTool<any>[] = [
       return textResult(lines.join('\n'));
     }),
   },
+
+  {
+    name: 'compile',
+    label: 'Compile Space Overview',
+    description: 'Generate or regenerate a Space overview README using AI. Reads all files in the Space, analyzes their content, and produces a structured summary saved as README.md.',
+    parameters: Type.Object({
+      space: Type.String({ description: 'Space path to compile (e.g. "Research", "Projects/ML")' }),
+    }),
+    execute: safeExecute(async (_id, params: { space: string }) => {
+      const { compileSpaceOverview, isCompileError } = await import('@/lib/compile');
+      const result = await compileSpaceOverview(params.space);
+      if (isCompileError(result)) {
+        return textResult(`Error: ${result.message}`);
+      }
+      return textResult(
+        `Overview generated for "${result.stats.spaceName}" (${result.stats.fileCount} files analyzed).\n\nSaved to ${params.space}/README.md`
+      );
+    }),
+  },
 ];

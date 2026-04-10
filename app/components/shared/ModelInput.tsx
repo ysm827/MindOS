@@ -189,7 +189,7 @@ export default function ModelInput({
       </div>
       {error && <p className="text-xs text-error mt-1">{error}</p>}
       {showDropdown && filtered.length > 0 && (
-        <div ref={listRef} style={dropdownStyle} className="fixed z-[9999] max-h-48 overflow-y-auto rounded-lg border border-border bg-popover shadow-lg">
+        <div ref={listRef} style={dropdownStyle} className="fixed z-50 max-h-48 overflow-y-auto rounded-lg border border-border bg-popover shadow-lg">
           {filtered.map((m, i) => {
             const isMatch = !value.trim() || m.toLowerCase().includes(value.toLowerCase());
             return (
@@ -211,7 +211,7 @@ export default function ModelInput({
         </div>
       )}
       {open && filtered.length === 0 && (
-        <div style={dropdownStyle} className="fixed z-[9999] rounded-lg border border-border bg-popover shadow-lg px-3 py-2 text-xs text-muted-foreground">
+        <div style={dropdownStyle} className="fixed z-50 rounded-lg border border-border bg-popover shadow-lg px-3 py-2 text-xs text-muted-foreground">
           {noModelsLabel}
         </div>
       )}

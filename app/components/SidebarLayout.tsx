@@ -23,19 +23,19 @@ import RightAgentDetailPanel, {
 } from './RightAgentDetailPanel';
 import AskFab from './AskFab';
 import SyncPopover from './panels/SyncPopover';
-import SearchModal from './SearchModal';
-import AskModal from './AskModal';
-import SettingsModal from './SettingsModal';
 import KeyboardShortcuts from './KeyboardShortcuts';
 import ChangesBanner from './changes/ChangesBanner';
 import SpaceInitToast from './SpaceInitToast';
 import OrganizeToast from './OrganizeToast';
-import CreateSpaceModal from './CreateSpaceModal';
 import { MobileSyncDot, useSyncStatus } from './SyncStatusBar';
 import { FileNode } from '@/lib/types';
 import { useLocale } from '@/lib/stores/locale-store';
 import dynamic from 'next/dynamic';
 
+const SearchModal = dynamic(() => import('./SearchModal'), { ssr: false });
+const AskModal = dynamic(() => import('./AskModal'), { ssr: false });
+const SettingsModal = dynamic(() => import('./SettingsModal'), { ssr: false });
+const CreateSpaceModal = dynamic(() => import('./CreateSpaceModal'), { ssr: false });
 const ImportModal = dynamic(() => import('./ImportModal'), { ssr: false });
 import McpStoreInit from '@/lib/stores/McpStoreInit';
 import WalkthroughInit from '@/lib/stores/WalkthroughInit';
@@ -430,7 +430,7 @@ export default function SidebarLayout({ fileTree, children }: SidebarLayoutProps
       {/* Skip link */}
       <a
         href="#main-content"
-        className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[60] focus:px-4 focus:py-2 focus:rounded-lg focus:text-sm focus:font-medium bg-[var(--amber)] text-[var(--amber-foreground)]"
+        className="sr-only focus-visible:not-sr-only focus-visible:fixed focus-visible:top-2 focus-visible:left-2 focus-visible:z-[60] focus-visible:px-4 focus-visible:py-2 focus-visible:rounded-lg focus-visible:text-sm focus-visible:font-medium bg-[var(--amber)] text-[var(--amber-foreground)]"
       >
         Skip to main content
       </a>

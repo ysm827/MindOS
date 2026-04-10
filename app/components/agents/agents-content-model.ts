@@ -1,6 +1,6 @@
 import type { AgentInfo, SkillInfo } from '@/components/settings/types';
 
-export type AgentsDashboardTab = 'overview' | 'mcp' | 'skills' | 'a2a' | 'sessions' | 'activity';
+export type AgentsDashboardTab = 'overview' | 'mcp' | 'skills' | 'a2a' | 'sessions' | 'activity' | 'channels';
 export type AgentResolvedStatus = 'connected' | 'detected' | 'notFound';
 export type SkillCapability = 'research' | 'coding' | 'docs' | 'ops' | 'memory';
 export type SkillSourceFilter = 'all' | 'builtin' | 'user';
@@ -24,7 +24,7 @@ export interface AgentBuckets {
 }
 
 export function parseAgentsTab(tab: string | undefined): AgentsDashboardTab {
-  if (tab === 'mcp' || tab === 'skills' || tab === 'a2a' || tab === 'sessions' || tab === 'activity') return tab;
+  if (tab === 'mcp' || tab === 'skills' || tab === 'a2a' || tab === 'sessions' || tab === 'activity' || tab === 'channels') return tab;
   return 'overview';
 }
 

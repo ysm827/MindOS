@@ -101,7 +101,7 @@ export default function ExportModal({ open, onClose, filePath, isDirectory, file
       ];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={state === 'exporting' ? undefined : handleClose}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center modal-backdrop" onClick={state === 'exporting' ? undefined : handleClose}>
       <div
         className="bg-card border border-border rounded-xl shadow-xl max-w-md w-full mx-4 animate-in fade-in-0 zoom-in-95 duration-200"
         role="dialog"

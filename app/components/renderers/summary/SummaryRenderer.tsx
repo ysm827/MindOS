@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { Sparkles, RefreshCw, Clock, FileText } from 'lucide-react';
 import { encodePath } from '@/lib/utils';
 import { apiFetch } from '@/lib/api';
@@ -50,6 +50,7 @@ export function SummaryRenderer({ filePath }: RendererContext) {
   const [error, setError] = useState('');
   const [generated, setGenerated] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
+  const summaryHtml = useMemo(() => renderMarkdown(summary), [summary]);
 
   // Fetch recent files once
   useEffect(() => {
@@ -133,10 +134,10 @@ Be specific. Reference actual content from the files. Keep the total response un
   useEffect(() => () => { abortRef.current?.abort(); }, []);
 
   return (
-    <div style={{ maxWidth: 720, margin: '0 auto', padding: '1.5rem 0' }}>
+    <div className="max-w-[720px] mx-auto py-6">
       {/* header row */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: '1.5rem', flexWrap: 'wrap' }}>
-        <span className="font-display" style={{ fontSize: 11, color: 'var(--muted-foreground)' }}>
+      <div className="flex items-center gap-2.5 mb-6 flex-wrap">
+        <span className="font-display text-[11px] text-muted-foreground">
           {recentFiles.length > 0
             ? `${recentFiles.length} recently modified files`
             : 'Loading recent files…'}
@@ -144,24 +145,10 @@ Be specific. Reference actual content from the files. Keep the total response un
         <button
           onClick={generate}
           disabled={streaming || recentFiles.length === 0}
-          className="font-display"
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 6,
-            padding: '5px 14px',
-            borderRadius: 7,
-            fontSize: 12,
-            cursor: streaming || recentFiles.length === 0 ? 'not-allowed' : 'pointer',
-            border: 'none',
-            background: streaming ? 'var(--muted)' : 'var(--amber)',
-            color: streaming ? 'var(--muted-foreground)' : 'var(--amber-foreground)',
-            opacity: recentFiles.length === 0 ? 0.5 : 1,
-            transition: 'opacity .15s',
-          }}
+          className={`font-display summary-gen-btn ${streaming ? 'summary-gen-btn--busy' : ''}`}
         >
           {streaming ? (
-            <RefreshCw size={12} style={{ animation: 'spin 1s linear infinite' }} />
+            <RefreshCw size={12} className="animate-spin" />
           ) : (
             <Sparkles size={12} />
           )}
@@ -171,33 +158,18 @@ Be specific. Reference actual content from the files. Keep the total response un
 
       {/* source files */}
       {recentFiles.length > 0 && (
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: '1.5rem' }}>
+        <div className="flex flex-wrap gap-1.5 mb-6">
           {recentFiles.map(f => (
             <a
               key={f.path}
               href={`/view/${encodePath(f.path)}`}
-              className="font-display"
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 5,
-                padding: '3px 10px',
-                borderRadius: 999,
-                fontSize: '0.7rem',
-                background: 'var(--muted)',
-                color: 'var(--muted-foreground)',
-                textDecoration: 'none',
-                border: '1px solid var(--border)',
-                transition: 'color .15s',
-              }}
-              onMouseEnter={e => (e.currentTarget.style.color = 'var(--foreground)')}
-              onMouseLeave={e => (e.currentTarget.style.color = 'var(--muted-foreground)')}
+              className="font-display summary-source-chip"
               title={f.path}
             >
               <FileText size={10} />
               {basename(f.path)}
-              <span style={{ opacity: 0.5 }}>
-                <Clock size={9} style={{ display: 'inline', marginLeft: 2 }} />
+              <span className="opacity-50">
+                <Clock size={9} className="inline ml-0.5" />
                 {' '}{relativeTime(f.mtime)}
               </span>
             </a>
@@ -207,44 +179,47 @@ Be specific. Reference actual content from the files. Keep the total response un
 
       {/* error */}
       {error && (
-        <div className="font-display" style={{ padding: '10px 14px', borderRadius: 8, background: 'color-mix(in srgb, var(--error) 10%, transparent)', border: '1px solid color-mix(in srgb, var(--error) 30%, transparent)', color: 'var(--error)', fontSize: 12, marginBottom: '1rem' }}>
+        <div className="font-display px-3.5 py-2.5 rounded-lg bg-[var(--error)]/10 border border-[var(--error)]/30 text-[var(--error)] text-xs mb-4">
           {error}
         </div>
       )}
 
       {/* summary output */}
       {summary ? (
-        <div style={{
-          background: 'var(--card)',
-          border: '1px solid var(--border)',
-          borderRadius: 10,
-          padding: '18px 20px',
-          position: 'relative',
-        }}>
+        <div className="bg-card border border-border rounded-[10px] px-5 py-[18px] relative">
           {streaming && (
-            <div style={{ position: 'absolute', top: 12, right: 14, width: 6, height: 6, borderRadius: '50%', background: 'var(--amber)', animation: 'pulse 1.2s ease-in-out infinite' }} />
+            <div className="absolute top-3 right-3.5 w-1.5 h-1.5 rounded-full bg-[var(--amber)] animate-pulse" />
           )}
-          <div dangerouslySetInnerHTML={{ __html: renderMarkdown(summary) }} />
+          <div dangerouslySetInnerHTML={{ __html: summaryHtml }} />
         </div>
       ) : !streaming && !generated && recentFiles.length > 0 ? (
-        <div style={{
-          border: '1px dashed var(--border)',
-          borderRadius: 10,
-          padding: '2.5rem 1.5rem',
-          textAlign: 'center',
-          color: 'var(--muted-foreground)',
-        }}>
-          <Sparkles size={28} style={{ margin: '0 auto 10px', opacity: 0.3, color: 'var(--amber)' }} />
-          <p className="font-display" style={{ fontSize: 12 }}>
-            Click <strong style={{ color: 'var(--foreground)' }}>Generate briefing</strong> to summarize recent changes with AI.
+        <div className="border border-dashed border-border rounded-[10px] px-6 py-10 text-center text-muted-foreground">
+          <Sparkles size={28} className="mx-auto mb-2.5 opacity-30 text-[var(--amber)]" />
+          <p className="font-display text-xs">
+            Click <strong className="text-foreground">Generate briefing</strong> to summarize recent changes with AI.
           </p>
         </div>
       ) : null}
 
-      {/* CSS keyframes injected inline */}
+      {/* CSS for custom classes (can't use Tailwind for generated HTML) */}
       <style>{`
-        @keyframes spin { to { transform: rotate(360deg); } }
-        @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:.3; } }
+        .summary-gen-btn {
+          display: flex; align-items: center; gap: 6px;
+          padding: 5px 14px; border-radius: 7px; font-size: 12px;
+          cursor: pointer; border: none;
+          background: var(--amber); color: var(--amber-foreground);
+          transition: opacity .15s;
+        }
+        .summary-gen-btn:disabled { cursor: not-allowed; opacity: 0.5; }
+        .summary-gen-btn--busy { background: var(--muted); color: var(--muted-foreground); }
+        .summary-source-chip {
+          display: inline-flex; align-items: center; gap: 5px;
+          padding: 3px 10px; border-radius: 999px; font-size: 0.7rem;
+          background: var(--muted); color: var(--muted-foreground);
+          text-decoration: none; border: 1px solid var(--border);
+          transition: color .15s;
+        }
+        .summary-source-chip:hover { color: var(--foreground); }
       `}</style>
     </div>
   );

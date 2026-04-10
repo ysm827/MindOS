@@ -4,6 +4,7 @@
  * Each handler owns its own parameter validation and returns
  * a response + optional change event for audit logging.
  */
+import fs from 'fs';
 import path from 'path';
 import { NextResponse } from 'next/server';
 import {
@@ -26,6 +27,8 @@ import {
 import { UNDELETABLE_FILES } from '@/lib/types';
 import { createSpaceFilesystem } from '@/lib/core/create-space';
 import { appendAgentAuditEvent, parseAgentAuditJsonLines } from '@/lib/core/agent-audit-log';
+import { resolveSafe } from '@/lib/core/security';
+import { effectiveSopRoot } from '@/lib/settings';
 import { handleRouteErrorSimple } from '@/lib/errors';
 
 // ---------------------------------------------------------------------------
@@ -74,12 +77,43 @@ function isUndeletable(filePath: string): boolean {
 // ---------------------------------------------------------------------------
 
 function handleSaveFile(filePath: string, params: Record<string, unknown>): FileOpResult {
-  const { content } = params as { content: string };
+  const { content, expectedMtime } = params as { content: string; expectedMtime?: number };
   if (typeof content !== 'string') return { resp: err('missing content'), changeEvent: null };
+
+  // Optimistic concurrency: if caller provides expectedMtime, verify the file
+  // hasn't been modified since they last read it.
+  if (typeof expectedMtime === 'number') {
+    try {
+      const mindRoot = effectiveSopRoot().trim();
+      const fullPath = resolveSafe(mindRoot, filePath);
+      const stat = fs.statSync(fullPath);
+      if (stat.mtimeMs > expectedMtime) {
+        return {
+          resp: NextResponse.json(
+            { error: 'conflict', serverMtime: stat.mtimeMs },
+            { status: 409 },
+          ),
+          changeEvent: null,
+        };
+      }
+    } catch {
+      // File doesn't exist yet — no conflict possible
+    }
+  }
+
   const before = safeRead(filePath);
   saveFileContent(filePath, content);
+
+  // Return new mtime so caller can track for future saves
+  let newMtime: number | undefined;
+  try {
+    const mindRoot = effectiveSopRoot().trim();
+    const fullPath = resolveSafe(mindRoot, filePath);
+    newMtime = fs.statSync(fullPath).mtimeMs;
+  } catch { /* ignore */ }
+
   return {
-    resp: NextResponse.json({ ok: true }),
+    resp: NextResponse.json({ ok: true, mtime: newMtime }),
     changeEvent: { op: 'save_file', path: filePath, summary: 'Updated file content', before, after: content },
   };
 }

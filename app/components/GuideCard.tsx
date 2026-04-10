@@ -110,13 +110,21 @@ export default function GuideCard() {
     }
   }, [guideState, g, patchGuide]);
 
-  // ── Auto-expand on step transitions ──
+  // ── Auto-expand: always show current step ──
+  // On initial load, expand the first incomplete step
   useEffect(() => {
-    if (isFirstVisit && guideState && !guideState.step1Done) {
+    if (!guideState || hasAutoExpanded.current) return;
+    hasAutoExpanded.current = true;
+    if (!guideState.step1Done) {
       setExpanded('import');
+    } else if (!guideState.askedAI) {
+      setExpanded('ai');
+    } else if (!step3Done) {
+      setExpanded('agent');
     }
-  }, [isFirstVisit, guideState]);
+  }, [guideState, step3Done]);
 
+  // On step completion, auto-advance to next step
   const prevStepRef = useRef({ s1: false, s2: false });
   useEffect(() => {
     if (!guideState) return;
@@ -238,6 +246,7 @@ export default function GuideCard() {
                 type="button"
                 onClick={() => handleStepClick(s.key, s.done, s.dimmed)}
                 disabled={s.done || s.dimmed}
+                title={s.dimmed ? g.stepLocked : undefined}
                 className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-2xs font-medium transition-all ${
                   s.done
                     ? 'text-success/70'
@@ -252,7 +261,7 @@ export default function GuideCard() {
                   <Check size={11} className="shrink-0" />
                 ) : (
                   <span className={`flex items-center justify-center w-4 h-4 rounded-full text-[9px] font-bold shrink-0 ${
-                    isActive ? 'bg-[var(--amber)] text-white' : s.dimmed ? 'bg-muted/50 text-muted-foreground/30' : 'bg-muted text-muted-foreground'
+                    isActive ? 'bg-[var(--amber)] text-[var(--amber-foreground)] animate-pulse' : s.dimmed ? 'bg-muted/50 text-muted-foreground/30' : 'bg-muted text-muted-foreground'
                   }`}>
                     {i + 1}
                   </span>
@@ -268,70 +277,82 @@ export default function GuideCard() {
         </button>
       </div>
 
-      {/* ── Step 1 expanded ── */}
-      {expanded === 'import' && !step1Done && (
-        <div className="px-4 pb-3 animate-in fade-in slide-in-from-top-1 duration-150">
-          <div className="flex items-center gap-3 pl-6">
-            <p className="text-xs text-muted-foreground flex-1">{g.import.desc}</p>
-            <button
-              onClick={handleImportClick}
-              className="shrink-0 text-xs font-medium px-3 py-1.5 rounded-md bg-[var(--amber)] text-[var(--amber-foreground)] transition-all hover:opacity-90"
-            >
-              {g.import.button}
-            </button>
-            <button
-              onClick={handleSkipImport}
-              className="shrink-0 text-xs px-2 py-1 rounded-md text-muted-foreground/60 hover:text-muted-foreground hover:bg-muted transition-colors"
-            >
-              {g.skip}
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* ── Step 2 expanded ── */}
-      {expanded === 'ai' && step1Done && !step2Done && (
-        <div className="px-4 pb-3 animate-in fade-in slide-in-from-top-1 duration-150">
-          <div className="flex items-center gap-3 pl-6">
-            <p className="text-xs text-muted-foreground flex-1">{g.ai.desc}</p>
-            <button
-              onClick={handleStartAI}
-              className="shrink-0 text-xs font-medium px-3 py-1.5 rounded-md bg-[var(--amber)] text-[var(--amber-foreground)] transition-all hover:opacity-90"
-            >
-              {g.ai.cta}
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* ── Step 3 expanded ── */}
-      {expanded === 'agent' && showStep3 && (
-        <div className="px-4 pb-3 animate-in fade-in slide-in-from-top-1 duration-150">
-          <div className="pl-6">
-            <p className="text-xs text-muted-foreground mb-2">{g.agent.desc}</p>
-            <div className="relative rounded-md bg-muted/50 p-3 pr-20">
-              <p className="text-xs font-mono text-foreground/80 leading-relaxed whitespace-pre-wrap">
-                {g.agent.copyPrompt}
-              </p>
+      {/* ── Step 1 panel (Grid transition) ── */}
+      <div className={`grid transition-[grid-template-rows] duration-200 ease-out ${
+        expanded === 'import' && !step1Done ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'
+      }`}>
+        <div className="overflow-hidden">
+          <div className="px-4 pb-3">
+            <div className="flex items-center gap-3 pl-6">
+              <p className="text-xs text-muted-foreground flex-1">{g.import.desc}</p>
               <button
-                onClick={handleCopyPrompt}
-                className="absolute top-2 right-2 flex items-center gap-1 text-2xs font-medium px-2 py-1 rounded-md bg-background border border-border/50 text-muted-foreground hover:text-foreground transition-colors"
+                onClick={handleImportClick}
+                className="shrink-0 text-xs font-medium px-3 py-1.5 rounded-md bg-[var(--amber)] text-[var(--amber-foreground)] transition-all hover:opacity-90"
               >
-                <Copy size={10} />
-                {g.agent.copy}
+                {g.import.button}
               </button>
-            </div>
-            <div className="flex justify-end mt-2">
               <button
-                onClick={handleStep3Done}
-                className="text-xs px-2 py-1 rounded-md text-muted-foreground/60 hover:text-muted-foreground hover:bg-muted transition-colors"
+                onClick={handleSkipImport}
+                className="shrink-0 text-xs px-2 py-1 rounded-md text-muted-foreground/60 hover:text-muted-foreground hover:bg-muted transition-colors"
               >
                 {g.skip}
               </button>
             </div>
           </div>
         </div>
-      )}
+      </div>
+
+      {/* ── Step 2 panel (Grid transition) ── */}
+      <div className={`grid transition-[grid-template-rows] duration-200 ease-out ${
+        expanded === 'ai' && step1Done && !step2Done ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'
+      }`}>
+        <div className="overflow-hidden">
+          <div className="px-4 pb-3">
+            <div className="flex items-center gap-3 pl-6">
+              <p className="text-xs text-muted-foreground flex-1">{g.ai.desc}</p>
+              <button
+                onClick={handleStartAI}
+                className="shrink-0 text-xs font-medium px-3 py-1.5 rounded-md bg-[var(--amber)] text-[var(--amber-foreground)] transition-all hover:opacity-90"
+              >
+                {g.ai.cta}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Step 3 panel (Grid transition) ── */}
+      <div className={`grid transition-[grid-template-rows] duration-200 ease-out ${
+        expanded === 'agent' && showStep3 ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'
+      }`}>
+        <div className="overflow-hidden">
+          <div className="px-4 pb-3">
+            <div className="pl-6">
+              <p className="text-xs text-muted-foreground mb-2">{g.agent.desc}</p>
+              <div className="relative rounded-md bg-muted/50 p-3 pr-20">
+                <p className="text-xs font-mono text-foreground/80 leading-relaxed whitespace-pre-wrap">
+                  {g.agent.copyPrompt}
+                </p>
+                <button
+                  onClick={handleCopyPrompt}
+                  className="absolute top-2 right-2 flex items-center gap-1 text-2xs font-medium px-2 py-1 rounded-md bg-background border border-border/50 text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  <Copy size={10} />
+                  {g.agent.copy}
+                </button>
+              </div>
+              <div className="flex justify-end mt-2">
+                <button
+                  onClick={handleStep3Done}
+                  className="text-xs px-2 py-1 rounded-md text-muted-foreground/60 hover:text-muted-foreground hover:bg-muted transition-colors"
+                >
+                  {g.skip}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

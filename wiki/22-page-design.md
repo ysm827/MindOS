@@ -1,4 +1,4 @@
-<!-- Last verified: 2026-04-04 | Current version: v0.6 -->
+<!-- Last verified: 2026-04-10 | Current version: v0.6 -->
 
 # 页面设计 (Page Design)
 
@@ -87,6 +87,8 @@ Drawer (triggered by ☰):
 
 ## 页面清单
 
+> **2026-04-10 更新**：共 15 个页面路由（含 3 个动态路由）
+
 | 路由 | 页面 | 组件入口 | 说明 |
 |------|------|---------|------|
 | `/` | 首页 | `HomeContent` | 最近文件、插件网格、AI 入口；GuideCard |
@@ -95,11 +97,15 @@ Drawer (triggered by ☰):
 | `/setup` | 初始化向导 | `Setup` | 8 步 Wizard |
 | `/login` | 登录 | `LoginPage` | Web 密码认证 |
 | `/help` | 帮助 | `app/help/page.tsx` | Activity Bar 底部 `?` 入口 |
-| `/echo/[segment]` | 回响内容页 | `app/app/echo/[segment]/page.tsx` | 与你有关 / 未完待续 / 每日回响 / 历史的你 / 心向生长；见 `wiki/specs/spec-echo-content-pages.md` |
+| `/echo` | 回响入口 | `app/echo/page.tsx` | Echo 主页，导航到各 segment |
+| `/echo/[segment]` | 回响内容页 | `app/echo/[segment]/page.tsx` | 与你有关 / 未完待续 / 每日回响 / 历史的你 / 心向生长；见 `spec-echo-content-pages.md` |
 | `/agents` | 智能体总览 | `app/agents/page.tsx` | Overview / MCP / Skills / Network 四 Tab |
 | `/agents/[agentKey]` | 智能体详情 | `app/agents/[agentKey]/page.tsx` | Skill 管理 + MCP 状态 + Runtime 诊断 |
 | `/trash` | 回收站 | `app/trash/page.tsx` | 已删除文件恢复/永久删除 |
-| `/changes` | 变更记录 | `app/changes/page.tsx` | 文件变更事件追踪 + diff 查看 |
+| `/wiki` | Wiki 入口 | `app/wiki/page.tsx` | 项目 Wiki 浏览 |
+| `/inbox/history` | Inbox 历史 | `app/inbox/history/page.tsx` | Web Clipper 收件记录 |
+| `/changelog` | 更新日志 | `app/changelog/page.tsx` | 版本变更日志浏览 + 搜索 |
+| `/changes` | 变更记录 (重定向) | `app/changes/page.tsx` | → 重定向到 `/changelog` |
 
 ---
 

@@ -3,7 +3,7 @@
 import { useSyncExternalStore, useMemo, useState, useCallback, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { FileText, Table, Folder, FolderOpen, LayoutGrid, List, FilePlus, ScrollText, BookOpen, Copy, AlertTriangle, Sparkles, Loader2 } from 'lucide-react';
+import { FileText, Table, Folder, FolderOpen, LayoutGrid, List, FilePlus, ScrollText, BookOpen, Copy, AlertTriangle, Sparkles, Loader2, Check } from 'lucide-react';
 import Breadcrumb from '@/components/Breadcrumb';
 import { encodePath, relativeTime } from '@/lib/utils';
 import { FileNode, SYSTEM_FILES } from '@/lib/types';
@@ -84,13 +84,14 @@ function useDirViewPref() {
 
 // ─── Space Preview Cards ──────────────────────────────────────────────────────
 
-function SpacePreviewCard({ icon, title, lines, viewAllHref, viewAllLabel, trailing }: {
+function SpacePreviewCard({ icon, title, lines, viewAllHref, viewAllLabel, trailing, footer }: {
   icon: React.ReactNode;
   title: string;
   lines: string[];
   viewAllHref: string;
   viewAllLabel: string;
   trailing?: React.ReactNode;
+  footer?: React.ReactNode;
 }) {
   if (lines.length === 0) return null;
   return (
@@ -107,7 +108,8 @@ function SpacePreviewCard({ icon, title, lines, viewAllHref, viewAllLabel, trail
           </p>
         ))}
       </div>
-      <div className="flex justify-end mt-2">
+      <div className="flex items-center justify-between mt-2">
+        {footer || <span />}
         <Link
           href={viewAllHref}
           className="text-xs hover:underline transition-colors text-[var(--amber)]"
@@ -121,7 +123,7 @@ function SpacePreviewCard({ icon, title, lines, viewAllHref, viewAllLabel, trail
 
 // ─── AI Overview Generation ───────────────────────────────────────────────────
 
-type OverviewState = 'idle' | 'loading' | 'error';
+type OverviewState = 'idle' | 'loading' | 'error' | 'unchanged';
 
 function useSpaceFileCount(dirPath: string) {
   const [count, setCount] = useState<number | null>(null);
@@ -234,24 +236,50 @@ function AboutCardWithRegenerate({ dirPath, preview }: {
   const [state, setState] = useState<OverviewState>('idle');
   const [errorMsg, setErrorMsg] = useState('');
   const [showConfirm, setShowConfirm] = useState(false);
+  const [toastMsg, setToastMsg] = useState('');
+  const confirmRef = useRef<HTMLDivElement>(null);
+
+  // Close confirm popover on click outside
+  useEffect(() => {
+    if (!showConfirm) return;
+    const handler = (e: MouseEvent) => {
+      if (confirmRef.current && !confirmRef.current.contains(e.target as Node)) {
+        setShowConfirm(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [showConfirm]);
 
   const handleRegenerate = async () => {
     setShowConfirm(false);
     setState('loading');
     setErrorMsg('');
+    setToastMsg('');
     try {
       const res = await fetch('/api/space-overview', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ space: dirPath }),
       });
+      const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
         setErrorMsg(data.error || 'Unknown error');
         setState('error');
         return;
       }
-      router.refresh();
+      if (data.unchanged) {
+        setState('unchanged');
+        setTimeout(() => setState('idle'), 3000);
+      } else {
+        // Show incremental info if available
+        if (data.stats?.mode === 'incremental') {
+          setToastMsg(t.dirView.overviewIncremental(data.stats.scannedFiles));
+          setTimeout(() => setToastMsg(''), 4000);
+        }
+        router.refresh();
+        setState('idle');
+      }
     } catch (err) {
       setErrorMsg(err instanceof Error ? err.message : 'Network error');
       setState('error');
@@ -292,7 +320,7 @@ function AboutCardWithRegenerate({ dirPath, preview }: {
   }
 
   const regenerateBtn = (
-    <div className="relative">
+    <div className="relative" ref={confirmRef}>
       <button
         onClick={() => setShowConfirm(true)}
         className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs text-muted-foreground/60 hover:text-[var(--amber)] hover:bg-[var(--amber)]/10 transition-colors"
@@ -326,6 +354,27 @@ function AboutCardWithRegenerate({ dirPath, preview }: {
     </div>
   );
 
+  // Build footer with lastCompiled time and status messages
+  const footerContent = (
+    <span className="text-2xs text-muted-foreground/50" suppressHydrationWarning>
+      {state === 'unchanged' ? (
+        <span className="inline-flex items-center gap-1 text-success">
+          <Check size={10} />
+          {t.dirView.overviewUnchanged}
+        </span>
+      ) : toastMsg ? (
+        <span className="inline-flex items-center gap-1 text-success">
+          <Check size={10} />
+          {toastMsg}
+        </span>
+      ) : preview.lastCompiled ? (
+        t.dirView.overviewLastCompiled(
+          relativeTime(new Date(preview.lastCompiled).getTime(), t.home.relativeTime)
+        )
+      ) : null}
+    </span>
+  );
+
   return (
     <SpacePreviewCard
       icon={<BookOpen size={14} className="text-muted-foreground shrink-0" />}
@@ -334,6 +383,7 @@ function AboutCardWithRegenerate({ dirPath, preview }: {
       viewAllHref={`/view/${encodePath(`${dirPath}/README.md`)}`}
       viewAllLabel={t.fileTree.viewAll}
       trailing={regenerateBtn}
+      footer={footerContent}
     />
   );
 }

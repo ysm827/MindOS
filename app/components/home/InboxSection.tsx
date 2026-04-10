@@ -19,12 +19,14 @@ import {
   ExternalLink,
   Copy,
   Trash2,
+  Link2,
+  Globe,
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { toast } from '@/lib/toast';
 import { useLocale } from '@/lib/stores/locale-store';
 import { encodePath } from '@/lib/utils';
-import { quickDropToInbox } from '@/lib/inbox-upload';
+import { quickDropToInbox, clipUrlToInbox, looksLikeUrl, extractUrlFromDrop, dragContainsUrl } from '@/lib/inbox-upload';
 import { loadHistory, type OrganizeHistoryEntry, type OrganizeSource } from '@/lib/organize-history';
 
 interface InboxFile {
@@ -48,8 +50,12 @@ export function InboxSection({ isOrganizing: externalOrganizing = false }: Inbox
   const [loading, setLoading] = useState(true);
   const [organizing, setOrganizing] = useState(false);
   const [dragOver, setDragOver] = useState(false);
+  const [dragIsUrl, setDragIsUrl] = useState(false);
   const [history, setHistory] = useState<OrganizeHistoryEntry[]>([]);
+  const [clipUrl, setClipUrl] = useState('');
+  const [clipping, setClipping] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const clipInputRef = useRef<HTMLInputElement>(null);
   const dragCounterRef = useRef(0);
   const isOrganizing = externalOrganizing || organizing;
 
@@ -83,15 +89,39 @@ export function InboxSection({ isOrganizing: externalOrganizing = false }: Inbox
     if (fileInputRef.current) fileInputRef.current.value = '';
   }, [t]);
 
+  const handleClipUrl = useCallback(async (url: string) => {
+    const trimmed = url.trim();
+    if (!trimmed) return;
+    if (!looksLikeUrl(trimmed)) {
+      toast.error(t.inbox.clipInvalidUrl, 3000);
+      return;
+    }
+    setClipping(true);
+    try {
+      await clipUrlToInbox(trimmed, t);
+      setClipUrl('');
+    } finally {
+      setClipping(false);
+    }
+  }, [t]);
+
   const handleLocalDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
     dragCounterRef.current = 0;
     setDragOver(false);
+    setDragIsUrl(false);
+
+    const droppedUrl = extractUrlFromDrop(e.nativeEvent);
+    if (droppedUrl) {
+      handleClipUrl(droppedUrl);
+      return;
+    }
+
     if (e.dataTransfer.files.length > 0) {
       quickDropToInbox(Array.from(e.dataTransfer.files), t);
     }
-  }, [t]);
+  }, [t, handleClipUrl]);
 
   const fetchInbox = useCallback(async () => {
     try {
@@ -122,7 +152,7 @@ export function InboxSection({ isOrganizing: externalOrganizing = false }: Inbox
   }, [fetchInbox, refreshHistory]);
 
   useEffect(() => {
-    const resetDrag = () => { dragCounterRef.current = 0; setDragOver(false); };
+    const resetDrag = () => { dragCounterRef.current = 0; setDragOver(false); setDragIsUrl(false); };
     window.addEventListener('drop', resetDrag, true);
     window.addEventListener('dragend', resetDrag, true);
     return () => {
@@ -245,67 +275,152 @@ export function InboxSection({ isOrganizing: externalOrganizing = false }: Inbox
         </div>
       )}
 
-      {/* Drop zone — always visible */}
+      {/* ─── Unified capture card: drop zone + URL clip ─── */}
       <div
-        className={`rounded-xl border border-dashed transition-all duration-150 ease-out cursor-pointer ${
+        className={`rounded-xl border overflow-hidden transition-all duration-150 ease-out ${
           dragOver
             ? 'border-[var(--amber)] bg-[var(--amber-subtle)] shadow-[inset_0_0_0_1px_var(--amber)]'
-            : hasFiles
-              ? 'border-border/40 bg-muted/[0.03] hover:border-[var(--amber)]/30 hover:bg-muted/[0.08]'
-              : 'border-border/60 bg-muted/[0.03] hover:border-[var(--amber)]/30 hover:bg-muted/[0.08]'
-        } ${hasFiles ? 'px-4 py-3.5' : 'px-4 py-8'}`}
-        role="button"
-        tabIndex={0}
-        aria-label={t.inbox.uploadButton}
-        onClick={() => fileInputRef.current?.click()}
-        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fileInputRef.current?.click(); } }}
+            : 'border-border/40 bg-card/30'
+        }`}
         onDragEnter={(e) => {
-          if (!e.dataTransfer.types.includes('Files')) return;
+          const hasFiles = e.dataTransfer.types.includes('Files');
+          const hasUrl = dragContainsUrl(e.nativeEvent);
+          if (!hasFiles && !hasUrl) return;
           e.preventDefault();
           e.stopPropagation();
           dragCounterRef.current++;
-          if (dragCounterRef.current === 1) setDragOver(true);
+          if (dragCounterRef.current === 1) {
+            setDragOver(true);
+            setDragIsUrl(hasUrl && !hasFiles);
+          }
         }}
         onDragOver={(e) => {
-          if (!e.dataTransfer.types.includes('Files')) return;
+          const hasFiles = e.dataTransfer.types.includes('Files');
+          const hasUrl = dragContainsUrl(e.nativeEvent);
+          if (!hasFiles && !hasUrl) return;
           e.preventDefault();
           e.stopPropagation();
         }}
         onDragLeave={(e) => {
           e.stopPropagation();
           dragCounterRef.current = Math.max(0, dragCounterRef.current - 1);
-          if (dragCounterRef.current === 0) setDragOver(false);
+          if (dragCounterRef.current === 0) {
+            setDragOver(false);
+            setDragIsUrl(false);
+          }
         }}
         onDrop={handleLocalDrop}
       >
-        {hasFiles ? (
-          <div className="flex items-center justify-center gap-2 text-center">
-            <FolderInput size={16} className={`shrink-0 ${dragOver ? 'text-[var(--amber)]' : 'text-muted-foreground/40'}`} />
-            <p className="text-xs text-muted-foreground">
-              {t.fileImport.dropzoneCompact}{' '}
-              <span className="text-[var(--amber)] hover:underline">{t.fileImport.dropzoneCompactButton}</span>
-            </p>
+        {/* File drop zone */}
+        <div
+          className={`cursor-pointer transition-colors duration-150 ${
+            hasFiles
+              ? 'px-4 py-3'
+              : 'px-4 py-7'
+          } ${!dragOver ? 'hover:bg-muted/[0.06]' : ''}`}
+          role="button"
+          tabIndex={0}
+          aria-label={t.inbox.uploadButton}
+          onClick={() => fileInputRef.current?.click()}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fileInputRef.current?.click(); } }}
+        >
+          {dragOver && dragIsUrl ? (
+            <div className="flex items-center justify-center gap-2.5 text-center py-1">
+              <Globe size={20} className="shrink-0 text-[var(--amber)] animate-pulse" />
+              <p className="text-sm font-medium text-[var(--amber)]">
+                {t.inbox.dropUrlOverlay}
+              </p>
+            </div>
+          ) : hasFiles ? (
+            <div className="flex items-center justify-center gap-2 text-center">
+              <FolderInput size={15} className={`shrink-0 ${dragOver ? 'text-[var(--amber)]' : 'text-muted-foreground/30'}`} />
+              <p className="text-xs text-muted-foreground/50">
+                {t.inbox.dropFilesOrLinks}{' '}
+                <span className="text-[var(--amber)]/70 hover:text-[var(--amber)] hover:underline">{t.fileImport.dropzoneCompactButton}</span>
+              </p>
+            </div>
+          ) : (
+            <div className="flex flex-col items-center gap-1.5 text-center">
+              <FolderInput size={26} className={`${dragOver ? 'text-[var(--amber)]' : 'text-muted-foreground/15'}`} />
+              <p className="text-sm text-muted-foreground/60">
+                {t.inbox.emptyTitle}
+              </p>
+              <p className="text-xs text-muted-foreground/35">
+                {t.inbox.emptyDesc}
+              </p>
+              <p className="text-2xs text-muted-foreground/25">{t.inbox.dropOverlayFormats}</p>
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); fileInputRef.current?.click(); }}
+                className="mt-1 inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg transition-all duration-150 ease-out bg-muted/60 text-muted-foreground hover:text-foreground hover:bg-muted/80"
+              >
+                <Upload size={12} />
+                {t.inbox.uploadButton}
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* Divider */}
+        <div className="border-t border-border/20 mx-3" />
+
+        {/* URL clip input */}
+        <div
+          className="flex items-center gap-2.5 px-4 py-2.5 transition-colors duration-150 focus-within:bg-muted/[0.06]"
+          onClick={(e) => { e.stopPropagation(); clipInputRef.current?.focus(); }}
+        >
+          <div className={`flex items-center justify-center w-6 h-6 rounded-md shrink-0 transition-colors duration-150 ${
+            clipping
+              ? 'bg-[var(--amber)]/15'
+              : clipUrl
+                ? 'bg-[var(--amber)]/10'
+                : 'bg-muted/50'
+          }`}>
+            {clipping ? (
+              <Loader2 size={12} className="text-[var(--amber)] animate-spin" />
+            ) : (
+              <Link2 size={12} className={`transition-colors duration-150 ${clipUrl ? 'text-[var(--amber)]' : 'text-muted-foreground/40'}`} />
+            )}
           </div>
-        ) : (
-          <div className="flex flex-col items-center gap-2 text-center">
-            <FolderInput size={28} className={`${dragOver ? 'text-[var(--amber)]' : 'text-muted-foreground/15'}`} />
-            <p className="text-sm text-muted-foreground/70">
-              {t.inbox.emptyTitle}
-            </p>
-            <p className="text-xs text-muted-foreground/40">
-              {t.inbox.emptyDesc}
-            </p>
-            <p className="text-2xs text-muted-foreground/30">{t.inbox.dropOverlayFormats}</p>
+          <input
+            ref={clipInputRef}
+            type="url"
+            value={clipUrl}
+            onChange={(e) => setClipUrl(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !clipping) {
+                e.preventDefault();
+                handleClipUrl(clipUrl);
+              }
+            }}
+            onPaste={(e) => {
+              const pasted = e.clipboardData.getData('text/plain').trim();
+              if (pasted && looksLikeUrl(pasted) && !clipUrl) {
+                e.preventDefault();
+                setClipUrl(pasted);
+                setTimeout(() => handleClipUrl(pasted), 50);
+              }
+            }}
+            placeholder={t.inbox.clipUrlPlaceholder}
+            disabled={clipping}
+            className="flex-1 min-w-0 bg-transparent text-sm text-foreground placeholder:text-muted-foreground/30 outline-none disabled:opacity-50"
+          />
+          {clipUrl && !clipping && (
             <button
               type="button"
-              onClick={(e) => { e.stopPropagation(); fileInputRef.current?.click(); }}
-              className="mt-1 inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg transition-all duration-150 ease-out bg-muted text-muted-foreground hover:text-foreground hover:bg-muted/80 shadow-sm shadow-black/[0.03]"
+              onClick={(e) => { e.stopPropagation(); handleClipUrl(clipUrl); }}
+              className="shrink-0 flex items-center gap-1.5 px-3 py-1 text-xs font-medium rounded-lg bg-[var(--amber)]/10 text-[var(--amber)] hover:bg-[var(--amber)]/20 transition-all duration-150 ease-out cursor-pointer"
             >
-              <Upload size={12} />
-              {t.inbox.uploadButton}
+              <Globe size={11} />
+              {t.inbox.clipButton}
             </button>
-          </div>
-        )}
+          )}
+          {clipping && (
+            <span className="shrink-0 text-xs text-[var(--amber)]/70 tabular-nums">
+              {t.inbox.clipping}
+            </span>
+          )}
+        </div>
       </div>
 
       {/* Recently processed — inline history */}
