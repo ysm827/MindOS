@@ -30,6 +30,7 @@ import OrganizeToast from './OrganizeToast';
 import { MobileSyncDot, useSyncStatus } from './SyncStatusBar';
 import { FileNode } from '@/lib/types';
 import { useLocale } from '@/lib/stores/locale-store';
+import { telemetry } from '@/lib/telemetry';
 import dynamic from 'next/dynamic';
 
 const SearchModal = dynamic(() => import('./SearchModal'), { ssr: false });
@@ -147,7 +148,12 @@ export default function SidebarLayout({ fileTree, children }: SidebarLayoutProps
   const { t } = useLocale();
   const router = useRouter();
   const pathname = usePathname();
-  const dirPaths = useMemo(() => collectDirPaths(fileTree), [fileTree]);
+  const dirPaths = useMemo(() => {
+    const stop = telemetry.startTimer('sidebar.collect_dir_paths');
+    const paths = collectDirPaths(fileTree);
+    stop({ nodeCount: fileTree.length, pathCount: paths.length });
+    return paths;
+  }, [fileTree]);
   const { status: syncStatus, fetchStatus: syncStatusRefresh } = useSyncStatus();
 
   const currentFile = pathname.startsWith('/view/')
@@ -327,20 +333,34 @@ export default function SidebarLayout({ fileTree, children }: SidebarLayoutProps
 
     const checkVersion = async () => {
       if (stopped || document.visibilityState === 'hidden') return;
+      const stop = telemetry.startTimer('tree.version.poll');
       try {
         const res = await fetch('/api/tree-version');
-        if (!res.ok) return;
+        if (!res.ok) {
+          stop({ ok: false, changed: false });
+          return;
+        }
         const { v } = (await res.json()) as { v: number };
         if (lastVersion === -1) {
           lastVersion = v;
+          stop({ ok: true, changed: false, version: v, initial: true });
           return;
         }
         if (v !== lastVersion) {
+          const previousVersion = lastVersion;
           lastVersion = v;
+          const stopRefresh = telemetry.startTimer('tree.refresh.trigger');
           router.refresh();
+          stopRefresh({ previousVersion, version: v, reason: 'tree_version_changed' });
           window.dispatchEvent(new Event('mindos:files-changed'));
+          stop({ ok: true, changed: true, previousVersion, version: v });
+          return;
         }
-      } catch (err) { console.debug('[tree-version] poll failed', err); }
+        stop({ ok: true, changed: false, version: v });
+      } catch (err) {
+        stop({ ok: false, changed: false });
+        console.debug('[tree-version] poll failed', err);
+      }
     };
 
     const onVisible = () => {

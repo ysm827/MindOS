@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { Search, X, FileText, Table, ChevronRight } from 'lucide-react';
-import { SearchResult } from '@/lib/types';
+import { SearchResult, SearchWarmState, SearchPrewarmResponse } from '@/lib/types';
 import { encodePath } from '@/lib/utils';
 import { apiFetch } from '@/lib/api';
 import { useLocale } from '@/lib/stores/locale-store';
@@ -39,13 +39,42 @@ interface SearchPanelProps {
   onMaximize?: () => void;
 }
 
+export function shouldStartSearchPrewarm({
+  active,
+  hasAttemptedPrewarm,
+  warmState,
+}: {
+  active: boolean;
+  hasAttemptedPrewarm: boolean;
+  warmState: SearchWarmState;
+}): boolean {
+  return active && !hasAttemptedPrewarm && warmState === 'idle';
+}
+
+export function getSearchWarmHint(
+  warmState: SearchWarmState,
+  query: string,
+  hints: { preparing: string; fallbackWarmHint: string } = {
+    preparing: 'Preparing search...',
+    fallbackWarmHint: 'Search will prepare on first query.',
+  },
+): string | null {
+  if (query.trim()) return null;
+  if (warmState === 'warming') return hints.preparing;
+  if (warmState === 'fallback') return hints.fallbackWarmHint;
+  return null;
+}
+
 export default function SearchPanel({ active, onNavigate, maximized, onMaximize }: SearchPanelProps) {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<SearchResult[]>([]);
   const [loading, setLoading] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+  const [warmState, setWarmState] = useState<SearchWarmState>('idle');
   const inputRef = useRef<HTMLInputElement>(null);
+  const hasAttemptedPrewarm = useRef(false);
+  const isMountedRef = useRef(true);
   const router = useRouter();
   const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const { t } = useLocale();
@@ -56,6 +85,45 @@ export default function SearchPanel({ active, onNavigate, maximized, onMaximize 
       setTimeout(() => inputRef.current?.focus(), 50);
     }
   }, [active]);
+
+  useEffect(() => {
+    if (!shouldStartSearchPrewarm({ active, hasAttemptedPrewarm: hasAttemptedPrewarm.current, warmState })) {
+      return;
+    }
+
+    hasAttemptedPrewarm.current = true;
+    setWarmState('warming');
+
+    void apiFetch<SearchPrewarmResponse>('/api/search/prewarm')
+      .then(() => {
+        if (isMountedRef.current) setWarmState('ready');
+      })
+      .catch(() => {
+        if (isMountedRef.current) setWarmState('fallback');
+      });
+  }, [active, warmState]);
+
+  useEffect(() => {
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    const handleFilesChanged = () => {
+      hasAttemptedPrewarm.current = false;
+      setWarmState('idle');
+    };
+    window.addEventListener('mindos:files-changed', handleFilesChanged);
+    return () => window.removeEventListener('mindos:files-changed', handleFilesChanged);
+  }, []);
+
+  useEffect(() => {
+    if (!active && warmState === 'fallback') {
+      hasAttemptedPrewarm.current = false;
+      setWarmState('idle');
+    }
+  }, [active, warmState]);
 
   // Debounced search
   const doSearch = useCallback((q: string) => {
@@ -117,35 +185,45 @@ export default function SearchPanel({ active, onNavigate, maximized, onMaximize 
     setDraggedIndex(null);
   }, []);
 
+  const warmHint = getSearchWarmHint(warmState, query, {
+    preparing: t.search.preparing,
+    fallbackWarmHint: t.search.fallbackWarmHint,
+  });
+
   return (
     <>
       {/* Header */}
       <PanelHeader title="Search" maximized={maximized} onMaximize={onMaximize} />
 
       {/* Search input */}
-      <div className="flex items-center gap-3 px-4 py-3 border-b border-border shrink-0 overflow-hidden">
-        <Search size={16} className="text-muted-foreground shrink-0 flex-none" />
-        <input
-          ref={inputRef}
-          type="text"
-          value={query}
-          onChange={handleChange}
-          onKeyDown={handleKeyDown}
-          placeholder={t.search.placeholder}
-          aria-label={t.search.placeholder}
-          className="flex-1 min-w-0 bg-transparent text-foreground text-base font-medium placeholder:text-muted-foreground/60 outline-none"
-        />
-        {loading && (
-          <div className="w-4 h-4 border-2 border-muted-foreground/30 border-t-foreground rounded-full animate-spin shrink-0 flex-none" />
-        )}
-        {!loading && query && (
-          <button
-            onClick={() => { setQuery(''); setResults([]); inputRef.current?.focus(); }}
-            className="shrink-0 flex-none p-1 text-muted-foreground hover:text-foreground transition-colors"
-            aria-label={t.search.clear}
-          >
-            <X size={16} />
-          </button>
+      <div className="px-4 py-3 border-b border-border shrink-0 overflow-hidden">
+        <div className="flex items-center gap-3 overflow-hidden">
+          <Search size={16} className="text-muted-foreground shrink-0 flex-none" />
+          <input
+            ref={inputRef}
+            type="text"
+            value={query}
+            onChange={handleChange}
+            onKeyDown={handleKeyDown}
+            placeholder={t.search.placeholder}
+            aria-label={t.search.placeholder}
+            className="flex-1 min-w-0 bg-transparent text-foreground text-base font-medium placeholder:text-muted-foreground/60 outline-none"
+          />
+          {loading && (
+            <div className="w-4 h-4 border-2 border-muted-foreground/30 border-t-foreground rounded-full animate-spin shrink-0 flex-none" />
+          )}
+          {!loading && query && (
+            <button
+              onClick={() => { setQuery(''); setResults([]); inputRef.current?.focus(); }}
+              className="shrink-0 flex-none p-1 text-muted-foreground hover:text-foreground transition-colors"
+              aria-label={t.search.clear}
+            >
+              <X size={16} />
+            </button>
+          )}
+        </div>
+        {warmHint && (
+          <p className="mt-2 text-xs text-muted-foreground/70">{warmHint}</p>
         )}
       </div>
 

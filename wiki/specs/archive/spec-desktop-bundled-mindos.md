@@ -260,6 +260,7 @@
 |------|-----|
 | 已完成 | `pickMindOsRuntime`（纯函数）、`analyzeMindOsLayout`、`getDefaultBundledMindOsDirectory`（打包路径 `resources/mindos-runtime`；开发用 `MINDOS_DEV_BUNDLED_ROOT`）、`resolveLocalMindOsProjectRoot`、`startLocalMode` 接入；`config`：`mindosRuntimePolicy`、`mindosRuntimeRoot`、`MINDOS_RUNTIME_ROOT`、`mindosRuntimeStrictCompat`、`minMindOsVersion`、`maxTestedMindOsVersion`；Main 日志 `[MindOS] runtime pick …` |
 | 已完成 | Desktop `npm test`：`mindos-runtime-pick` + `mindos-runtime-layout` 单测（`semver` 择优与布局探测） |
+| 已完成 | Desktop 发布实际走 `.github/workflows/build-desktop.yml` 平台矩阵：每个平台 runner 先执行 `next build --webpack`，再执行 `desktop/scripts/prepare-mindos-runtime.mjs` 把 freshly built runtime 打进安装包；用户侧不是依赖历史 cache 或本地 archive 脚本 |
 | 进行中 | `electron-builder` 已配置 `extraResources` → `mindos-runtime`；`desktop/scripts/prepare-mindos-runtime.mjs` + `npm run prepare-mindos-runtime` / `dist:with-bundled`；详见 `desktop/resources/mindos-runtime/README.md` |
 | 未做 | CI 在发版流程中自动执行 prepare + 三平台安装包冒烟、关于页双版本、托盘重启重新 resolve |
 

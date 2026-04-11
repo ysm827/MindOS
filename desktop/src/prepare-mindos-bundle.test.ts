@@ -3,6 +3,20 @@ import { tmpdir } from 'os';
 import path from 'path';
 import { describe, expect, it, afterEach } from 'vitest';
 import { copyAppForBundledRuntime, materializeStandaloneAssets } from '../scripts/prepare-mindos-bundle.mjs';
+import { getStandaloneAppRequiredEntries } from '../scripts/runtime-health-contract.mjs';
+
+function writeStandaloneApp(appDir: string, omit: string[] = []) {
+  for (const entry of getStandaloneAppRequiredEntries()) {
+    if (omit.includes(entry.path)) continue;
+    const target = path.join(appDir, entry.path);
+    if (entry.type === 'directory') {
+      mkdirSync(target, { recursive: true });
+    } else {
+      mkdirSync(path.dirname(target), { recursive: true });
+      writeFileSync(target, `// ${entry.path}`);
+    }
+  }
+}
 
 const created: string[] = [];
 
@@ -29,8 +43,7 @@ describe('materializeStandaloneAssets', () => {
   it('copies .next/static and public into standalone', () => {
     const appDir = makeTemp('mindos-app-');
     const standalone = path.join(appDir, '.next', 'standalone');
-    mkdirSync(standalone, { recursive: true });
-    writeFileSync(path.join(standalone, 'server.js'), '// stub');
+    writeStandaloneApp(appDir);
 
     mkdirSync(path.join(appDir, '.next', 'static', 'chunks'), { recursive: true });
     writeFileSync(path.join(appDir, '.next', 'static', 'chunks', 'a.js'), 'a');
@@ -47,6 +60,15 @@ describe('materializeStandaloneAssets', () => {
     const pub = path.join(standalone, 'public', 'favicon.ico');
     expect(existsSync(pub)).toBe(true);
     expect(readFileSync(pub, 'utf-8')).toBe('ico');
+  });
+
+  it('throws when required pdf runtime files are missing', () => {
+    const appDir = makeTemp('mindos-app-missing-pdf-');
+    writeStandaloneApp(appDir, [
+      '.next/standalone/node_modules/pdfjs-dist/legacy/build/pdf.mjs',
+      '.next/standalone/node_modules/pdfjs-dist/legacy/build/pdf.worker.mjs',
+    ]);
+    expect(() => materializeStandaloneAssets(appDir)).toThrow(/Incomplete standalone runtime/);
   });
 });
 

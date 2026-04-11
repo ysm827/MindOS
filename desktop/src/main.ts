@@ -43,6 +43,7 @@ import { resolvePreferUnpacked } from './resolve-packaged-asset';
 import { registerMindosConnectSchemePrivileged, registerMindosConnectProtocol } from './mindos-connect-protocol';
 import { CoreUpdater } from './core-updater';
 import { getAppConfigStore } from './app-config-store';
+import { desktopTelemetry } from './telemetry';
 
 registerMindosConnectSchemePrivileged();
 
@@ -838,6 +839,7 @@ function refreshTray(status: 'starting' | 'running' | 'error'): void {
  */
 async function healPreviousInstallation(): Promise<void> {
   const t0 = Date.now();
+  const stopHeal = desktopTelemetry.startTimer('desktop.boot.heal');
 
   // Fast-restart optimisation: if the app exited cleanly less than 30 s ago,
   // skip the full cleanup — no orphaned processes or stale ports to worry about.
@@ -845,7 +847,9 @@ async function healPreviousInstallation(): Promise<void> {
     const configStore = getAppConfigStore();
     const lastCleanExit = configStore.get('lastCleanExit');
     if (lastCleanExit && (t0 - lastCleanExit) < 30_000) {
-      console.info(`[MindOS:heal] Clean exit ${t0 - lastCleanExit}ms ago — skipping cleanup`);
+      const cleanExitAgoMs = t0 - lastCleanExit;
+      console.info(`[MindOS:heal] Clean exit ${cleanExitAgoMs}ms ago — skipping cleanup`);
+      stopHeal({ skipped: true, cleanExitAgoMs });
       return;
     }
   } catch { /* config read failure — run full heal */ }
@@ -907,18 +911,23 @@ async function healPreviousInstallation(): Promise<void> {
   } catch { /* non-critical */ }
 
   const elapsed = Date.now() - t0;
+  stopHeal({ skipped: false, webInUse, mcpInUse });
   if (elapsed > 100) {
     console.info(`[MindOS:heal] Previous installation healing completed in ${elapsed}ms`);
   }
 }
 
 /** Remove private Node.js if it can't run or version is too low (< 18). */
-function validatePrivateNode(): void {
+function validatePrivateNode(): 'missing' | 'ok' | 'removed' {
+  const stop = desktopTelemetry.startTimer('desktop.boot.validate_node');
   const nodeBin = path.join(
     app.getPath('home'), '.mindos', 'node',
     process.platform === 'win32' ? 'node.exe' : 'bin/node',
   );
-  if (!existsSync(nodeBin)) return; // nothing to validate
+  if (!existsSync(nodeBin)) {
+    stop({ result: 'missing' });
+    return 'missing';
+  }
 
   try {
     // Use execFileSync to avoid shell quoting issues with paths containing spaces or special chars
@@ -929,7 +938,10 @@ function validatePrivateNode(): void {
       stdio: ['pipe', 'pipe', 'pipe'],
     }).trim();
     const match = version.match(/^v(\d+)/);
-    if (match && parseInt(match[1], 10) >= 18) return; // good
+    if (match && parseInt(match[1], 10) >= 18) {
+      stop({ result: 'ok' });
+      return 'ok';
+    }
     console.warn(`[MindOS:heal] Private Node.js ${version} is below v18 — removing`);
   } catch {
     console.warn('[MindOS:heal] Private Node.js failed version check — removing');
@@ -938,12 +950,18 @@ function validatePrivateNode(): void {
   // Remove the entire private node directory — downloadNode() will replace it
   const nodeDir = path.join(app.getPath('home'), '.mindos', 'node');
   try { rmSync(nodeDir, { recursive: true, force: true }); } catch { /* best effort */ }
+  stop({ result: 'removed' });
+  return 'removed';
 }
 
 /** Remove .next if it exists but is corrupt (missing BUILD_ID and no standalone server, or partial standalone). */
-function validateBuildCache(appDir: string): void {
+function validateBuildCache(appDir: string): 'missing' | 'ok' | 'removed' {
+  const stop = desktopTelemetry.startTimer('desktop.boot.validate_cache');
   const nextDir = path.join(appDir, '.next');
-  if (!existsSync(nextDir)) return;
+  if (!existsSync(nextDir)) {
+    stop({ result: 'missing' });
+    return 'missing';
+  }
 
   const hasBuildId = existsSync(path.join(nextDir, 'BUILD_ID'));
   const hasStandalone = existsSync(path.join(nextDir, 'standalone', 'server.js'));
@@ -953,15 +971,23 @@ function validateBuildCache(appDir: string): void {
     if (!existsSync(path.join(nextDir, 'static'))) {
       console.warn('[MindOS:heal] Incomplete standalone build (missing .next/static/) — removing to trigger rebuild');
       try { rmSync(nextDir, { recursive: true, force: true }); } catch { /* best effort */ }
+      stop({ result: 'removed' });
+      return 'removed';
     }
-    return;
+    stop({ result: 'ok' });
+    return 'ok';
   }
 
-  if (hasBuildId) return; // regular build looks valid
+  if (hasBuildId) {
+    stop({ result: 'ok' });
+    return 'ok';
+  }
 
   // .next exists but neither BUILD_ID nor standalone — corrupt / interrupted build
   console.warn('[MindOS:heal] Corrupt .next build cache detected — removing to trigger rebuild');
   try { rmSync(nextDir, { recursive: true, force: true }); } catch { /* best effort */ }
+  stop({ result: 'removed' });
+  return 'removed';
 }
 
 /**
@@ -1773,26 +1799,34 @@ app.whenReady().then(async () => {
 
   ipcMain.handle('splash:action', (_e, actionId: string) => handleSplashAction(actionId));
 
-  ensureMindosCliShim();
-  cleanupOrphanedSshTunnel();
-  await healPreviousInstallation();
+  const stopBoot = desktopTelemetry.startTimer('desktop.boot.total');
+  try {
+    ensureMindosCliShim();
+    cleanupOrphanedSshTunnel();
+    await healPreviousInstallation();
 
-  if (needsDesktopModeSelectAtLaunch()) {
-    const mode = await showModeSelectWindow();
-    if (!mode) {
-      app.quit();
-      return;
+    if (needsDesktopModeSelectAtLaunch()) {
+      const mode = await showModeSelectWindow();
+      if (!mode) {
+        stopBoot({ modeSelected: false, success: false });
+        app.quit();
+        return;
+      }
+      currentMode = mode;
+      saveDesktopMode(mode, { allowSeedWebSetup: true });
+      splashWindow = createSplash();
+    } else {
+      const disk = readMindOsConfigFileUncached();
+      currentMode = disk.desktopMode === 'remote' ? 'remote' : 'local';
+      splashWindow = createSplash();
     }
-    currentMode = mode;
-    saveDesktopMode(mode, { allowSeedWebSetup: true });
-    splashWindow = createSplash();
-  } else {
-    const disk = readMindOsConfigFileUncached();
-    currentMode = disk.desktopMode === 'remote' ? 'remote' : 'local';
-    splashWindow = createSplash();
-  }
 
-  await bootApp();
+    await bootApp();
+    stopBoot({ mode: currentMode, modeSelected: true, success: true });
+  } catch (error) {
+    stopBoot({ mode: currentMode, success: false });
+    throw error;
+  }
 });
 
 app.on('window-all-closed', () => { /* tray keeps alive */ });

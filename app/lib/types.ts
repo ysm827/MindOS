@@ -20,6 +20,16 @@ export interface SearchMatch {
   key: string;
 }
 
+export type SearchPrewarmCacheState = 'hit' | 'built';
+
+export interface SearchPrewarmResponse {
+  warmed: true;
+  cacheState: SearchPrewarmCacheState;
+  documentCount: number;
+}
+
+export type SearchWarmState = 'idle' | 'warming' | 'ready' | 'fallback';
+
 /** Frontend-facing backlink shape returned by /api/backlinks (transformed from core BacklinkEntry) */
 export interface BacklinkItem {
   filePath: string;

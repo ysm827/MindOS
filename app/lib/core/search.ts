@@ -6,6 +6,7 @@ import { readFile } from './fs-ops';
 import { SearchIndex } from './search-index';
 import type { SearchResult, SearchOptions } from './types';
 import { updateEmbeddingFile, removeEmbeddingFile, invalidateEmbeddingIndex } from './hybrid-search';
+import { telemetry } from '../telemetry';
 /**
  * Module-level search index singleton.
  * Lazily built on first search, invalidated by `invalidateSearchIndex()`.
@@ -168,7 +169,9 @@ export function searchFiles(mindRoot: string, query: string, opts: SearchOptions
   // Ensure search index is built for this mindRoot
   if (!searchIndex.isBuiltFor(mindRoot)) {
     // Try loading from disk first (fast path — avoids full rebuild)
+    const stopIndexLoad = telemetry.startTimer('search.core.index.load');
     const loaded = searchIndex.load(getMindosDir(), mindRoot);
+    stopIndexLoad({ loaded, fileCount: loaded ? searchIndex.getFileCount() : 0 });
     if (!loaded) {
       searchIndex.rebuild(mindRoot);
       // Persist for next cold start (fire-and-forget)
@@ -180,6 +183,11 @@ export function searchFiles(mindRoot: string, query: string, opts: SearchOptions
   const avgDocLength = searchIndex.getAvgDocLength();
 
   const queryTerms = splitQueryTerms(query);
+  const stopQuery = telemetry.startTimer('search.core.query', {
+    queryLen: query.length,
+    queryTermCount: queryTerms.length,
+    totalDocs,
+  });
 
   // Use UNION index to get candidate files (any file matching any term)
   const candidates = searchIndex.getCandidatesUnion(query);
@@ -297,5 +305,10 @@ export function searchFiles(mindRoot: string, query: string, opts: SearchOptions
   }
 
   results.sort((a, b) => b.score - a.score);
-  return results.slice(0, limit);
+  const limitedResults = results.slice(0, limit);
+  stopQuery({
+    candidateCount: candidateSet ? candidateSet.size : allFiles.length,
+    resultCount: limitedResults.length,
+  });
+  return limitedResults;
 }

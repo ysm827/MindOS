@@ -3,7 +3,7 @@ import path from 'path';
 import os from 'os';
 import { parseAcpAgentOverrides } from './acp/agent-descriptors';
 import { type ProviderId, PROVIDER_PRESETS, isProviderId, getApiKeyFromEnv } from './agent/providers';
-import { type Provider, parseProviders, findProvider, migrateProviders } from './custom-endpoints';
+import { type Provider, parseProviders, findProvider, migrateProviders, isProviderEntryId } from './custom-endpoints';
 // Backward compat re-exports for files still importing from settings
 export type { Provider };
 
@@ -101,7 +101,8 @@ function migrateAi(parsed: Record<string, unknown>): AiConfig {
   // ── New format: ai.providers is an array ──
   if (Array.isArray(ai.providers)) {
     const providers = parseProviders(ai.providers);
-    const activeProvider = typeof ai.activeProvider === 'string' ? ai.activeProvider : '';
+    const rawActiveProvider = typeof ai.activeProvider === 'string' ? ai.activeProvider : '';
+    const activeProvider = normalizeActiveProvider(rawActiveProvider, providers);
     return { activeProvider, providers };
   }
 
@@ -114,6 +115,19 @@ function migrateAi(parsed: Record<string, unknown>): AiConfig {
   // Very old flat format (anthropicApiKey etc.) — also handled by migrateProviders
   // but if it returns null, fall through to defaults
   return { ...DEFAULTS.ai };
+}
+
+function normalizeActiveProvider(activeProvider: string, providers: Provider[]): string {
+  if (activeProvider && isProviderEntryId(activeProvider) && findProvider(providers, activeProvider)) {
+    return activeProvider;
+  }
+
+  if (activeProvider && isProviderId(activeProvider)) {
+    const byProtocol = providers.find((provider) => provider.protocol === activeProvider);
+    if (byProtocol) return byProtocol.id;
+  }
+
+  return providers[0]?.id ?? '';
 }
 
 /** Parse agent config from unknown input */

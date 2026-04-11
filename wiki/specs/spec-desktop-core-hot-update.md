@@ -121,6 +121,14 @@ runtime 包**必须保持和原始项目完全一致的目录结构**，因为 P
   存入模块级变量 currentCoreVersion，供 CoreUpdater.check() 对比。
 ```
 
+### 当前实现结论（2026-04-11）
+
+- **用户不会因为旧 cache 长期卡在不健康版本**：`cleanupOnBoot()` 会先检查 cached runtime 完整性；若 runtime 缺少 contract 中定义的关键文件，会直接删除缓存，再回退 bundled 或其他健康候选。
+- **用户不会因为 Desktop 升级后继续跑旧 bundled**：当 `bundled >= cached` 时，启动阶段会删除旧 cache；因此安装新 Desktop 后，若内置版本不低于本地 cache，用户会自动切回新 bundled。
+- **默认策略仍是 prefer-newer**：如果 cached runtime 版本高于 bundled 且 runnable，它会继续胜出。这是产品预期，因为它代表用户已拿到更新的 Core Hot Update，而不是陈旧缓存。
+- **真正的 Desktop 用户安装包是 workflow 实时构建出来的**：Desktop 发布走 `.github/workflows/build-desktop.yml` 的平台矩阵，先在对应 runner 上执行 `next build --webpack`，再执行 `desktop/scripts/prepare-mindos-runtime.mjs` 把 freshly built 的 runtime 打进安装包；用户不会拿到某个历史 cache 打出来的安装包。
+- **runtime archive 的 bash 脚本只影响 CI / 发布链路，不影响用户侧跨平台运行**：`scripts/build-runtime-archive.sh` 用于 `.github/workflows/publish-runtime.yml`，且该 workflow 固定在 `ubuntu-latest` 上运行；它不是 Desktop 用户本机运行路径的一部分。
+
 ### 启动时清理逻辑
 
 ```

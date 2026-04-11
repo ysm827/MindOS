@@ -642,23 +642,32 @@ export class CoreUpdater extends EventEmitter {
       }
     }
 
-    // 2. Remove cached runtime if bundled version is same or newer (Desktop was updated)
-    if (bundledVersion && semver.valid(bundledVersion) && existsSync(RUNTIME_DIR)) {
+    // 2. Remove cached runtime if it's incomplete, or if bundled version is same or newer
+    if (existsSync(RUNTIME_DIR)) {
       try {
-        const cached = this.getCachedVersion();
-        if (cached && semver.valid(cached) && semver.gte(bundledVersion, cached)) {
-          // Additional safety: Verify this is a runtime directory
-          const pkgPath = path.join(RUNTIME_DIR, 'package.json');
-          if (!existsSync(pkgPath)) {
-            console.warn(`[CoreUpdater] runtime/ missing package.json, not removing`);
-            return;
-          }
+        // Security: Double-check it's not a symlink
+        assertNotSymlink(RUNTIME_DIR);
 
-          // Security: Double-check it's not a symlink
-          assertNotSymlink(RUNTIME_DIR);
-
-          console.info(`[CoreUpdater] Bundled v${bundledVersion} >= cached v${cached}, removing stale cache`);
+        const layout = analyzeMindOsLayout(RUNTIME_DIR);
+        if (!layout.runnable) {
+          console.info('[CoreUpdater] Cached runtime is incomplete, removing stale cache');
           safeRmSync(RUNTIME_DIR, { recursive: true, force: true });
+          return;
+        }
+
+        if (bundledVersion && semver.valid(bundledVersion)) {
+          const cached = this.getCachedVersion();
+          if (cached && semver.valid(cached) && semver.gte(bundledVersion, cached)) {
+            // Additional safety: Verify this is a runtime directory
+            const pkgPath = path.join(RUNTIME_DIR, 'package.json');
+            if (!existsSync(pkgPath)) {
+              console.warn('[CoreUpdater] runtime/ missing package.json, not removing');
+              return;
+            }
+
+            console.info(`[CoreUpdater] Bundled v${bundledVersion} >= cached v${cached}, removing stale cache`);
+            safeRmSync(RUNTIME_DIR, { recursive: true, force: true });
+          }
         }
       } catch (err) {
         console.warn(`[CoreUpdater] Failed to cleanup cached runtime: ${err}`);

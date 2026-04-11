@@ -4,10 +4,8 @@
  */
 import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, symlinkSync } from 'fs';
 import path from 'path';
+import { assertStandaloneAppFiles } from './runtime-health-contract.mjs';
 
-/**
- * @param {string} appDir - Absolute path to MindOS `app/` (contains .next/, public/, etc.)
- */
 export function materializeStandaloneAssets(appDir) {
   const standaloneDir = path.join(appDir, '.next', 'standalone');
   const serverJs = path.join(standaloneDir, 'server.js');
@@ -31,6 +29,8 @@ export function materializeStandaloneAssets(appDir) {
     rmSync(publicDest, { recursive: true, force: true });
     cpSync(publicSrc, publicDest, { recursive: true });
   }
+
+  assertStandaloneAppFiles(appDir, 'prepare-mindos-bundle');
 }
 
 /**

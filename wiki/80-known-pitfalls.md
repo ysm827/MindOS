@@ -20,6 +20,18 @@
 
 ## Agent / LLM API
 
+### 背景预热请求不要绑在“面板隐藏”清理上（2026-04-11）
+
+**症状**：像 Search 这类后台预热请求，如果在面板关闭时直接取消并阻止状态更新，下一次重新打开面板可能一直停留在 `warming` 或再也不重试。
+
+**根因**：很多面板是“隐藏但仍挂载”，不是完全 unmount。把 background prewarm 的完成回调绑到 `active=false` 的 cleanup 上，会把一次正常的后台完成误判成“应该丢弃的结果”。同时若文件内容变化后不重置 prewarm 状态，会导致预热状态与真实索引生命周期脱节。
+
+**规则**：
+- 背景预热的完成回调要区分“组件卸载”和“面板隐藏”
+- 只在真正 unmount 时阻止状态更新，不要因为 `active=false` 就丢结果
+- 任何依赖缓存的 warmState，都要在 `files-changed` 等失效事件发生时重置
+
+
 ### pdfjs-dist 在 Next.js standalone 构建下找不到模块（2026-04-11，更新 2026-04-11）
 
 **症状**：用户在 Chatbot 上传 PDF 时报错 `Cannot find module 'pdfjs-dist/legacy/build/pdf.mjs'`，require stack 指向 `.next/standalone/…/extract-pdf.cjs`。dev 模式正常，standalone（Desktop/npm 全局）模式才出问题。
@@ -39,6 +51,32 @@
 3. `extract-pdf.cjs` 等运行时脚本改动必须同步到 `desktop/resources/mindos-runtime/app/scripts/`
 
 **测试**：`__tests__/scripts/extract-pdf-runtime.test.ts` 直接 spawn `extract-pdf.cjs` 验证 pdfjs-dist 加载成功。
+
+**三次复发根因**（2026-04-11）：用户已更新到最新 Desktop，但 `~/.mindos/runtime/` 缓存的旧 runtime 版本 **高于** 新 bundled runtime 版本。`cleanupOnBoot()` 只在 `bundled >= cached` 时才删除缓存，所以用户继续使用缺少 `pdfjs-dist` 的旧 runtime。`analyzeMindOsLayout()` 不检查具体依赖是否存在，只检查 `server.js`，无法拦截这类不完整的 runtime。
+
+**用户自救**：
+```bash
+# macOS / Linux
+rm -rf ~/.mindos/runtime
+
+# Windows (PowerShell)
+Remove-Item -Recurse -Force "$env:USERPROFILE\.mindos\runtime"
+```
+重启 Desktop 后会自动使用新 bundled runtime。
+
+**最终修复**（2026-04-11）：
+1. `desktop/src/core-updater.ts` 在 `cleanupOnBoot()` 中先检查 cached runtime 完整性；若缺少 `extract-pdf.cjs` / `pdfjs-dist` 关键文件，则**无条件删除** `~/.mindos/runtime/`
+2. `desktop/src/mindos-runtime-layout.ts` 的 `analyzeMindOsLayout()` / `isBundledRuntimeIntact()` 统一校验 standalone 关键文件，避免坏 runtime 被当作 runnable
+3. `scripts/build-runtime-archive.sh` 与 Desktop 内置 runtime archive 脚本增加 `pdfjs-dist` 自检，打包阶段直接 fail fast
+4. `desktop/scripts/prepare-mindos-bundle.mjs` 在 prepare 阶段校验 standalone 关键文件，防止坏 runtime 被打进安装包
+5. 将 runtime 健康标准收敛到 `desktop/runtime-health-contract.json`，让 Desktop 运行时判定、prepare、自检统一消费同一份 contract，未来更换 PDF 库只需改一处
+
+**发布链路澄清**（2026-04-11）：
+- Desktop 用户安装包走 `.github/workflows/build-desktop.yml` 平台矩阵：在对应 runner 上先执行 `next build --webpack`，再执行 `desktop/scripts/prepare-mindos-runtime.mjs`，把 freshly built runtime 打进安装包。
+- 因此，**Desktop 用户拿到的不是历史 cache 产物**，而是当前 workflow 现场构建并校验过的 bundled runtime。
+- `scripts/build-runtime-archive.sh` 的 bash-only 限制只影响 `publish-runtime.yml` 这条 **Linux CI 发布链路**，不影响 Desktop 用户在 macOS / Windows / Linux 上运行最新健康版本。
+
+**发布规则**：修复上线时需要同时发新的 Core patch 版本和新的 Desktop 版本；仅发 npm 或仅发 Desktop 都可能留下旧缓存继续生效。
 
 ### Vitest `vi.mock()` 工厂会被提升，引用顶层变量会直接炸掉 (2026-04-11)
 
@@ -625,6 +663,13 @@ rootcause: app/api/ask/route.ts:143 直接传递 llmHistoryMessages（pi-ai Mess
 - **现象：** AI SDK 用 `toolCallId` / `toolName` / `input`，pi-agent-core 用 `id` / `name` / `arguments`
 - **解决：** `toAgentMessages()` 中做字段映射（`type: 'toolCall', id: part.toolCallId, name: part.toolName, arguments: part.input`）
 - **规则：** 跨 SDK 迁移时逐字段对比类型定义，不要假设字段名相同
+
+### Settings 半迁移配置：activeProvider 仍是协议值导致 AI 配置项整块消失（#25）
+- **现象：** 设置页里 OpenAI / Gemini 等按钮看起来被选中了，但标题仍显示“未选择”，下面的 API Key / Base URL / Model 配置项完全不出现
+- **原因：** 某些用户本地 `config.json` 已迁到 `ai.providers: Provider[]` 新格式，但 `ai.activeProvider` 仍保留旧协议值（如 `"openai"`、`"google"`）而不是 provider entry id（`p_*`）。`ProviderSelect` 用这个值仍会高亮协议按钮，但 `AiTab` 用 `providers.find(p => p.id === activeProvider)` 查当前项时查不到，于是整块配置区不渲染
+- **解决：** `readSettings()` 在读取数组格式 providers 时增加 `normalizeActiveProvider()`：若 `activeProvider` 是协议值，则映射到首个匹配的 provider entry id；若指向缺失条目，则回退到第一个 provider
+- **规则：** 配置迁移不能只迁“数据结构”，还要归一化主键字段。凡是 `active*` / `selected*` / `current*` 这类引用字段，都必须校验是否仍指向有效实体
+- **文件：** `app/lib/settings.ts`
 
 ## 架构 & 设计模式
 

@@ -41,6 +41,14 @@
   - 拆分 ChatHeader/ChatEmptyState/ChatStatusFooter/ScrollToBottomButton 子组件
   - stale closure fix + FlatList key 稳定化
   - 新增 13 条 chat-session-store 测试
+- [x] Mobile Build Workflow
+  - 新增 `.github/workflows/build-mobile.yml`
+  - workflow_dispatch 支持 android / ios / all + development / preview / production
+  - 构建前自动执行 mobile typecheck + test
+  - 输出 EAS build metadata 到 Step Summary 和 artifact
+  - iOS 构建复用现有 Apple secrets（App Store Connect API key / team id）作为 EAS 凭证修复输入
+  - `mobile/app.json` 补齐 `expo.extra.eas.projectId`
+  - `mobile/package.json` 新增 Android/iOS EAS 构建脚本
 - [x] Feishu conversation SDK-first ingress refactor
   - 用 `@larksuiteoapi/node-sdk` 接管 challenge / 验签 / decrypt
   - 保留 MindOS 业务层：过滤、标准化、会话历史、Agent 编排
@@ -53,6 +61,11 @@
   - 添加 `pi-subagents` 到 dependencies
   - 在 `additionalExtensionPaths` 注册扩展入口
   - 新增 7 条测试覆盖（安装、路径注册、导出结构）
+- [x] Search 首搜预热与冷启动降迟
+  - 新增 `/api/search/prewarm` 非阻塞预热入口
+  - Search Panel 打开时后台预热 UI 搜索索引
+  - 增加 warming / fallback 轻量状态文案与 i18n 文案
+  - 补充 API 与 SearchPanel 纯函数测试覆盖
 
 ## Next
 

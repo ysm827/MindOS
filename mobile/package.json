@@ -11,8 +11,12 @@
     "lint": "eslint .",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
-    "build:dev": "eas build --profile development --platform all",
-    "build:preview": "eas build --profile preview --platform all"
+    "build:dev": "npx eas-cli build --profile development --platform all",
+    "build:preview": "npx eas-cli build --profile preview --platform all",
+    "build:android:preview": "npx eas-cli build --profile preview --platform android",
+    "build:ios:preview": "npx eas-cli build --profile preview --platform ios",
+    "build:android:production": "npx eas-cli build --profile production --platform android",
+    "build:ios:production": "npx eas-cli build --profile production --platform ios"
   },
   "dependencies": {
     "@expo/vector-icons": "~14.0.4",

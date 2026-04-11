@@ -3,6 +3,11 @@
  */
 import { existsSync, readFileSync } from 'fs';
 import path from 'path';
+import {
+  hasBundledRuntimeRequiredFiles,
+  hasRequiredStandaloneAppFiles,
+  isRuntimeLayoutMcpRunnable,
+} from './runtime-health-contract';
 
 export interface MindOsLayoutAnalysis {
   version: string | null;
@@ -83,18 +88,7 @@ export function isNextBuildCurrent(appDir: string, projectRoot: string): boolean
  * Catches partial DMG extraction where server.js exists but static assets are missing.
  */
 export function isBundledRuntimeIntact(root: string): boolean {
-  const required = [
-    path.join(root, 'app', '.next'),
-    path.join(root, 'mcp', 'dist', 'index.cjs'),
-  ];
-  // Static assets are critical for the web UI to render properly
-  const appDir = path.join(root, 'app');
-  const hasStandalone = existsSync(path.join(appDir, '.next', 'standalone', 'server.js'));
-  if (hasStandalone) {
-    // standalone mode needs static dir copied alongside
-    required.push(path.join(appDir, '.next', 'static'));
-  }
-  return required.every(p => existsSync(p));
+  return hasBundledRuntimeRequiredFiles(root);
 }
 
 export function analyzeMindOsLayout(root: string): MindOsLayoutAnalysis {
@@ -108,11 +102,12 @@ export function analyzeMindOsLayout(root: string): MindOsLayoutAnalysis {
   }
 
   const appDir = path.join(root, 'app');
-  const mcpDir = path.join(root, 'mcp');
-  // MCP must have either pre-built bundle (dist/index.cjs) or source (src/) to be runnable
-  const mcpRunnable = existsSync(path.join(mcpDir, 'dist', 'index.cjs'))
-    || existsSync(path.join(mcpDir, 'src'));
-  const runnable = isNextBuildValid(appDir) && mcpRunnable;
+  const hasStandalone = existsSync(path.join(appDir, '.next', 'standalone', 'server.js'));
+  const runtimeRunnable = hasStandalone
+    ? hasRequiredStandaloneAppFiles(appDir)
+    : isNextBuildValid(appDir);
+  const mcpRunnable = isRuntimeLayoutMcpRunnable(root);
+  const runnable = runtimeRunnable && mcpRunnable;
 
   return { version, runnable };
 }

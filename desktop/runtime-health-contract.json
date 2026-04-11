@@ -1,0 +1,108 @@
+{
+  "version": 1,
+  "features": {
+    "web-standalone": {
+      "description": "Next.js standalone server and traced server output",
+      "required": true,
+      "files": [
+        {
+          "path": "app/.next/standalone/server.js",
+          "type": "file"
+        },
+        {
+          "path": "app/.next/standalone/.next/server",
+          "type": "directory"
+        },
+        {
+          "path": "app/.next/static",
+          "type": "directory"
+        }
+      ]
+    },
+    "pdf-runtime": {
+      "description": "PDF extraction entrypoint and parser runtime",
+      "required": true,
+      "files": [
+        {
+          "path": "app/.next/standalone/scripts/extract-pdf.cjs",
+          "type": "file"
+        },
+        {
+          "path": "app/.next/standalone/node_modules/pdfjs-dist/legacy/build/pdf.mjs",
+          "type": "file"
+        },
+        {
+          "path": "app/.next/standalone/node_modules/pdfjs-dist/legacy/build/pdf.worker.mjs",
+          "type": "file"
+        }
+      ]
+    },
+    "mcp-dist": {
+      "description": "Built MCP bundle for packaged and archived runtimes",
+      "required": true,
+      "files": [
+        {
+          "path": "mcp/dist/index.cjs",
+          "type": "file"
+        }
+      ]
+    },
+    "skills-data": {
+      "description": "Bundled skill definitions required by runtime archive",
+      "required": false,
+      "files": [
+        {
+          "path": "app/data/skills",
+          "type": "directory"
+        }
+      ]
+    },
+    "mcp-source": {
+      "description": "MCP source tree allowed in dev/user runtimes",
+      "required": false,
+      "files": [
+        {
+          "path": "mcp/src",
+          "type": "directory"
+        }
+      ]
+    }
+  },
+  "checks": {
+    "standaloneAppRequiredFeatures": [
+      "web-standalone",
+      "pdf-runtime"
+    ],
+    "bundledRuntimeRequiredFiles": [
+      {
+        "path": "app/.next",
+        "type": "directory"
+      }
+    ],
+    "bundledRuntimeRequiredFeatures": [
+      "web-standalone",
+      "pdf-runtime",
+      "mcp-dist"
+    ],
+    "archiveRequiredFiles": [
+      {
+        "path": "package.json",
+        "type": "file"
+      }
+    ],
+    "archiveRequiredFeatures": [
+      "web-standalone",
+      "pdf-runtime",
+      "mcp-dist",
+      "skills-data"
+    ],
+    "runtimeLayoutMcpAnyOf": [
+      [
+        "mcp-dist"
+      ],
+      [
+        "mcp-source"
+      ]
+    ]
+  }
+}

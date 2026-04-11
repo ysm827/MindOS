@@ -1,7 +1,27 @@
 import { describe, expect, it } from 'vitest';
 import { mkdirSync, writeFileSync, rmSync } from 'fs';
 import path from 'path';
-import { analyzeMindOsLayout, isNextBuildValid, isNextBuildCurrent, BUILD_VERSION_FILE } from './mindos-runtime-layout';
+import {
+  analyzeMindOsLayout,
+  isBundledRuntimeIntact,
+  isNextBuildValid,
+  isNextBuildCurrent,
+  BUILD_VERSION_FILE,
+} from './mindos-runtime-layout';
+import { getStandaloneAppRequiredEntries } from './runtime-health-contract';
+
+function writeEntries(baseDir: string, omit: string[] = []) {
+  for (const entry of getStandaloneAppRequiredEntries()) {
+    if (omit.includes(entry.path)) continue;
+    const target = path.join(baseDir, entry.path);
+    if (entry.type === 'directory') {
+      mkdirSync(target, { recursive: true });
+    } else {
+      mkdirSync(path.dirname(target), { recursive: true });
+      writeFileSync(target, `// ${entry.path}`, 'utf-8');
+    }
+  }
+}
 
 describe('analyzeMindOsLayout', () => {
   it('returns version and runnable when app/.next has BUILD_ID and mcp has source', () => {
@@ -20,12 +40,11 @@ describe('analyzeMindOsLayout', () => {
     }
   });
 
-  it('runnable with standalone server.js and mcp dist', () => {
+  it('runnable with standalone server.js, pdf runtime files, and mcp dist', () => {
     const root = path.join(process.cwd(), 'tmp-mindos-layout-standalone');
     try {
       rmSync(root, { recursive: true, force: true });
-      mkdirSync(path.join(root, 'app', '.next', 'standalone'), { recursive: true });
-      writeFileSync(path.join(root, 'app', '.next', 'standalone', 'server.js'), '// server', 'utf-8');
+      writeEntries(path.join(root, 'app'));
       mkdirSync(path.join(root, 'mcp', 'dist'), { recursive: true });
       writeFileSync(path.join(root, 'mcp', 'dist', 'index.cjs'), '// mcp', 'utf-8');
       writeFileSync(path.join(root, 'package.json'), '{}', 'utf-8');
@@ -73,6 +92,52 @@ describe('analyzeMindOsLayout', () => {
       writeFileSync(path.join(root, 'package.json'), '{}', 'utf-8');
       const r = analyzeMindOsLayout(root);
       expect(r.runnable).toBe(false);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+});
+
+describe('runtime completeness', () => {
+  it('marks standalone runtime not runnable when pdfjs-dist is missing', () => {
+    const root = path.join(process.cwd(), 'tmp-mindos-layout-missing-pdfjs');
+    try {
+      rmSync(root, { recursive: true, force: true });
+      writeEntries(path.join(root, 'app'), ['.next/standalone/node_modules/pdfjs-dist/legacy/build/pdf.mjs', '.next/standalone/node_modules/pdfjs-dist/legacy/build/pdf.worker.mjs']);
+      mkdirSync(path.join(root, 'mcp', 'dist'), { recursive: true });
+      writeFileSync(path.join(root, 'mcp', 'dist', 'index.cjs'), '// mcp', 'utf-8');
+      writeFileSync(path.join(root, 'package.json'), '{}', 'utf-8');
+
+      const r = analyzeMindOsLayout(root);
+      expect(r.runnable).toBe(false);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('rejects bundled runtime when pdf worker is missing', () => {
+    const root = path.join(process.cwd(), 'tmp-mindos-bundled-missing-worker');
+    try {
+      rmSync(root, { recursive: true, force: true });
+      writeEntries(path.join(root, 'app'), ['.next/standalone/node_modules/pdfjs-dist/legacy/build/pdf.worker.mjs']);
+      mkdirSync(path.join(root, 'mcp', 'dist'), { recursive: true });
+      writeFileSync(path.join(root, 'mcp', 'dist', 'index.cjs'), '// mcp', 'utf-8');
+
+      expect(isBundledRuntimeIntact(root)).toBe(false);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('accepts bundled runtime when required pdf files exist', () => {
+    const root = path.join(process.cwd(), 'tmp-mindos-bundled-complete');
+    try {
+      rmSync(root, { recursive: true, force: true });
+      writeEntries(path.join(root, 'app'));
+      mkdirSync(path.join(root, 'mcp', 'dist'), { recursive: true });
+      writeFileSync(path.join(root, 'mcp', 'dist', 'index.cjs'), '// mcp', 'utf-8');
+
+      expect(isBundledRuntimeIntact(root)).toBe(true);
     } finally {
       rmSync(root, { recursive: true, force: true });
     }

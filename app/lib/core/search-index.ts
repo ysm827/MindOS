@@ -5,6 +5,7 @@ import { readFile } from './fs-ops';
 import { resolveSafe } from './security';
 import { extractPdfText } from './pdf-text';
 import { CJK_CHAR_REGEX } from './cjk';
+import { telemetry } from '../telemetry';
 
 const MAX_CONTENT_LENGTH = 50_000;
 
@@ -105,11 +106,13 @@ export class SearchIndex {
 
   /** Full rebuild: read all files and build inverted index. */
   rebuild(mindRoot: string): void {
+    const stop = telemetry.startTimer('search.index.rebuild');
     const allFiles = collectAllFiles(mindRoot);
     const inverted = new Map<string, Set<string>>();
     const docLengths = new Map<string, number>();
     const fileTokensMap = new Map<string, Set<string>>();
     let totalChars = 0;
+    let tokenCount = 0;
 
     for (const filePath of allFiles) {
       let content: string;
@@ -143,6 +146,7 @@ export class SearchIndex {
       // Also index the file path itself
       const allText = filePath + '\n' + content;
       const tokens = tokenize(allText);
+      tokenCount += tokens.size;
       fileTokensMap.set(filePath, tokens);
 
       for (const token of tokens) {
@@ -161,6 +165,7 @@ export class SearchIndex {
     this.docLengths = docLengths;
     this.totalChars = totalChars;
     this.fileTokens = fileTokensMap;
+    stop({ fileCount: allFiles.length, tokenCount });
   }
 
   /** Clear the index. Next search will trigger a lazy rebuild. */

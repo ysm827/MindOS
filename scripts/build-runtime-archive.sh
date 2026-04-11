@@ -107,19 +107,13 @@ rm -rf "$VERIFY" && mkdir -p "$VERIFY"
 tar xzf "$ARCHIVE" -C "$VERIFY"
 
 ERRORS=0
-for f in \
-  "app/.next/standalone/server.js" \
-  "app/.next/standalone/node_modules" \
-  "app/.next/standalone/.next/server" \
-  "app/.next/static" \
-  "app/data/skills" \
-  "mcp/dist/index.cjs" \
-  "package.json"; do
+while IFS= read -r f; do
+  [ -z "$f" ] && continue
   if [ ! -e "$VERIFY/$f" ]; then
     echo "  ❌ MISSING: $f"
     ERRORS=$((ERRORS + 1))
   fi
-done
+done < <(node desktop/scripts/print-runtime-health-paths.mjs)
 
 # Verify version in package.json matches
 PKG_VER=$(node -p "require('$VERIFY/package.json').version" 2>/dev/null || echo "")

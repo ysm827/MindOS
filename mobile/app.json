@@ -43,6 +43,11 @@
     "experiments": {
       "typedRoutes": true
     },
-    "scheme": "mindos"
+    "scheme": "mindos",
+    "extra": {
+      "eas": {
+        "projectId": "b24f8ff1-a88d-4501-884d-e15fe60855b0"
+      }
+    }
   }
 }

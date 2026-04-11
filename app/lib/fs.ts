@@ -39,8 +39,10 @@ import type { MindSpaceSummary } from './core';
 import type { ContentChangeEvent, ContentChangeInput, ContentChangeSummary } from './core';
 import { FileNode, SpacePreview } from './core/types';
 import { SearchMatch } from './types';
+import type { SearchPrewarmResponse } from './types';
 import { effectiveSopRoot } from './settings';
 import { extractPdfText } from './core/pdf-text';
+import { telemetry } from './telemetry';
 
 // ─── Root helpers ─────────────────────────────────────────────────────────────
 
@@ -72,15 +74,21 @@ const CACHE_TTL_MS = 30_000; // 30 seconds (file watcher still invalidates immed
 let _treeVersion = 0;
 
 function buildCache(root: string): FileTreeCache {
+  const stop = telemetry.startTimer('tree.cache.build');
   const tree = buildFileTree(root);
   const allFiles: string[] = [];
+  let directoryCount = 0;
   function collect(nodes: FileNode[]) {
     for (const n of nodes) {
       if (n.type === 'file') allFiles.push(n.path);
-      else if (n.children) collect(n.children);
+      else if (n.children) {
+        directoryCount++;
+        collect(n.children);
+      }
     }
   }
   collect(tree);
+  stop({ fileCount: allFiles.length, directoryCount });
   return { tree, allFiles, timestamp: Date.now() };
 }
 
@@ -663,8 +671,12 @@ interface SearchDocument {
 let _searchIndex: SearchIndex | null = null;
 
 function getSearchIndex(): SearchIndex {
-  if (_searchIndex && isCacheValid()) return _searchIndex;
+  if (_searchIndex && isCacheValid()) {
+    telemetry.track('search.ui.index.cache_hit', { documentCount: _searchIndex.documents.length });
+    return _searchIndex;
+  }
 
+  const stop = telemetry.startTimer('search.ui.index.build');
   const allFiles = collectAllFiles();
   const documents: SearchDocument[] = [];
 
@@ -700,14 +712,27 @@ function getSearchIndex(): SearchIndex {
   });
 
   _searchIndex = { fuse, documents, timestamp: Date.now() };
+  stop({ fileCount: allFiles.length, documentCount: documents.length });
   return _searchIndex;
 }
 
 /** Full-text search across all files using Fuse.js fuzzy matching. */
+export function prewarmSearchIndex(): SearchPrewarmResponse {
+  if (_searchIndex && isCacheValid()) {
+    telemetry.track('search.ui.prewarm', { cacheState: 'hit', documentCount: _searchIndex.documents.length });
+    return { warmed: true, cacheState: 'hit', documentCount: _searchIndex.documents.length };
+  }
+
+  const index = getSearchIndex();
+  telemetry.track('search.ui.prewarm', { cacheState: 'built', documentCount: index.documents.length });
+  return { warmed: true, cacheState: 'built', documentCount: index.documents.length };
+}
+
 export function searchFiles(query: string): AppSearchResult[] {
   if (!query.trim()) return [];
 
-  const { fuse } = getSearchIndex();
+  const stop = telemetry.startTimer('search.ui.query', { queryLen: query.length });
+  const { fuse, documents } = getSearchIndex();
 
   // FIXED: Removed CJK-specific exact-match forcing.
   // Now all queries use the same Fuse.js fuzzy matching for consistent UX.
@@ -715,7 +740,7 @@ export function searchFiles(query: string): AppSearchResult[] {
 
   const fuseResults = fuse.search(searchQuery, { limit: 20 });
 
-  return fuseResults.map((r) => {
+  const results = fuseResults.map((r) => {
     const filePath = r.item.path;
     const content = r.item.content;
     const score = 1 - (r.score ?? 1);
@@ -730,6 +755,9 @@ export function searchFiles(query: string): AppSearchResult[] {
 
     return { path: filePath, snippet, score, matches };
   });
+
+  stop({ resultCount: results.length, documentCount: documents.length });
+  return results;
 }
 
 /** Pick the best (longest) content match and build a context snippet around it. */

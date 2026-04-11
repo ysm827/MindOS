@@ -8,6 +8,7 @@ import path from 'path';
 import http from 'http';
 import net from 'net';
 import { readFileSync, existsSync, writeFileSync, unlinkSync, mkdirSync, chmodSync, appendFileSync } from 'fs';
+import { desktopTelemetry } from './telemetry';
 
 const IS_WIN = process.platform === 'win32';
 
@@ -75,6 +76,10 @@ export class ProcessManager extends EventEmitter {
   /** Start MCP + Next.js, then wait for health check */
   async start(): Promise<void> {
     const t0 = Date.now();
+    const stopStart = desktopTelemetry.startTimer('desktop.process_manager.start', {
+      webPort: this.opts.webPort,
+      mcpPort: this.opts.mcpPort,
+    });
     console.info('[MindOS:ProcessManager] start() called');
     this.stopped = false;
     this.webProcessDied = false;
@@ -83,44 +88,56 @@ export class ProcessManager extends EventEmitter {
     this.externalMcp = false;
     this.emit('status-change', 'starting');
 
-    // 1. Spawn MCP server — or detect an existing one on the target port
-    const mcpAlreadyRunning = await this.checkMcpHealth(this.opts.mcpPort);
-    if (mcpAlreadyRunning) {
-      console.info(`[MindOS] Existing MCP detected on port ${this.opts.mcpPort} — reusing`);
-      this.externalMcp = true;
-    } else {
-      this.mcpProcess = this.spawnMcp();
-      this.guardSpawnError(this.mcpProcess, 'mcp');
-      this.setupCrashHandler(this.mcpProcess, 'mcp');
+    try {
+      // 1. Spawn MCP server — or detect an existing one on the target port
+      const stopMcp = desktopTelemetry.startTimer('desktop.boot.spawn_mcp', { port: this.opts.mcpPort });
+      const mcpAlreadyRunning = await this.checkMcpHealth(this.opts.mcpPort);
+      if (mcpAlreadyRunning) {
+        console.info(`[MindOS] Existing MCP detected on port ${this.opts.mcpPort} — reusing`);
+        this.externalMcp = true;
+      } else {
+        this.mcpProcess = this.spawnMcp();
+        this.guardSpawnError(this.mcpProcess, 'mcp');
+        this.setupCrashHandler(this.mcpProcess, 'mcp');
+      }
+      stopMcp({ externalMcp: mcpAlreadyRunning, port: this.opts.mcpPort });
+
+      // 2. Spawn Next.js
+      const stopWebSpawn = desktopTelemetry.startTimer('desktop.boot.spawn_web', { port: this.opts.webPort });
+      this.webProcess = this.spawnWeb();
+      this.guardSpawnError(this.webProcess, 'web');
+      this.captureStderr(this.webProcess);
+      this.setupCrashHandler(this.webProcess, 'web');
+      stopWebSpawn({ port: this.opts.webPort });
+
+      // 3. Write child PIDs to disk for orphan cleanup on next launch
+      this.writeChildPids();
+
+      // 4. Wait for health (exits early if web process dies)
+      const stopHealthCheck = desktopTelemetry.startTimer('desktop.boot.health_check', { port: this.opts.webPort });
+      const healthy = await this.waitForReady(this.opts.webPort, '/api/health', 60_000);
+      stopHealthCheck({ port: this.opts.webPort, success: healthy });
+      if (!healthy) {
+        const stderr = this.webStderrLines.slice(-20).join('\n');
+        const detail = this.webProcessDied
+          ? `Web process crashed before becoming ready.`
+          : `Health check timed out after 60 seconds.`;
+        throw new Error(
+          `MindOS web server failed to start on port ${this.opts.webPort}.\n` +
+          `${detail}\n` +
+          (stderr ? `Last output:\n${stderr}` : 'No output captured from web process.'),
+        );
+      }
+
+      const elapsed = Date.now() - t0;
+      stopStart({ success: true, externalMcp: this.externalMcp });
+      console.info(`[MindOS:ProcessManager] ready in ${elapsed}ms (web port ${this.opts.webPort}, mcp port ${this.opts.mcpPort})`);
+      this.emit('status-change', 'running');
+      this.emit('ready');
+    } catch (error) {
+      stopStart({ success: false, externalMcp: this.externalMcp });
+      throw error;
     }
-
-    // 2. Spawn Next.js
-    this.webProcess = this.spawnWeb();
-    this.guardSpawnError(this.webProcess, 'web');
-    this.captureStderr(this.webProcess);
-    this.setupCrashHandler(this.webProcess, 'web');
-
-    // 3. Write child PIDs to disk for orphan cleanup on next launch
-    this.writeChildPids();
-
-    // 3. Wait for health (exits early if web process dies)
-    const healthy = await this.waitForReady(this.opts.webPort, '/api/health', 60_000);
-    if (!healthy) {
-      const stderr = this.webStderrLines.slice(-20).join('\n');
-      const detail = this.webProcessDied
-        ? `Web process crashed before becoming ready.`
-        : `Health check timed out after 60 seconds.`;
-      throw new Error(
-        `MindOS web server failed to start on port ${this.opts.webPort}.\n` +
-        `${detail}\n` +
-        (stderr ? `Last output:\n${stderr}` : 'No output captured from web process.'),
-      );
-    }
-
-    const elapsed = Date.now() - t0;
-    console.info(`[MindOS:ProcessManager] ready in ${elapsed}ms (web port ${this.opts.webPort}, mcp port ${this.opts.mcpPort})`);
-    this.emit('status-change', 'running');
-    this.emit('ready');
   }
 
   /** Graceful shutdown: SIGTERM → 5s timeout → force kill */
@@ -720,23 +737,40 @@ export class ProcessManager extends EventEmitter {
 
     if (process.platform === 'win32') {
       // Windows: PowerShell Get-NetTCPConnection (execFileSync avoids cmd.exe quoting issues)
+      const stop = desktopTelemetry.startTimer('desktop.port.find_pids', { port, method: 'powershell' });
       try {
         const out = (execFileSync('powershell.exe', [
           '-NoProfile', '-Command',
           `(Get-NetTCPConnection -LocalPort ${port} -State Listen -ErrorAction SilentlyContinue).OwningProcess`,
         ], opts) as string).trim();
-        return out.split(/\r?\n/).map(Number).filter((p: number) => p > 0 && !isNaN(p));
-      } catch { return []; }
+        const pids = out.split(/\r?\n/).map(Number).filter((p: number) => p > 0 && !isNaN(p));
+        stop({ port, method: 'powershell', pidCount: pids.length, success: true });
+        return pids;
+      } catch {
+        stop({ port, method: 'powershell', pidCount: 0, success: false });
+        return [];
+      }
     }
 
     // Unix: try lsof → ss → fuser
-    try {
-      const out = execSync(`lsof -ti:${port}`, opts).trim();
-      if (out) return out.split('\n').map(Number).filter((p: number) => p > 0 && !isNaN(p));
-    } catch { /* lsof not available */ }
+    {
+      const stop = desktopTelemetry.startTimer('desktop.port.find_pids', { port, method: 'lsof' });
+      try {
+        const out = execSync(`lsof -ti:${port}`, opts).trim();
+        if (out) {
+          const pids = out.split('\n').map(Number).filter((p: number) => p > 0 && !isNaN(p));
+          stop({ port, method: 'lsof', pidCount: pids.length, success: true });
+          return pids;
+        }
+        stop({ port, method: 'lsof', pidCount: 0, success: true });
+      } catch {
+        stop({ port, method: 'lsof', pidCount: 0, success: false });
+      }
+    }
 
     // Fallback: ss (Linux modern — not on macOS)
     if (process.platform === 'linux') {
+      const stop = desktopTelemetry.startTimer('desktop.port.find_pids', { port, method: 'ss' });
       try {
         const out = execSync(`ss -tlnp sport = :${port}`, opts).trim();
         const pids: number[] = [];
@@ -744,18 +778,31 @@ export class ProcessManager extends EventEmitter {
           const p = parseInt(match[1], 10);
           if (p > 0) pids.push(p);
         }
-        if (pids.length > 0) return pids;
-      } catch { /* ss not available */ }
+        if (pids.length > 0) {
+          stop({ port, method: 'ss', pidCount: pids.length, success: true });
+          return pids;
+        }
+        stop({ port, method: 'ss', pidCount: 0, success: true });
+      } catch {
+        stop({ port, method: 'ss', pidCount: 0, success: false });
+      }
     }
 
     // Fallback: fuser (available on most Unix)
     // Note: fuser outputs PIDs to stderr on Linux, so we merge stderr into stdout
+    const stop = desktopTelemetry.startTimer('desktop.port.find_pids', { port, method: 'fuser' });
     try {
       const out = execSync(`fuser ${port}/tcp 2>&1`, { encoding: 'utf-8' as const, timeout: 3000 }).trim();
       // fuser output looks like: "3456/tcp:  1234  5678" or just "1234 5678"
       const pids = out.match(/\d+/g)?.map(Number).filter((p: number) => p > 0 && p !== port) ?? [];
-      if (pids.length > 0) return pids;
-    } catch { /* fuser not available */ }
+      if (pids.length > 0) {
+        stop({ port, method: 'fuser', pidCount: pids.length, success: true });
+        return pids;
+      }
+      stop({ port, method: 'fuser', pidCount: 0, success: true });
+    } catch {
+      stop({ port, method: 'fuser', pidCount: 0, success: false });
+    }
 
     return [];
   }
@@ -766,6 +813,7 @@ export class ProcessManager extends EventEmitter {
    * On Unix: uses ps -p to check.
    */
   private static killIfNodeProcess(pid: number, label: string): void {
+    const stop = desktopTelemetry.startTimer('desktop.port.kill_verify', { pid, label });
     try {
       process.kill(pid, 0); // check alive
       const { execSync, execFileSync } = require('child_process');
@@ -780,6 +828,7 @@ export class ProcessManager extends EventEmitter {
             `(Get-Process -Id ${pid} -ErrorAction SilentlyContinue).ProcessName`,
           ], cmdOpts) as string).trim().toLowerCase();
           if (!name.includes('node')) {
+            stop({ pid, label, verifiedNodeProcess: false, success: true });
             return; // PID reused by non-node process, skip
           }
         } catch {
@@ -790,23 +839,35 @@ export class ProcessManager extends EventEmitter {
               cmdOpts,
             ).trim();
             if (!name.toLowerCase().includes('node')) {
+              stop({ pid, label, verifiedNodeProcess: false, success: true });
               return;
             }
-          } catch { return; } // both failed, skip to be safe
+          } catch {
+            stop({ pid, label, verifiedNodeProcess: false, success: false });
+            return;
+          } // both failed, skip to be safe
         }
       } else {
         try {
           const comm = execSync(`ps -p ${pid} -o comm=`, { encoding: 'utf-8', timeout: 2000 }).trim();
           if (!comm.includes('node') && !comm.includes('next')) {
+            stop({ pid, label, verifiedNodeProcess: false, success: true });
             return; // PID reused by non-node process, skip
           }
-        } catch { return; } // ps failed, skip to be safe
+        } catch {
+          stop({ pid, label, verifiedNodeProcess: false, success: false });
+          return;
+        } // ps failed, skip to be safe
       }
 
       console.warn(`[MindOS] Killing ${label} process (PID ${pid})`);
       // Windows: process.kill with SIGTERM maps to TerminateProcess (hard kill).
       // This is acceptable for cleanup; graceful shutdown via IPC is not available cross-process.
       process.kill(pid, 'SIGTERM');
-    } catch { /* already dead */ }
+      stop({ pid, label, verifiedNodeProcess: true, success: true });
+    } catch {
+      stop({ pid, label, verifiedNodeProcess: false, success: false });
+      /* already dead */
+    }
   }
 }
