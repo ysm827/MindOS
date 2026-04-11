@@ -20,19 +20,25 @@
 
 ## Agent / LLM API
 
-### pdfjs-dist 在 Next.js standalone 构建下找不到模块（2026-04-11）
+### pdfjs-dist 在 Next.js standalone 构建下找不到模块（2026-04-11，更新 2026-04-11）
 
 **症状**：用户在 Chatbot 上传 PDF 时报错 `Cannot find module 'pdfjs-dist/legacy/build/pdf.mjs'`，require stack 指向 `.next/standalone/…/extract-pdf.cjs`。dev 模式正常，standalone（Desktop/npm 全局）模式才出问题。
 
 **根因**：`extract-pdf.cjs` 是通过 `execFileSync('node', [scriptPath, …])` 在子进程中运行的，不经过 Next.js 打包。`next.config.ts` 的 `outputFileTracingIncludes` 虽然把脚本文件拷贝到 `.next/standalone/scripts/`，但 `pdfjs-dist` 不在 `serverExternalPackages` 列表，所以 **`node_modules/pdfjs-dist/` 不会被拷贝到 standalone**。子进程 `require('pdfjs-dist/…')` 时找不到模块。
 
-**修复**：将 `pdfjs-dist` 加入 `next.config.ts` 的 `serverExternalPackages` 列表。
+**二次复发根因**（2026-04-11）：主 `app/next.config.ts` 修复后，**Desktop runtime 副本**（`desktop/resources/mindos-runtime/app/next.config.ts`）和 **npm 包副本**（`_standalone/next.config.ts`）未同步更新 `serverExternalPackages`。用户通过 Desktop 安装的 runtime 使用过期配置构建，standalone 仍然缺少 `pdfjs-dist`。
 
-**规则**：任何被 spawn 的 `.cjs`/`.mjs` 脚本若直接 `require()`/`import()` npm 包，该包必须同时：
-1. 加入 `serverExternalPackages`（确保 standalone 构建时被拷贝）
-2. 或者将依赖打包进脚本本身（bundle all）
+**修复**：
+1. 将 `pdfjs-dist` 加入 `serverExternalPackages` 列表
+2. **同时更新所有 `next.config.ts` 副本**：`app/`、`_standalone/`、`desktop/resources/mindos-runtime/app/`
+3. 同步 `extract-pdf.cjs` 脚本到所有副本
 
-**测试**：新增 `__tests__/scripts/extract-pdf-runtime.test.ts`，直接 spawn `extract-pdf.cjs` 验证 pdfjs-dist 加载成功。
+**规则**：
+1. 任何被 spawn 的 `.cjs`/`.mjs` 脚本若直接 `require()`/`import()` npm 包，该包必须加入 `serverExternalPackages`
+2. **`next.config.ts` 改动必须同步到三处副本**：`app/`、`_standalone/`、`desktop/resources/mindos-runtime/app/`
+3. `extract-pdf.cjs` 等运行时脚本改动必须同步到 `desktop/resources/mindos-runtime/app/scripts/`
+
+**测试**：`__tests__/scripts/extract-pdf-runtime.test.ts` 直接 spawn `extract-pdf.cjs` 验证 pdfjs-dist 加载成功。
 
 ### Vitest `vi.mock()` 工厂会被提升，引用顶层变量会直接炸掉 (2026-04-11)
 
